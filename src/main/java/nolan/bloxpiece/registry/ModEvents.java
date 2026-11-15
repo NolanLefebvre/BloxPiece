@@ -3,8 +3,10 @@ package nolan.bloxpiece.registry;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerPlayer;
 
+import nolan.bloxpiece.ability.AbilityManager;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fx.FireEffects;
@@ -42,6 +44,10 @@ public class ModEvents {
             }
             return true;
         });
+
+        // Quand un joueur rejoint : on lui renvoie ses recharges encore en cours (affichage du HUD)
+        ServerPlayConnectionEvents.JOIN.register((listener, sender, server) ->
+                AbilityManager.syncCooldowns(listener.getPlayer()));
 
         // Évite de garder des projectiles d'un ancien monde en mémoire
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> FireEffects.clear());

@@ -6,9 +6,14 @@ import org.lwjgl.sdl.SDLScancode;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.multiplayer.ClientLevel;
 
+import nolan.bloxpiece.client.hud.AbilityHud;
+import nolan.bloxpiece.client.hud.ClientCooldowns;
+import nolan.bloxpiece.network.CooldownPayload;
 import nolan.bloxpiece.network.UseAbilityPayload;
 
 public class BloxPieceClient implements ClientModInitializer {
@@ -28,6 +33,18 @@ public class BloxPieceClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // HUD des 3 attaques à côté de la hotbar
+        AbilityHud.register();
+
+        // Le serveur nous indique les recharges en cours (affichage uniquement)
+        ClientPlayNetworking.registerGlobalReceiver(CooldownPayload.TYPE, (payload, context) -> {
+            ClientLevel level = context.client().level;
+            if (level != null) {
+                ClientCooldowns.set(payload.key(), payload.ticks(), level.getGameTime());
+            }
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> ClientCooldowns.clear());
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.getConnection() == null) {
                 return;

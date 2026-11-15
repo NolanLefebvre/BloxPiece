@@ -39,7 +39,7 @@ public class ModCommands {
 
         // Retirer le fruit suffit : pouvoirs, résistance et faiblesse disparaissent avec lui
         target.removeAttached(ModAttachments.FRUIT);
-        AbilityManager.clearCooldowns(target.getUUID());
+        AbilityManager.clearCooldowns(target);
 
         target.sendSystemMessage(Component.translatable("message.bloxpiece.removedf.lost"));
         source.sendSuccess(() -> Component.translatable("message.bloxpiece.removedf.success", target.getDisplayName()), true);
