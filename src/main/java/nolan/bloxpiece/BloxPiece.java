@@ -7,8 +7,11 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import nolan.bloxpiece.registry.ModEffects;
+import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.registry.ModCommands;
+import nolan.bloxpiece.registry.ModEvents;
 import nolan.bloxpiece.registry.ModItems;
+import nolan.bloxpiece.registry.ModNetworking;
 
 public class BloxPiece implements ModInitializer {
     public static final String MOD_ID = "bloxpiece";
@@ -20,9 +23,11 @@ public class BloxPiece implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Hello Fabric world!");
 
-        // L'ordre compte : les effets d'abord, car les items peuvent les utiliser.
-        ModEffects.initialize();
+        ModAttachments.initialize();
         ModItems.initialize();
+        ModNetworking.initialize();
+        ModCommands.initialize();
+        ModEvents.initialize();
     }
 
     public static Identifier id(String path) {
