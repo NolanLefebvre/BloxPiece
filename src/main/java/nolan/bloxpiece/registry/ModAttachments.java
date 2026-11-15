@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.network.codec.ByteBufCodecs;
 
 import nolan.bloxpiece.BloxPiece;
+import nolan.bloxpiece.progression.PlayerProgress;
 
 public class ModAttachments {
 
@@ -21,6 +22,26 @@ public class ModAttachments {
             BloxPiece.id("fruit"),
             builder -> builder.persistent(Codec.STRING).copyOnDeath()
                     .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /**
+     * La race du joueur (id de la race, ex : "human").
+     * Pas de valeur = race par défaut (voir Races.DEFAULT). Lire avec Races.of(player).
+     */
+    public static final AttachmentType<String> RACE = AttachmentRegistry.create(
+            BloxPiece.id("race"),
+            builder -> builder.persistent(Codec.STRING).copyOnDeath()
+                    .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /**
+     * Niveau et XP du joueur. Sauvegardé, conservé après la mort, synchronisé avec le client du joueur.
+     * Pas de valeur = niveau 1 sans XP. Lire/modifier avec Progression.
+     */
+    public static final AttachmentType<PlayerProgress> PROGRESS = AttachmentRegistry.create(
+            BloxPiece.id("progress"),
+            builder -> builder.persistent(PlayerProgress.CODEC).copyOnDeath()
+                    .syncWith(PlayerProgress.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
     );
 
     public static void initialize() {

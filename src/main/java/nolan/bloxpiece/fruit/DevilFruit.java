@@ -4,10 +4,12 @@ import java.util.List;
 
 import org.jspecify.annotations.Nullable;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 
+import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.ability.Ability;
 
 /**
@@ -39,6 +41,16 @@ public class DevilFruit {
 
     public String id() {
         return id;
+    }
+
+    /** Item de ce fruit. Convention : l'item d'un fruit d'id "fire" s'appelle "fire_fruit". */
+    public Identifier itemId() {
+        return BloxPiece.id(id + "_fruit");
+    }
+
+    /** Clé de traduction du nom du fruit (c'est le nom de son item), pour les interfaces. */
+    public String translationKey() {
+        return "item." + BloxPiece.MOD_ID + "." + id + "_fruit";
     }
 
     /** Renvoie l'attaque de ce slot, ou null si ce fruit n'en a pas à cet emplacement. */

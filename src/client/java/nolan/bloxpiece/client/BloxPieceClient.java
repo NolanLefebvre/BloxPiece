@@ -13,6 +13,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 
 import nolan.bloxpiece.client.hud.AbilityHud;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
+import nolan.bloxpiece.client.screen.CharacterScreen;
 import nolan.bloxpiece.network.CooldownPayload;
 import nolan.bloxpiece.network.UseAbilityPayload;
 
@@ -25,6 +26,9 @@ public class BloxPieceClient implements ClientModInitializer {
             registerKey("key.bloxpiece.ability_2", SDLScancode.SDL_SCANCODE_X),
             registerKey("key.bloxpiece.ability_3", SDLScancode.SDL_SCANCODE_C)
     };
+
+    // Menu du personnage (modifiable dans Options > Contrôles)
+    private static final KeyMapping CHARACTER_KEY = registerKey("key.bloxpiece.character", SDLScancode.SDL_SCANCODE_G);
 
     private static KeyMapping registerKey(String translationKey, int scancode) {
         return KeyMappingHelper.registerKeyMapping(
@@ -49,6 +53,13 @@ public class BloxPieceClient implements ClientModInitializer {
             if (client.player == null || client.getConnection() == null) {
                 return;
             }
+            // Touche G : ouvre le menu du personnage (le fermer se fait dans le menu lui-même)
+            while (CHARACTER_KEY.consumeClick()) {
+                if (client.gui.screen() == null) {
+                    client.gui.setScreen(new CharacterScreen(CHARACTER_KEY));
+                }
+            }
+
             for (int slot = 0; slot < ABILITY_KEYS.length; slot++) {
                 // while : au cas où la touche a été pressée plusieurs fois dans le même tick
                 while (ABILITY_KEYS[slot].consumeClick()) {
