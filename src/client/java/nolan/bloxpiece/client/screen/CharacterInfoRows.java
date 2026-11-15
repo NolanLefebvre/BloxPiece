@@ -45,7 +45,11 @@ public final class CharacterInfoRows {
 
                 new CharacterInfoRow(icon("fruit"), label("fruit"), 0xFFFF8A3D,
                         CharacterInfoRows::fruitValue)
-                        .withItemIcon(CharacterInfoRows::fruitStack),
+                        .withItemIcon(CharacterInfoRows::fruitStack)
+                        // Cliquer sur le fruit (icône ou nom) ouvre la page de ses attaques ; sans fruit, rien à voir
+                        .withClick(Component.translatable("screen.bloxpiece.character.fruit_tooltip"),
+                                player -> Fruits.get(player.getAttached(ModAttachments.FRUIT)) != null,
+                                CharacterScreen::openAbilities),
 
                 new CharacterInfoRow(icon("race"), label("race"), 0xFF4FD1B5,
                         player -> {

@@ -2,14 +2,10 @@ package nolan.bloxpiece.client.screen;
 
 import java.util.List;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -26,16 +22,12 @@ import nolan.bloxpiece.progression.Progression;
  * Il ne met jamais le jeu en pause. Tout est LU à chaque image depuis les vraies données du joueur
  * (attachments synchronisés par le serveur), donc il se met à jour tout seul.
  *
- * Tout est dessiné dans un repère fixe PANEL_W x PANEL_H ; si l'écran est plus petit, le panneau est réduit.
- * Pour ajouter une information : voir CharacterInfoRows.
+ * Le cadre, le titre, l'animation et les touches sont dans BloxPanelScreen (partagés avec les autres pages du menu).
+ * Pour ajouter une information : voir CharacterInfoRows. Une ligne peut être cliquable (ex : le fruit ouvre la page des attaques).
  */
-public class CharacterScreen extends Screen {
+public class CharacterScreen extends BloxPanelScreen {
 
     // ---- Mise en page (pixels GUI, repère du panneau)
-    private static final int PANEL_W = 300;
-    private static final int PANEL_H = 176;
-    private static final int PAD = 12;
-
     private static final int PORTRAIT_X = PAD;
     private static final int PORTRAIT_Y = 34;
     private static final int PORTRAIT_SIZE = 80;
@@ -50,129 +42,59 @@ public class CharacterScreen extends Screen {
     private static final int XP_Y = 130;
     private static final int XP_BAR_H = 10;
 
-    // ---- Couleurs (ARGB) : fond sombre, touches d'or
-    private static final int COLOR_PANEL = 0xF2101018;
-    private static final int COLOR_GOLD = 0xFFC8A24A;
-    private static final int COLOR_GOLD_DIM = 0xFF6B5A2E;
-    private static final int COLOR_GOLD_BRIGHT = 0xFFFFD25A;
-    private static final int COLOR_INNER_LINE = 0xFF2A2418;
-    private static final int COLOR_LABEL = 0xFF9A9AAA;
-    private static final int COLOR_HINT = 0xFF6E6E7A;
-
-    private static final float OPEN_DURATION_MS = 180.0F;
-
     private static final int ICON_SIZE = 16;
 
-    private final KeyMapping closeKey;
     private final List<CharacterInfoRow> rows = CharacterInfoRows.create();
-
-    // G ouvre le menu : on n'accepte "G pour fermer" qu'après le relâchement de la touche (sinon la répétition de touche refermerait le menu)
-    private boolean closeArmed;
-
-    private final long openedAtMs = System.currentTimeMillis();
-    private long lastFrameNs = System.nanoTime();
 
     // Barre d'XP animée : valeur affichée qui rattrape la valeur réelle
     private float shownXpFraction = 0.0F;
     private int shownLevel = -1;
 
     public CharacterScreen(KeyMapping closeKey) {
-        super(Component.translatable("screen.bloxpiece.character.title"));
-        this.closeKey = closeKey;
-        this.closeArmed = !closeKey.isDown();
+        super(Component.translatable("screen.bloxpiece.character.title"), closeKey, true);
     }
 
-    // Le jeu continue de tourner derrière le menu (important en multijoueur)
     @Override
-    public boolean isPauseScreen() {
+    protected Component hint() {
+        return Component.translatable("screen.bloxpiece.character.hint", closeKey.getTranslatedKeyMessage());
+    }
+
+    @Override
+    protected void extractPanel(GuiGraphicsExtractor g, Font font, LocalPlayer player,
+                                int mx, int my, int mouseX, int mouseY, float dt) {
+        drawPortrait(g, font, player, mx, my);
+        drawRows(g, font, player, mx, my, mouseX, mouseY);
+        drawExperience(g, font, player, mx, my, mouseX, mouseY, dt);
+    }
+
+    /** Clic sur une ligne cliquable (ex : le fruit) : elle fait son action. */
+    @Override
+    protected boolean onPanelClick(int mx, int my) {
+        LocalPlayer player = this.minecraft.player;
+        if (player == null) {
+            return false;
+        }
+        int y = ROWS_Y;
+        for (CharacterInfoRow row : rows) {
+            if (inside(mx, my, ROWS_X, y, ROWS_W, ROW_H)) {
+                if (row.isClickable(player)) {
+                    row.click(this);
+                    return true;
+                }
+                return false;
+            }
+            y += ROW_H + ROW_GAP;
+        }
         return false;
     }
 
-    @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (closeKey.matches(event) && closeArmed) {
-            onClose();
-            return true;
-        }
-        return super.keyPressed(event); // Échap est géré par Screen
-    }
-
-    @Override
-    public boolean keyReleased(KeyEvent event) {
-        if (closeKey.matches(event)) {
-            closeArmed = true;
-            return true;
-        }
-        return super.keyReleased(event);
-    }
-
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
-        Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        if (player == null) {
-            return;
-        }
-
-        long nowNs = System.nanoTime();
-        float dt = Mth.clamp((nowNs - lastFrameNs) / 1.0E9F, 0.0F, 0.1F);
-        lastFrameNs = nowNs;
-
-        float open = easeOut(Mth.clamp((System.currentTimeMillis() - openedAtMs) / OPEN_DURATION_MS, 0.0F, 1.0F));
-
-        // Fond assombri (sans flou : on garde le jeu visible derrière)
-        g.fill(0, 0, this.width, this.height, ((int) (0x99 * open)) << 24);
-
-        // Panneau centré, réduit automatiquement si l'écran est petit, avec une légère montée à l'ouverture
-        float scale = Math.min(1.0F, Math.min((this.width - 8) / (float) PANEL_W, (this.height - 8) / (float) PANEL_H));
-        float originX = (this.width - PANEL_W * scale) / 2.0F;
-        float originY = (this.height - PANEL_H * scale) / 2.0F + (1.0F - open) * 10.0F * scale;
-        int mx = Math.round((mouseX - originX) / scale);
-        int my = Math.round((mouseY - originY) / scale);
-
-        g.pose().pushMatrix();
-        g.pose().translate(originX, originY);
-        g.pose().scale(scale);
-
-        drawFrame(g, 0, 0, PANEL_W, PANEL_H);
-        drawTitle(g, mc.font);
-        drawPortrait(g, mc.font, player, mx, my);
-        drawRows(g, mc.font, player, mx, my);
-        drawExperience(g, mc.font, player, mx, my, mouseX, mouseY, dt);
-        g.centeredText(mc.font, Component.translatable("screen.bloxpiece.character.hint", closeKey.getTranslatedKeyMessage()),
-                PANEL_W / 2, PANEL_H - 14, COLOR_HINT);
-
-        // Fondu à l'ouverture
-        int fade = (int) ((1.0F - open) * 255.0F);
-        if (fade > 0) {
-            g.fill(0, 0, PANEL_W, PANEL_H, fade << 24);
-        }
-
-        g.pose().popMatrix();
-    }
-
-    // Fond personnalisé (dessiné dans extractRenderState) : on neutralise celui de Screen
-    @Override
-    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    /** Ouvre la page des attaques du fruit (appelé par la ligne "fruit"). */
+    void openAbilities() {
+        playClickSound();
+        this.minecraft.gui.setScreen(new AbilitiesScreen(this, closeKey));
     }
 
     // ------------------------------------------------------------------ éléments
-
-    private void drawTitle(GuiGraphicsExtractor g, Font font) {
-        Component title = getTitle().copy().withStyle(ChatFormatting.BOLD);
-        int half = font.width(title) / 2;
-        int cx = PANEL_W / 2;
-
-        g.centeredText(font, title, cx, 9, COLOR_GOLD_BRIGHT);
-
-        // Ornements de part et d'autre du titre + filet sous l'en-tête
-        g.fill(PAD, 13, cx - half - 10, 14, COLOR_GOLD_DIM);
-        g.fill(cx + half + 10, 13, PANEL_W - PAD, 14, COLOR_GOLD_DIM);
-        g.fill(cx - half - 8, 12, cx - half - 5, 15, COLOR_GOLD);
-        g.fill(cx + half + 5, 12, cx + half + 8, 15, COLOR_GOLD);
-        g.fill(PAD, 24, PANEL_W - PAD, 25, COLOR_GOLD_DIM);
-        g.fill(PANEL_W / 4, 24, PANEL_W * 3 / 4, 25, COLOR_GOLD);
-    }
 
     private void drawPortrait(GuiGraphicsExtractor g, Font font, LocalPlayer player, int mx, int my) {
         int x = PORTRAIT_X;
@@ -210,10 +132,15 @@ public class CharacterScreen extends Screen {
         g.centeredText(font, badge, badgeX + badgeW / 2, badgeY + 3, COLOR_GOLD_BRIGHT);
     }
 
-    private void drawRows(GuiGraphicsExtractor g, Font font, LocalPlayer player, int mx, int my) {
+    private void drawRows(GuiGraphicsExtractor g, Font font, LocalPlayer player, int mx, int my,
+                          int screenMouseX, int screenMouseY) {
         int y = ROWS_Y;
         for (CharacterInfoRow row : rows) {
-            row.extract(g, font, player, ROWS_X, y, ROWS_W, ROW_H, inside(mx, my, ROWS_X, y, ROWS_W, ROW_H));
+            boolean hovered = inside(mx, my, ROWS_X, y, ROWS_W, ROW_H);
+            row.extract(g, font, player, ROWS_X, y, ROWS_W, ROW_H, hovered);
+            if (hovered && row.isClickable(player)) {
+                g.setTooltipForNextFrame(font, row.clickTooltip(), screenMouseX, screenMouseY);
+            }
             y += ROW_H + ROW_GAP;
         }
     }
@@ -271,36 +198,6 @@ public class CharacterScreen extends Screen {
                     : Component.translatable("screen.bloxpiece.character.xp_tooltip", needed - progress.xp());
             g.setTooltipForNextFrame(font, tip, screenMouseX, screenMouseY);
         }
-    }
-
-    // ------------------------------------------------------------------ dessin générique
-
-    private static void drawFrame(GuiGraphicsExtractor g, int x, int y, int w, int h) {
-        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0x88000000); // ombre portée
-        g.fill(x, y, x + w, y + h, COLOR_PANEL);
-        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, 0x1CFFFFFF, 0x00000000);
-        g.outline(x, y, w, h, COLOR_GOLD_DIM);
-        g.outline(x + 2, y + 2, w - 4, h - 4, COLOR_INNER_LINE);
-
-        // Coins dorés
-        int l = 8;
-        g.fill(x - 1, y - 1, x - 1 + l, y + 1, COLOR_GOLD);
-        g.fill(x - 1, y - 1, x + 1, y - 1 + l, COLOR_GOLD);
-        g.fill(x + w + 1 - l, y - 1, x + w + 1, y + 1, COLOR_GOLD);
-        g.fill(x + w - 1, y - 1, x + w + 1, y - 1 + l, COLOR_GOLD);
-        g.fill(x - 1, y + h - 1, x - 1 + l, y + h + 1, COLOR_GOLD);
-        g.fill(x - 1, y + h + 1 - l, x + 1, y + h + 1, COLOR_GOLD);
-        g.fill(x + w + 1 - l, y + h - 1, x + w + 1, y + h + 1, COLOR_GOLD);
-        g.fill(x + w - 1, y + h + 1 - l, x + w + 1, y + h + 1, COLOR_GOLD);
-    }
-
-    private static boolean inside(int mx, int my, int x, int y, int w, int h) {
-        return mx >= x && mx < x + w && my >= y && my < y + h;
-    }
-
-    private static float easeOut(float t) {
-        float inv = 1.0F - t;
-        return 1.0F - inv * inv * inv;
     }
 
     private static Identifier icon(String name) {

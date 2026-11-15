@@ -28,6 +28,11 @@ public class FireAbility implements Ability {
     }
 
     @Override
+    public int requiredLevel() {
+        return 1;
+    }
+
+    @Override
     public void use(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
         Vec3 look = player.getLookAngle();

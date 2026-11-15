@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import nolan.bloxpiece.fruit.DevilFruit;
@@ -44,6 +45,13 @@ public class AbilityManager {
             return;
         }
 
+        // Attaque verrouillée : le niveau du joueur (côté serveur) est trop bas. Quel que soit le client, rien ne part.
+        if (!ability.isUnlockedFor(player)) {
+            player.sendSystemMessage(Component.translatable("message.bloxpiece.ability_locked",
+                    Component.translatable(ability.nameKey()), ability.requiredLevel()));
+            return;
+        }
+
         long now = player.level().getGameTime();
         String key = cooldownKey(fruit, ability);
         Map<String, Long> playerCooldowns = COOLDOWNS.computeIfAbsent(player.getUUID(), uuid -> new HashMap<>());
@@ -51,6 +59,11 @@ public class AbilityManager {
         long readyAt = playerCooldowns.getOrDefault(key, 0L);
         if (now < readyAt) {
             return; // en recharge : le temps restant est affiché dans le HUD
+        }
+
+        // L'attaque peut refuser de partir (ex : aucune cible visée) : dans ce cas la recharge n'est pas consommée
+        if (!ability.canUse(player)) {
+            return;
         }
 
         playerCooldowns.put(key, now + ability.cooldownTicks());

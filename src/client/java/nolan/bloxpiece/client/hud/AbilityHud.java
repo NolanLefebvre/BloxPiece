@@ -29,6 +29,8 @@ import nolan.bloxpiece.registry.ModAttachments;
  * - aucun fruit : les 3 cases restent vides
  * - un fruit : chaque case affiche l'icône de l'attaque (fond semi-transparent)
  * - attaque en recharge : icône assombrie + temps restant en secondes, qui disparaît à la fin
+ * - attaque verrouillée (niveau du joueur trop bas) : un cadenas remplace l'affichage habituel ; il disparaît tout seul
+ *   dès que le joueur atteint le niveau requis
  *
  * Tout est LU, rien n'est recalculé : le fruit vient de l'attachment du joueur (synchronisé par le serveur),
  * les attaques viennent de DevilFruit, et les recharges de ClientCooldowns (alimenté par AbilityManager).
@@ -59,6 +61,10 @@ public class AbilityHud implements HudElement {
     // Transparence de l'icône (0-255) : l'icône sert de fond, le chiffre reste lisible par-dessus
     private static final int ICON_ALPHA_READY = 0xB4;
     private static final int ICON_ALPHA_COOLDOWN = 0x70;
+    private static final int ICON_ALPHA_LOCKED = 0x50;   // icône d'une attaque verrouillée, derrière le cadenas
+
+    /** Cadenas des attaques verrouillées (aussi utilisé par la page des attaques du menu personnage). */
+    public static final Identifier LOCK_ICON = BloxPiece.id("textures/gui/lock.png");
 
     private static final Map<String, Identifier> ICONS = new HashMap<>();
 
@@ -87,7 +93,7 @@ public class AbilityHud implements HudElement {
 
         for (int slot = 0; slot < DevilFruit.MAX_ABILITIES; slot++) {
             Ability ability = fruit == null ? null : fruit.getAbility(slot);
-            drawSlot(graphics, mc.font, x, y, fruit, ability, now);
+            drawSlot(graphics, mc.font, player, x, y, fruit, ability, now);
             x += SLOT_SIZE + GAP;
         }
     }
@@ -107,7 +113,7 @@ public class AbilityHud implements HudElement {
         return Math.min(x, guiWidth - totalWidth - 2);
     }
 
-    private static void drawSlot(GuiGraphicsExtractor g, Font font, int x, int y,
+    private static void drawSlot(GuiGraphicsExtractor g, Font font, LocalPlayer player, int x, int y,
                                  DevilFruit fruit, Ability ability, long now) {
         g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKGROUND);
 
@@ -118,6 +124,18 @@ public class AbilityHud implements HudElement {
         }
 
         String key = AbilityManager.cooldownKey(fruit, ability);
+
+        // Attaque verrouillée : icône très atténuée en fond, cadenas par-dessus (comme dans la page des attaques).
+        // Le serveur refuse de toute façon de la lancer.
+        if (!ability.isUnlockedFor(player)) {
+            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+                    0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
+            g.blit(RenderPipelines.GUI_TEXTURED, LOCK_ICON, x + 1, y + 1,
+                    0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
+            g.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_COOLDOWN);
+            return;
+        }
+
         int remaining = ClientCooldowns.remainingTicks(key, now);
         boolean cooling = remaining > 0;
 
@@ -144,7 +162,8 @@ public class AbilityHud implements HudElement {
         }
     }
 
-    private static Identifier iconTexture(String key, DevilFruit fruit, Ability ability) {
+    /** Icône d'une attaque (aussi utilisée par la page des attaques du menu personnage). */
+    public static Identifier iconTexture(String key, DevilFruit fruit, Ability ability) {
         return ICONS.computeIfAbsent(key, k ->
                 BloxPiece.id("textures/gui/ability/" + fruit.id() + "/" + ability.id() + ".png"));
     }

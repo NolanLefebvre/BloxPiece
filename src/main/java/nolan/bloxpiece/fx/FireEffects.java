@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -84,6 +85,24 @@ public class FireEffects {
 
     public static void clear() {
         TRACKED.clear();
+    }
+
+    /**
+     * Vrai si ces dégâts viennent d'une attaque de feu lancée par la victime elle-même (explosion de sa boule de feu,
+     * de ses météores...). Le propriétaire de chaque projectile est déjà enregistré (Tracked.owner, et Projectile.getOwner()
+     * côté vanilla) : on compare l'auteur des dégâts, la victime et le projectile à l'origine de l'explosion.
+     */
+    public static boolean isOwnAttack(LivingEntity victim, DamageSource source) {
+        if (source.getEntity() != victim) {
+            return false; // l'auteur des dégâts n'est pas la victime : ce n'est pas sa propre attaque
+        }
+        Entity direct = source.getDirectEntity();
+        for (Tracked t : TRACKED) {
+            if (t.owner == victim && (direct == null || direct == t.projectile)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Appelé à chaque tick serveur. */
@@ -188,6 +207,10 @@ public class FireEffects {
         for (LivingEntity target : targets) {
             if (target.distanceToSqr(x, y, z) <= r * r) {
                 target.igniteForSeconds(k.igniteSeconds);
+                if (t.owner != null) {
+                    // Le joueur devient responsable de ces dégâts (récompenses d'XP, riposte des mobs)
+                    target.setLastHurtByMob(t.owner);
+                }
                 target.hurtServer(level, level.damageSources().inFire(), k.damage);
             }
         }

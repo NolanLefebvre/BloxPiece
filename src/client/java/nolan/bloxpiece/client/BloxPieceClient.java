@@ -8,14 +8,17 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.multiplayer.ClientLevel;
 
+import nolan.bloxpiece.client.entity.PirateRenderer;
 import nolan.bloxpiece.client.hud.AbilityHud;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
 import nolan.bloxpiece.client.screen.CharacterScreen;
 import nolan.bloxpiece.network.CooldownPayload;
 import nolan.bloxpiece.network.UseAbilityPayload;
+import nolan.bloxpiece.registry.ModEntities;
 
 public class BloxPieceClient implements ClientModInitializer {
 
@@ -37,6 +40,9 @@ public class BloxPieceClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // Apparence des mobs du mod (un renderer par type d'entité)
+        EntityRendererRegistry.register(ModEntities.PIRATE, PirateRenderer::new);
+
         // HUD des 3 attaques à côté de la hotbar
         AbilityHud.register();
 

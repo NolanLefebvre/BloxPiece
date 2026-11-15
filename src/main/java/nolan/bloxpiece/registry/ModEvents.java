@@ -10,6 +10,7 @@ import nolan.bloxpiece.ability.AbilityManager;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fx.FireEffects;
+import nolan.bloxpiece.mob.BloxMob;
 
 public class ModEvents {
 
@@ -36,6 +37,12 @@ public class ModEvents {
 
         // Immunité aux dégâts de feu / lave / boules de feu pour les porteurs d'un fruit ignifugé.
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            // Un joueur ne se blesse jamais avec ses propres attaques de feu (explosions comprises).
+            // Seul le créateur est épargné : tout le monde d'autre subit les dégâts normalement.
+            if (FireEffects.isOwnAttack(entity, source)) {
+                return false;
+            }
+
             if (entity instanceof ServerPlayer player) {
                 DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
                 if (fruit != null && fruit.isImmuneTo(source)) {
@@ -43,6 +50,14 @@ public class ModEvents {
                 }
             }
             return true;
+        });
+
+        // Quand un mob du mod meurt : XP BloxPiece pour le joueur responsable (s'il y en a un).
+        // Tous les futurs mobs (qui étendent BloxMob) sont couverts automatiquement.
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            if (entity instanceof BloxMob mob) {
+                mob.rewardKiller(source);
+            }
         });
 
         // Quand un joueur rejoint : on lui renvoie ses recharges encore en cours (affichage du HUD)

@@ -9,9 +9,11 @@ import org.slf4j.LoggerFactory;
 
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModCommands;
+import nolan.bloxpiece.registry.ModEntities;
 import nolan.bloxpiece.registry.ModEvents;
 import nolan.bloxpiece.registry.ModItems;
 import nolan.bloxpiece.registry.ModNetworking;
+import nolan.bloxpiece.registry.ModSpawns;
 
 public class BloxPiece implements ModInitializer {
     public static final String MOD_ID = "bloxpiece";
@@ -25,6 +27,8 @@ public class BloxPiece implements ModInitializer {
 
         ModAttachments.initialize();
         ModItems.initialize();
+        ModEntities.initialize();
+        ModSpawns.initialize();
         ModNetworking.initialize();
         ModCommands.initialize();
         ModEvents.initialize();
