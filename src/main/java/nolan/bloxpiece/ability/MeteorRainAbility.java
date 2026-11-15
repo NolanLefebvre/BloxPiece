@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import nolan.bloxpiece.fx.FireEffects;
 
 /**
- * Troisième attaque (ultime) du fruit du feu : une pluie de météores enflammés
+ * Troisième attaque du fruit du feu : une pluie de météores enflammés
  * qui s'abat sur l'endroit visé par le curseur du joueur.
  * La zone est marquée par des cercles de feu, puis les météores tombent à la verticale
  * (avec une traînée en spirale) et explosent à l'impact.

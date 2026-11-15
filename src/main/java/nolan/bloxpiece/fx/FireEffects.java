@@ -20,12 +20,15 @@ import net.minecraft.world.phys.Vec3;
  */
 public class FireEffects {
 
-    /** Les 3 tailles de projectiles. Modifie ces valeurs pour régler l'intensité de chaque attaque. */
+    /** Les 4 tailles de projectiles. Modifie ces valeurs pour régler l'intensité de chaque attaque. */
     public enum Kind {
-        //     rayon traînée, flammes coeur, fumée, rayon impact, dégâts, feu (s), particules impact, gerbes d'explosion, points onde, vitesse onde, hauteur colonne
-        SMALL (0.25, 3,  0, 2.5, 3.0f, 3, 25,  0, 24, 0.25, 0),
-        GREAT (0.60, 8,  3, 7.0, 8.0f, 6, 120, 2, 48, 0.55, 6),
-        METEOR(0.90, 12, 4, 7.5, 10.0f, 8, 160, 3, 56, 0.65, 8);
+        //     rayon traînée, flammes coeur, fumée, rayon impact, dégâts, feu (s), particules impact, gerbes d'explosion, points onde, vitesse onde, hauteur colonne, rayon de la sphère de feu (0 = aucune)
+        SMALL (0.25, 3,  0, 2.5, 3.0f, 3, 25,  0, 24, 0.25, 0,  0.0),
+        GREAT (0.60, 8,  3, 7.0, 8.0f, 6, 120, 2, 48, 0.55, 6,  0.0),
+        METEOR(0.90, 12, 4, 7.5, 10.0f, 8, 160, 3, 56, 0.65, 8, 0.0),
+        // Dai Enkai: Entei : un petit soleil. Dégâts et rayon au-dessus du météore, mais un seul projectile.
+        // (sa boule visible est le modèle Blockbench de EnteiSun : pas de sphère de particules)
+        ENTEI (3.00, 3, 0, 12.0, 16.0f, 10, 300, 6, 72, 0.80, 12, 0.0);
 
         final double trailRadius;
         final int coreCount;
@@ -38,9 +41,11 @@ public class FireEffects {
         final int shockPoints;
         final double shockSpeed;
         final int columnHeight;
+        final double sphereRadius;
 
         Kind(double trailRadius, int coreCount, int smokeCount, double impactRadius, float damage,
-             float igniteSeconds, int burst, int emitters, int shockPoints, double shockSpeed, int columnHeight) {
+             float igniteSeconds, int burst, int emitters, int shockPoints, double shockSpeed, int columnHeight,
+             double sphereRadius) {
             this.trailRadius = trailRadius;
             this.coreCount = coreCount;
             this.smokeCount = smokeCount;
@@ -52,6 +57,7 @@ public class FireEffects {
             this.shockPoints = shockPoints;
             this.shockSpeed = shockSpeed;
             this.columnHeight = columnHeight;
+            this.sphereRadius = sphereRadius;
         }
     }
 
@@ -60,11 +66,13 @@ public class FireEffects {
         final ServerLevel level;
         final ServerPlayer owner;
         final Kind kind;
+        final Entity visual; // corps visible qui suit le projectile (peut être null), supprimé à l'impact
         double x, y, z;
         int age;
 
-        Tracked(Entity projectile, ServerLevel level, ServerPlayer owner, Kind kind) {
+        Tracked(Entity projectile, ServerLevel level, ServerPlayer owner, Kind kind, Entity visual) {
             this.projectile = projectile;
+            this.visual = visual;
             this.level = level;
             this.owner = owner;
             this.kind = kind;
@@ -78,12 +86,22 @@ public class FireEffects {
 
     /** À appeler juste après avoir fait apparaître un projectile : il aura traînée + impact spectaculaire. */
     public static void track(Entity projectile, ServerPlayer owner, Kind kind) {
+        track(projectile, owner, kind, null);
+    }
+
+    /** Pareil, avec un corps visible (ex : le soleil de Dai Enkai: Entei) qui suit le projectile puis disparaît à l'impact. */
+    public static void track(Entity projectile, ServerPlayer owner, Kind kind, Entity visual) {
         if (projectile.level() instanceof ServerLevel level) {
-            TRACKED.add(new Tracked(projectile, level, owner, kind));
+            TRACKED.add(new Tracked(projectile, level, owner, kind, visual));
         }
     }
 
     public static void clear() {
+        for (Tracked t : TRACKED) {
+            if (t.visual != null) {
+                t.visual.discard();
+            }
+        }
         TRACKED.clear();
     }
 
@@ -113,6 +131,9 @@ public class FireEffects {
             Entity e = t.projectile;
 
             if (e.isRemoved()) {
+                if (t.visual != null) {
+                    t.visual.discard(); // le soleil disparaît dans l'explosion
+                }
                 impact(t); // le projectile a disparu = il a touché quelque chose
                 it.remove();
                 continue;
@@ -121,6 +142,9 @@ public class FireEffects {
             t.x = e.getX();
             t.y = e.getY();
             t.z = e.getZ();
+            if (t.visual != null) {
+                t.visual.setPos(t.x, t.y, t.z); // le soleil reste centré sur la boule de feu
+            }
             trail(t);
             t.age++;
         }
@@ -163,8 +187,15 @@ public class FireEffects {
                     k.smokeCount, k.trailRadius * 0.5, k.trailRadius * 0.5, k.trailRadius * 0.5, 0.01);
         }
 
+        // Grosse boule de feu (Entei) : nuage de flammes + enveloppe qui tourne, centrés sur le projectile
+        if (k.sphereRadius > 0) {
+            level.sendParticles(ParticleTypes.FLAME, t.x, t.y, t.z,
+                    40, k.sphereRadius * 0.4, k.sphereRadius * 0.4, k.sphereRadius * 0.4, 0.02);
+            fireSphere(level, t.x, t.y, t.z, k.sphereRadius, 28, t.age * 0.35);
+        }
+
         // Gouttes de lave de temps en temps
-        if (k != Kind.SMALL && t.age % 2 == 0) {
+        if (k != Kind.SMALL && k != Kind.ENTEI && t.age % 2 == 0) {
             level.sendParticles(ParticleTypes.LAVA, t.x, t.y, t.z, 2, k.trailRadius, k.trailRadius, k.trailRadius, 0.0);
         }
     }
@@ -203,7 +234,7 @@ public class FireEffects {
         // Dégâts bonus en zone + mise à feu (en plus de l'explosion normale)
         AABB box = new AABB(x - r, y - r, z - r, x + r, y + r, z + r);
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box,
-                e -> e != t.owner && e.isAlive());
+                e -> e != t.owner && e.isAlive() && !(e instanceof EnteiSun));
         for (LivingEntity target : targets) {
             if (target.distanceToSqr(x, y, z) <= r * r) {
                 target.igniteForSeconds(k.igniteSeconds);
@@ -234,6 +265,19 @@ public class FireEffects {
             level.sendParticles(ParticleTypes.FLAME,
                     cx + Math.cos(angle) * radius, y + 0.1, cz + Math.sin(angle) * radius,
                     2, 0.05, 0.15, 0.05, 0.01);
+        }
+    }
+
+    /** Sphère de flammes : points répartis régulièrement sur la surface ; {@code spin} la fait tourner (en radians). */
+    public static void fireSphere(ServerLevel level, double cx, double cy, double cz, double radius, int points, double spin) {
+        double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
+        for (int i = 0; i < points; i++) {
+            double y = 1.0 - 2.0 * (i + 0.5) / points;
+            double ring = Math.sqrt(1.0 - y * y);
+            double angle = i * goldenAngle + spin;
+            level.sendParticles(ParticleTypes.FLAME,
+                    cx + Math.cos(angle) * ring * radius, cy + y * radius, cz + Math.sin(angle) * ring * radius,
+                    1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 

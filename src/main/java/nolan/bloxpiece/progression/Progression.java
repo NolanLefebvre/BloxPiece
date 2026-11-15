@@ -20,7 +20,10 @@ public final class Progression {
         return progress != null ? progress : PlayerProgress.START;
     }
 
-    /** Ajoute de l'XP à un joueur (serveur uniquement) et renvoie sa nouvelle progression. Le client est prévenu automatiquement. */
+    /**
+     * Ajoute de l'XP à un joueur (serveur uniquement) ; un nombre négatif en retire (le niveau peut alors baisser).
+     * Renvoie sa nouvelle progression. Le client est prévenu automatiquement.
+     */
     public static PlayerProgress addXp(ServerPlayer player, long amount) {
         PlayerProgress updated = get(player).withXp(amount);
         player.setAttached(ModAttachments.PROGRESS, updated);

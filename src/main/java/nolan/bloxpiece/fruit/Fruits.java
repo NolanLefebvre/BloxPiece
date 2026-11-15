@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.ability.FireAbility;
 import nolan.bloxpiece.ability.GreatFireballAbility;
 import nolan.bloxpiece.ability.MeteorRainAbility;
@@ -19,7 +20,8 @@ public class Fruits {
             List.of(
                     new FireAbility(),          // touche 1 : boule de feu
                     new GreatFireballAbility(), // touche 2 : grosse boule de feu explosive
-                    new MeteorRainAbility()     // touche 3 : pluie de météores (ultime)
+                    new MeteorRainAbility(),    // touche 3 : pluie de météores
+                    new DaiEnkaiEnteiAbility()  // touche 4 : Dai Enkai: Entei (ultime)
             )));
 
     private static DevilFruit register(DevilFruit fruit) {

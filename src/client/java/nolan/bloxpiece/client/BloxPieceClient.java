@@ -8,10 +8,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.multiplayer.ClientLevel;
 
+import nolan.bloxpiece.client.entity.EnteiSunModel;
+import nolan.bloxpiece.client.entity.EnteiSunRenderer;
 import nolan.bloxpiece.client.entity.PirateRenderer;
 import nolan.bloxpiece.client.hud.AbilityHud;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
@@ -27,11 +30,17 @@ public class BloxPieceClient implements ClientModInitializer {
     private static final KeyMapping[] ABILITY_KEYS = {
             registerKey("key.bloxpiece.ability_1", SDLScancode.SDL_SCANCODE_Z),
             registerKey("key.bloxpiece.ability_2", SDLScancode.SDL_SCANCODE_X),
-            registerKey("key.bloxpiece.ability_3", SDLScancode.SDL_SCANCODE_C)
+            registerKey("key.bloxpiece.ability_3", SDLScancode.SDL_SCANCODE_C),
+            registerKey("key.bloxpiece.ability_4", SDLScancode.SDL_SCANCODE_V)
     };
 
     // Menu du personnage (modifiable dans Options > Contrôles)
     private static final KeyMapping CHARACTER_KEY = registerKey("key.bloxpiece.character", SDLScancode.SDL_SCANCODE_G);
+
+    /** Touche de l'attaque de ce slot (le HUD en affiche le nom), ou null si ce slot n'a pas de touche. */
+    public static KeyMapping abilityKey(int slot) {
+        return slot >= 0 && slot < ABILITY_KEYS.length ? ABILITY_KEYS[slot] : null;
+    }
 
     private static KeyMapping registerKey(String translationKey, int scancode) {
         return KeyMappingHelper.registerKeyMapping(
@@ -42,8 +51,11 @@ public class BloxPieceClient implements ClientModInitializer {
     public void onInitializeClient() {
         // Apparence des mobs du mod (un renderer par type d'entité)
         EntityRendererRegistry.register(ModEntities.PIRATE, PirateRenderer::new);
+        // Le calque du modèle doit être enregistré AVANT le renderer qui s'en sert
+        ModelLayerRegistry.registerModelLayer(EnteiSunModel.LAYER, EnteiSunModel::createBodyLayer);
+        EntityRendererRegistry.register(ModEntities.ENTEI_SUN, EnteiSunRenderer::new);
 
-        // HUD des 3 attaques à côté de la hotbar
+        // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();
 
         // Le serveur nous indique les recharges en cours (affichage uniquement)

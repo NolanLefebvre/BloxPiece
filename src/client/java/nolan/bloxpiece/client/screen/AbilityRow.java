@@ -24,7 +24,11 @@ final class AbilityRow {
     private static final int ICON_FRAME = 26;
     private static final int ICON_SIZE = 16;
     private static final int TEXT_X = 38;        // début des textes, à droite de l'icône
-    private static final int MAX_DESCRIPTION_LINES = 2;
+    private static final int MAX_DESCRIPTION_LINES = 4;
+    private static final int MIN_HEIGHT = 36;     // hauteur d'une ligne dont la description tient sur 1 ou 2 lignes
+    private static final int DESCRIPTION_Y = 16;  // début de la description sous le nom
+    private static final int BOTTOM_PAD = 2;
+    private static final int RIGHT_PAD = 7;
 
     private static final int COLOR_ACCENT = 0xFFFF8A3D;
     private static final int COLOR_ACCENT_LOCKED = 0xFF55555F;
@@ -43,6 +47,20 @@ final class AbilityRow {
     private static final int ICON_ALPHA_LOCKED = 0x50;
 
     private AbilityRow() {
+    }
+
+    /** Description de l'attaque, découpée à la largeur disponible dans une ligne de largeur {@code w}. */
+    private static List<FormattedCharSequence> descriptionLines(Font font, Ability ability, int w) {
+        return font.split(Component.translatable(ability.descriptionKey()), w - RIGHT_PAD - TEXT_X);
+    }
+
+    /**
+     * Hauteur de la ligne de cette attaque : 36 px, plus si la description a besoin de plus de 2 lignes
+     * (ex : Dai Enkai: Entei), pour qu'elle s'affiche en entier.
+     */
+    static int heightFor(Font font, Ability ability, int w) {
+        int lines = Math.min(MAX_DESCRIPTION_LINES, descriptionLines(font, ability, w).size());
+        return Math.max(MIN_HEIGHT, DESCRIPTION_Y + lines * font.lineHeight + BOTTOM_PAD);
     }
 
     static void extract(GuiGraphicsExtractor g, Font font, LocalPlayer player, DevilFruit fruit, Ability ability,
@@ -74,15 +92,15 @@ final class AbilityRow {
 
         // Ligne 1 : nom à gauche, niveau requis à droite (vert = atteint, rouge = pas encore)
         int textX = x + TEXT_X;
-        int right = x + w - 7;
+        int right = x + w - RIGHT_PAD;
         g.text(font, Component.translatable(ability.nameKey()), textX, y + 5,
                 unlocked ? COLOR_NAME : COLOR_NAME_LOCKED, true);
         Component level = Component.translatable("screen.bloxpiece.abilities.required_level", ability.requiredLevel());
         g.text(font, level, right - font.width(level), y + 5, unlocked ? COLOR_LEVEL_OK : COLOR_LEVEL_LOCKED, true);
 
-        // Lignes suivantes : description, à la ligne automatiquement (2 lignes maximum)
-        List<FormattedCharSequence> lines = font.split(Component.translatable(ability.descriptionKey()), right - textX);
-        int lineY = y + 16;
+        // Lignes suivantes : description, à la ligne automatiquement (la hauteur de la ligne s'adapte : voir heightFor)
+        List<FormattedCharSequence> lines = descriptionLines(font, ability, w);
+        int lineY = y + DESCRIPTION_Y;
         for (int i = 0; i < Math.min(MAX_DESCRIPTION_LINES, lines.size()); i++) {
             g.text(font, lines.get(i), textX, lineY, unlocked ? COLOR_DESCRIPTION : COLOR_DESCRIPTION_LOCKED, false);
             lineY += font.lineHeight;

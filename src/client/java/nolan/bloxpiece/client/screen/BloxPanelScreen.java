@@ -82,6 +82,11 @@ public abstract class BloxPanelScreen extends Screen {
         return getTitle();
     }
 
+    /** Hauteur du panneau de cette page. Une page qui a besoin de plus de place (ex : liste d'attaques) peut la redéfinir. */
+    protected int panelHeight() {
+        return PANEL_H;
+    }
+
     /** Clic gauche aux coordonnées (mx, my) du panneau. Renvoie true si la page l'a utilisé. */
     protected boolean onPanelClick(int mx, int my) {
         return false;
@@ -150,9 +155,10 @@ public abstract class BloxPanelScreen extends Screen {
         g.fill(0, 0, this.width, this.height, ((int) (0x99 * open)) << 24);
 
         // Panneau centré, réduit automatiquement si l'écran est petit, avec une légère montée à l'ouverture
-        scale = Math.min(1.0F, Math.min((this.width - 8) / (float) PANEL_W, (this.height - 8) / (float) PANEL_H));
+        int panelH = panelHeight();
+        scale = Math.min(1.0F, Math.min((this.width - 8) / (float) PANEL_W, (this.height - 8) / (float) panelH));
         originX = (this.width - PANEL_W * scale) / 2.0F;
-        originY = (this.height - PANEL_H * scale) / 2.0F + (1.0F - open) * 10.0F * scale;
+        originY = (this.height - panelH * scale) / 2.0F + (1.0F - open) * 10.0F * scale;
         int mx = Math.round((mouseX - originX) / scale);
         int my = Math.round((mouseY - originY) / scale);
 
@@ -160,15 +166,15 @@ public abstract class BloxPanelScreen extends Screen {
         g.pose().translate(originX, originY);
         g.pose().scale(scale);
 
-        drawFrame(g, 0, 0, PANEL_W, PANEL_H);
+        drawFrame(g, 0, 0, PANEL_W, panelH);
         drawTitle(g, mc.font, titleFor(player));
         extractPanel(g, mc.font, player, mx, my, mouseX, mouseY, dt);
-        g.centeredText(mc.font, hint(), PANEL_W / 2, PANEL_H - 14, COLOR_HINT);
+        g.centeredText(mc.font, hint(), PANEL_W / 2, panelH - 14, COLOR_HINT);
 
         // Fondu à l'ouverture
         int fade = (int) ((1.0F - open) * 255.0F);
         if (fade > 0) {
-            g.fill(0, 0, PANEL_W, PANEL_H, fade << 24);
+            g.fill(0, 0, PANEL_W, panelH, fade << 24);
         }
 
         g.pose().popMatrix();

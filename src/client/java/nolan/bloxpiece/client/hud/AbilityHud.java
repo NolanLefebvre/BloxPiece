@@ -14,26 +14,33 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.ability.Ability;
 import nolan.bloxpiece.ability.AbilityManager;
+import nolan.bloxpiece.client.BloxPieceClient;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.registry.ModAttachments;
 
 /**
- * HUD des attaques : 3 cases à droite de la hotbar.
- * - aucun fruit : les 3 cases restent vides
- * - un fruit : chaque case affiche l'icône de l'attaque (fond semi-transparent)
- * - attaque en recharge : icône assombrie + temps restant en secondes, qui disparaît à la fin
+ * HUD des attaques : 4 cases à droite de la hotbar (Z, X, C, V par défaut).
+ * - aucun fruit : les 4 cases restent vides
+ * - un fruit : chaque case affiche l'icône de l'attaque (fond semi-transparent) et sa touche en bas à droite
+ * - attaque en recharge : icône assombrie + temps restant en secondes (à la place de la touche), qui disparaît à la fin
  * - attaque verrouillée (niveau du joueur trop bas) : un cadenas remplace l'affichage habituel ; il disparaît tout seul
  *   dès que le joueur atteint le niveau requis
  *
  * Tout est LU, rien n'est recalculé : le fruit vient de l'attachment du joueur (synchronisé par le serveur),
  * les attaques viennent de DevilFruit, et les recharges de ClientCooldowns (alimenté par AbilityManager).
+ *
+ * Disposition : en ligne à droite de la hotbar. Si la place manque (grand GUI scale, petite fenêtre, main secondaire
+ * ou indicateur d'attaque affichés), les cases passent sur plusieurs rangées au-dessus les unes des autres
+ * au lieu de se superposer à la hotbar.
  *
  * Icônes : assets/bloxpiece/textures/gui/ability/<id du fruit>/<id de l'attaque>.png (16x16).
  */
@@ -44,6 +51,7 @@ public class AbilityHud implements HudElement {
     private static final int ICON_SIZE = 16;
     private static final int GAP = 2;          // espace entre deux cases
     private static final int DISTANCE_FROM_HOTBAR = 4;
+    private static final int SCREEN_MARGIN = 2;   // marge minimale avec le bord droit de l'écran
 
     // Valeurs de la hotbar vanilla, pour ne pas chevaucher ses éléments annexes
     private static final int HOTBAR_HALF_WIDTH = 91;
@@ -88,17 +96,34 @@ public class AbilityHud implements HudElement {
         DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
         long now = level.getGameTime();
 
-        int x = firstSlotX(mc, player, graphics.guiWidth());
-        int y = graphics.guiHeight() - 20; // centré verticalement sur la hotbar (22 px de haut)
+        // Disposition : une seule rangée si elle tient à droite de la hotbar, sinon plusieurs rangées vers le haut
+        int guiWidth = graphics.guiWidth();
+        int idealX = firstSlotX(mc, player, guiWidth);
+        int fit = Mth.clamp((guiWidth - idealX - SCREEN_MARGIN + GAP) / (SLOT_SIZE + GAP), 1, DevilFruit.MAX_ABILITIES);
+        int rows = (DevilFruit.MAX_ABILITIES + fit - 1) / fit;
+        int columns = (DevilFruit.MAX_ABILITIES + rows - 1) / rows;   // répartit équitablement (4 -> 2 x 2 plutôt que 3 + 1)
+        int totalWidth = columns * SLOT_SIZE + (columns - 1) * GAP;
+        int x0 = Math.min(idealX, guiWidth - totalWidth - SCREEN_MARGIN);
+        int bottomY = graphics.guiHeight() - 20; // centré verticalement sur la hotbar (22 px de haut)
 
         for (int slot = 0; slot < DevilFruit.MAX_ABILITIES; slot++) {
             Ability ability = fruit == null ? null : fruit.getAbility(slot);
-            drawSlot(graphics, mc.font, player, x, y, fruit, ability, now);
-            x += SLOT_SIZE + GAP;
+            int x = x0 + (slot % columns) * (SLOT_SIZE + GAP);
+            int y = bottomY - (slot / columns) * (SLOT_SIZE + GAP);
+            drawSlot(graphics, mc.font, player, x, y, fruit, ability, now, keyLabel(mc.font, slot));
         }
     }
 
-    /** Position X de la première case : à droite de la hotbar, en évitant la main secondaire et l'indicateur d'attaque. */
+    /** Nom de la touche de l'attaque de ce slot (ex : "Z"), raccourci pour tenir dans la case. */
+    private static String keyLabel(Font font, int slot) {
+        KeyMapping key = BloxPieceClient.abilityKey(slot);
+        if (key == null) {
+            return "";
+        }
+        return font.plainSubstrByWidth(key.getTranslatedKeyMessage().getString(), SLOT_SIZE - 4);
+    }
+
+    /** Position X idéale de la première case : à droite de la hotbar, en évitant la main secondaire et l'indicateur d'attaque. */
     private static int firstSlotX(Minecraft mc, LocalPlayer player, int guiWidth) {
         int x = guiWidth / 2 + HOTBAR_HALF_WIDTH + DISTANCE_FROM_HOTBAR;
 
@@ -108,13 +133,11 @@ public class AbilityHud implements HudElement {
             x += ATTACK_INDICATOR_SPACE;
         }
 
-        // Petit écran / grand GUI scale : on reste dans l'écran
-        int totalWidth = DevilFruit.MAX_ABILITIES * SLOT_SIZE + (DevilFruit.MAX_ABILITIES - 1) * GAP;
-        return Math.min(x, guiWidth - totalWidth - 2);
+        return x;
     }
 
     private static void drawSlot(GuiGraphicsExtractor g, Font font, LocalPlayer player, int x, int y,
-                                 DevilFruit fruit, Ability ability, long now) {
+                                 DevilFruit fruit, Ability ability, long now, String keyLabel) {
         g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKGROUND);
 
         // Pas de fruit, ou pas d'attaque sur cette touche : case vide
@@ -152,6 +175,11 @@ public class AbilityHud implements HudElement {
         }
 
         g.outline(x, y, SLOT_SIZE, SLOT_SIZE, cooling ? COLOR_BORDER_COOLDOWN : COLOR_BORDER_READY);
+
+        if (!cooling && !keyLabel.isEmpty()) {
+            // Attaque prête : sa touche en bas à droite de la case (comme le nombre d'items vanilla)
+            g.text(font, keyLabel, x + SLOT_SIZE - 1 - font.width(keyLabel), y + SLOT_SIZE - font.lineHeight, COLOR_TEXT, true);
+        }
 
         if (cooling) {
             // Secondes restantes (arrondi au supérieur, comme le message de recharge du serveur), par-dessus tout

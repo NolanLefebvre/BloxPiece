@@ -25,16 +25,19 @@ import nolan.bloxpiece.registry.ModAttachments;
  */
 public class AbilitiesScreen extends BloxPanelScreen {
 
+    // Panneau plus haut que celui du menu personnage : 4 attaques, dont une avec une longue description
+    // (chaque ligne s'adapte à sa description, voir AbilityRow.heightFor)
+    private static final int PANEL_HEIGHT = 232;
+
     private static final int ROWS_X = PAD;
     private static final int ROWS_Y = 30;
     private static final int ROWS_W = PANEL_W - 2 * PAD;
-    private static final int ROW_H = 36;
     private static final int ROW_GAP = 3;
 
     private static final int BACK_W = 62;
     private static final int BACK_H = 14;
     private static final int BACK_X = PAD;
-    private static final int BACK_Y = PANEL_H - 22;
+    private static final int BACK_Y = PANEL_HEIGHT - 22;
 
     private final CharacterScreen parent;
 
@@ -42,6 +45,11 @@ public class AbilitiesScreen extends BloxPanelScreen {
         // Pas d'animation d'ouverture : on change de page, on ne rouvre pas le menu
         super(Component.translatable("screen.bloxpiece.abilities.title"), closeKey, false);
         this.parent = parent;
+    }
+
+    @Override
+    protected int panelHeight() {
+        return PANEL_HEIGHT;
     }
 
     @Override
@@ -73,15 +81,16 @@ public class AbilitiesScreen extends BloxPanelScreen {
             for (int slot = 0; slot < DevilFruit.MAX_ABILITIES; slot++) {
                 Ability ability = fruit.getAbility(slot);
                 if (ability == null) {
-                    continue; // le fruit a moins de 3 attaques : pas de ligne vide
+                    continue; // le fruit a moins de 4 attaques : pas de ligne vide
                 }
-                boolean hovered = inside(mx, my, ROWS_X, y, ROWS_W, ROW_H);
-                AbilityRow.extract(g, font, player, fruit, ability, ROWS_X, y, ROWS_W, ROW_H, hovered);
+                int rowH = AbilityRow.heightFor(font, ability, ROWS_W);
+                boolean hovered = inside(mx, my, ROWS_X, y, ROWS_W, rowH);
+                AbilityRow.extract(g, font, player, fruit, ability, ROWS_X, y, ROWS_W, rowH, hovered);
                 if (hovered && !ability.isUnlockedFor(player)) {
                     tooltip = Component.translatable("screen.bloxpiece.abilities.locked_tooltip",
                             ability.requiredLevel(), Progression.get(player).level());
                 }
-                y += ROW_H + ROW_GAP;
+                y += rowH + ROW_GAP;
             }
             if (tooltip != null) {
                 g.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);

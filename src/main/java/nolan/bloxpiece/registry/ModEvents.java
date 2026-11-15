@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerPlayer;
 
 import nolan.bloxpiece.ability.AbilityManager;
+import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fx.FireEffects;
@@ -18,6 +19,8 @@ public class ModEvents {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             // Traînées et impacts des projectiles de feu : à chaque tick
             FireEffects.tick();
+            // Charge de Dai Enkai: Entei (les flammes se rassemblent, puis le soleil part)
+            DaiEnkaiEnteiAbility.tick();
 
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
@@ -65,6 +68,9 @@ public class ModEvents {
                 AbilityManager.syncCooldowns(listener.getPlayer()));
 
         // Évite de garder des projectiles d'un ancien monde en mémoire
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> FireEffects.clear());
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            FireEffects.clear();
+            DaiEnkaiEnteiAbility.clear();
+        });
     }
 }

@@ -15,10 +15,10 @@ import nolan.bloxpiece.ability.Ability;
 /**
  * Un fruit du démon = un id + sa faiblesse + sa résistance + la liste de ses attaques.
  * La position dans la liste des attaques correspond à la touche :
- * index 0 = touche 1, index 1 = touche 2, index 2 = touche 3.
+ * index 0 = touche 1, index 1 = touche 2, index 2 = touche 3, index 3 = touche 4.
  */
 public class DevilFruit {
-    public static final int MAX_ABILITIES = 3;
+    public static final int MAX_ABILITIES = 4;
 
     private final String id;
     private final @Nullable Weakness weakness;

@@ -92,14 +92,23 @@ public class AbilityManager {
         COOLDOWNS.remove(playerId);
     }
 
-    /** Pareil, mais prévient aussi le HUD du joueur pour qu'il efface les recharges affichées. */
-    public static void clearCooldowns(ServerPlayer player) {
+    /**
+     * Pareil, mais prévient aussi le HUD du joueur pour qu'il efface les recharges affichées.
+     * Renvoie le nombre d'attaques qui étaient réellement en recharge (0 = il n'y avait rien à réinitialiser).
+     */
+    public static int clearCooldowns(ServerPlayer player) {
         Map<String, Long> removed = COOLDOWNS.remove(player.getUUID());
         if (removed == null) {
-            return;
+            return 0;
         }
-        for (String key : removed.keySet()) {
-            ServerPlayNetworking.send(player, new CooldownPayload(key, 0));
+        long now = player.level().getGameTime();
+        int active = 0;
+        for (Map.Entry<String, Long> entry : removed.entrySet()) {
+            if (entry.getValue() > now) {
+                active++;
+            }
+            ServerPlayNetworking.send(player, new CooldownPayload(entry.getKey(), 0));
         }
+        return active;
     }
 }

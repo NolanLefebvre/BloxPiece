@@ -35,17 +35,27 @@ public class ModCommands {
                                     .executes(context -> removeFruit(context.getSource(), getPlayer(context, "joueur")))));
 
             // /bloxpiece addxp <joueur> <quantité>  -> commande de test du système de niveaux
+            //   quantité > 0 : ajoute de l'XP ; quantité < 0 : en retire (le niveau peut baisser) ; 0 : ne change rien
+            // /bloxpiece resetcooldowns [joueur]  -> remet à zéro les recharges des attaques du fruit
+            // Les sous-commandes héritent de la permission de "bloxpiece" (opérateurs / game masters).
             dispatcher.register(
                     Commands.literal("bloxpiece")
                             .requires(PermissionPredicates.require(
                                     BloxPiece.id("command/bloxpiece"), PermissionLevel.GAMEMASTERS))
                             .then(Commands.literal("addxp")
                                     .then(Commands.argument("joueur", player())
-                                            .then(Commands.argument("quantite", IntegerArgumentType.integer(1))
+                                            .then(Commands.argument("quantite", IntegerArgumentType.integer())
                                                     .executes(context -> addXp(
                                                             context.getSource(),
                                                             getPlayer(context, "joueur"),
-                                                            IntegerArgumentType.getInteger(context, "quantite")))))));
+                                                            IntegerArgumentType.getInteger(context, "quantite"))))))
+                            .then(Commands.literal("resetcooldowns")
+                                    // sans joueur : tes propres recharges
+                                    .executes(context -> resetCooldowns(
+                                            context.getSource(), context.getSource().getPlayerOrException()))
+                                    .then(Commands.argument("joueur", player())
+                                            .executes(context -> resetCooldowns(
+                                                    context.getSource(), getPlayer(context, "joueur"))))));
         });
     }
 
@@ -65,11 +75,23 @@ public class ModCommands {
     }
 
     private static int addXp(CommandSourceStack source, ServerPlayer target, int amount) {
-        // Les passages de niveau sont gérés automatiquement par Progression
-        PlayerProgress progress = Progression.addXp(target, amount);
         Component name = target.getDisplayName();
 
-        if (LevelCurve.isMaxLevel(progress.level())) {
+        if (amount == 0) {
+            source.sendSuccess(() -> Component.translatable("message.bloxpiece.addxp.none", name), true);
+            return 1;
+        }
+
+        // Les changements de niveau (en plus comme en moins) sont gérés automatiquement par Progression.
+        // Le client reçoit le nouveau niveau tout seul : HUD et cadenas des attaques se mettent à jour immédiatement.
+        PlayerProgress progress = Progression.addXp(target, amount);
+
+        if (amount < 0) {
+            long removed = -(long) amount; // évite le débordement avec Integer.MIN_VALUE
+            source.sendSuccess(() -> Component.translatable(
+                    "message.bloxpiece.addxp.removed", removed, name, progress.level(), progress.xp(),
+                    LevelCurve.xpForNextLevel(progress.level())), true);
+        } else if (LevelCurve.isMaxLevel(progress.level())) {
             source.sendSuccess(() -> Component.translatable(
                     "message.bloxpiece.addxp.success.max", amount, name, progress.level()), true);
         } else {
@@ -78,5 +100,21 @@ public class ModCommands {
                     LevelCurve.xpForNextLevel(progress.level())), true);
         }
         return 1;
+    }
+
+    private static int resetCooldowns(CommandSourceStack source, ServerPlayer target) {
+        // Efface les recharges côté serveur (là où elles comptent vraiment) ET prévient le HUD du joueur
+        int reset = AbilityManager.clearCooldowns(target);
+        if (reset == 0) {
+            source.sendFailure(Component.translatable("message.bloxpiece.resetcooldowns.none", target.getDisplayName()));
+            return 0;
+        }
+
+        if (source.getEntity() != target) {
+            target.sendSystemMessage(Component.translatable("message.bloxpiece.resetcooldowns.notify"));
+        }
+        source.sendSuccess(() -> Component.translatable(
+                "message.bloxpiece.resetcooldowns.success", target.getDisplayName(), reset), true);
+        return reset;
     }
 }
