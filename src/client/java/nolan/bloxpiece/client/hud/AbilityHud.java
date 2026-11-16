@@ -71,6 +71,11 @@ public class AbilityHud implements HudElement {
     private static final int ICON_ALPHA_COOLDOWN = 0x70;
     private static final int ICON_ALPHA_LOCKED = 0x50;   // icône d'une attaque verrouillée, derrière le cadenas
 
+    /** Goutte d'eau barrée : attaques bloquées parce que le joueur est dans l'eau. */
+    private static final Identifier WATER_ICON = BloxPiece.id("textures/gui/water_blocked.png");
+    private static final int COLOR_WATER_VEIL = 0x803A7BD5;   // voile bleu sur l'icône
+    private static final int COLOR_BORDER_WATER = 0xFF3A7BD5;
+
     /** Cadenas des attaques verrouillées (aussi utilisé par la page des attaques du menu personnage). */
     public static final Identifier LOCK_ICON = BloxPiece.id("textures/gui/lock.png");
 
@@ -156,6 +161,17 @@ public class AbilityHud implements HudElement {
             g.blit(RenderPipelines.GUI_TEXTURED, LOCK_ICON, x + 1, y + 1,
                     0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
             g.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_COOLDOWN);
+            return;
+        }
+
+        // Dans l'eau (pieds compris) : tous les pouvoirs sont bloqués par le serveur. Icône atténuée, voile bleu, goutte barrée.
+        if (player.isInWater()) {
+            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+                    0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
+            g.fill(x + 1, y + 1, x + 1 + ICON_SIZE, y + 1 + ICON_SIZE, COLOR_WATER_VEIL);
+            g.blit(RenderPipelines.GUI_TEXTURED, WATER_ICON, x + 1, y + 1,
+                    0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
+            g.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_WATER);
             return;
         }
 

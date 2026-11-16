@@ -46,11 +46,26 @@ public class ModItems {
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
     );
 
+    public static final Item ICE_FRUIT = register(
+            "ice_fruit",
+            properties -> new DevilFruitItem(properties, Fruits.ICE),
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
+    );
+
+    // Trident de glace (attaque 1 du fruit de la Glace) : créé par l'attaque, jamais obtenu autrement (absent des onglets créatifs).
+    // Il fond s'il est jeté (ItemEntityMixin), lancé (Partisan) ou si l'attaque est relancée.
+    public static final Item ICE_SABER = register(
+            "ice_saber",
+            Item::new,
+            new Item.Properties().stacksTo(1)
+    );
+
     public static void initialize() {
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS)
                 .register(tab -> {
                     tab.accept(FIRE_FRUIT);
                     tab.accept(BUDDHA_FRUIT);
+                    tab.accept(ICE_FRUIT);
                 });
     }
 }

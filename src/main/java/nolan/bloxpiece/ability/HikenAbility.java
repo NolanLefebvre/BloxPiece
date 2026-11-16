@@ -1,6 +1,5 @@
 package nolan.bloxpiece.ability;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -15,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.fx.HikenFist;
+import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Deuxième attaque du fruit du feu : Hiken (le "poing de feu" de Portgas D. Ace). Remplace l'ancienne Grande boule de feu :
@@ -94,9 +94,9 @@ public class HikenAbility implements Ability {
         player.swing(punchingHand, SwingAnimation.DEFAULT, true);
 
         // Lancement : déflagration à l'origine du poing, onde de choc et tourbillon de feu autour du joueur
-        level.sendParticles(ParticleTypes.FLAME, start.x, start.y, start.z, 50, 0.8, 0.8, 0.8, 0.15);
-        level.sendParticles(ParticleTypes.LAVA, start.x, start.y, start.z, 10, 1.0, 1.0, 1.0, 0.0);
-        FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 56, 0.6);
+        level.sendParticles(ModParticles.FIRE_FLAME, start.x, start.y, start.z, 50, 0.8, 0.8, 0.8, 0.15);
+        level.sendParticles(ModParticles.FIRE_EMBER, start.x, start.y, start.z, 10, 1.0, 1.0, 1.0, 0.0);
+        FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 56, 0.6);
         FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.5, 3.0, 2);
 
         level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 2.0f, 0.6f);

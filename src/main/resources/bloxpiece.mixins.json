@@ -3,6 +3,8 @@
 	"package": "nolan.bloxpiece.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
+		"ItemEntityMixin",
+		"ProjectileMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

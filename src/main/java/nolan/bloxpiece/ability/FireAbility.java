@@ -1,6 +1,5 @@
 package nolan.bloxpiece.ability;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -9,6 +8,7 @@ import net.minecraft.world.entity.projectile.hurtingprojectile.SmallFireball;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.FireEffects;
+import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Première attaque du fruit du feu : lance une boule de feu dans la direction du regard.
@@ -50,7 +50,7 @@ public class FireAbility implements Ability {
         FireEffects.track(fireball, player, FireEffects.Kind.SMALL);
 
         // Petite gerbe de flammes au lancement
-        level.sendParticles(ParticleTypes.FLAME,
+        level.sendParticles(ModParticles.FIRE_FLAME,
                 player.getX() + look.x * 1.2, player.getEyeY() - 0.3 + look.y * 1.2, player.getZ() + look.z * 1.2,
                 20, 0.25, 0.25, 0.25, 0.06);
 

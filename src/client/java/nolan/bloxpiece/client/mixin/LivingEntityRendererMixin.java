@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 
 import nolan.bloxpiece.client.entity.BuddhaGoldLayer;
+import nolan.bloxpiece.client.entity.LogiaFlameLayer;
 
 /**
  * Ajoute la couche dorée du Bouddha (BuddhaGoldLayer) au rendu de tous les joueurs, à la fin de la construction du renderer.
@@ -38,6 +39,9 @@ public abstract class LivingEntityRendererMixin {
             RenderLayerParent<AvatarRenderState, PlayerModel> parent = (RenderLayerParent<AvatarRenderState, PlayerModel>) (Object) this;
             RenderLayer<AvatarRenderState, PlayerModel> layer = new BuddhaGoldLayer(parent);
             this.layers.add(layer);
+            // Passif Logia du feu : relève la pose des membres dispersés en flammes (ne dessine rien)
+            RenderLayer<AvatarRenderState, PlayerModel> logia = new LogiaFlameLayer(parent);
+            this.layers.add(logia);
         }
     }
 }

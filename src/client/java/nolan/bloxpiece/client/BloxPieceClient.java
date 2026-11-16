@@ -8,22 +8,35 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.multiplayer.ClientLevel;
 
+import nolan.bloxpiece.client.entity.BuddhaPalmModel;
+import nolan.bloxpiece.client.entity.BuddhaPalmRenderer;
+import nolan.bloxpiece.client.entity.BuddhaSealModel;
+import nolan.bloxpiece.client.entity.BuddhaSealRenderer;
 import nolan.bloxpiece.client.entity.EnteiSunModel;
+import nolan.bloxpiece.client.entity.IceModels;
+import nolan.bloxpiece.client.entity.IceRenderers;
 import nolan.bloxpiece.client.entity.EnteiSunRenderer;
 import nolan.bloxpiece.client.entity.HikenFistModel;
 import nolan.bloxpiece.client.entity.HikenFistRenderer;
 import nolan.bloxpiece.client.entity.PirateRenderer;
 import nolan.bloxpiece.client.hud.AbilityHud;
+import nolan.bloxpiece.client.particle.ModParticle;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
 import nolan.bloxpiece.client.screen.CharacterScreen;
 import nolan.bloxpiece.network.CooldownPayload;
+import nolan.bloxpiece.ability.IceSaberAbility;
+import nolan.bloxpiece.network.SaberStrikePayload;
+import nolan.bloxpiece.network.ShakePayload;
 import nolan.bloxpiece.network.UseAbilityPayload;
+import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModEntities;
+import nolan.bloxpiece.registry.ModParticles;
 
 public class BloxPieceClient implements ClientModInitializer {
 
@@ -35,6 +48,12 @@ public class BloxPieceClient implements ClientModInitializer {
             registerKey("key.bloxpiece.ability_3", SDLScancode.SDL_SCANCODE_C),
             registerKey("key.bloxpiece.ability_4", SDLScancode.SDL_SCANCODE_V)
     };
+
+    /** Touches d'attaque enfoncées au tick précédent : pour prévenir le serveur quand l'une est relâchée (attaques à charge). */
+    private static final boolean[] KEY_WAS_DOWN = new boolean[ABILITY_KEYS.length];
+
+    /** Touche d'attaque enfoncée au tick précédent (pour détecter un nouveau coup avec le trident de glace). */
+    private static boolean attackWasDown;
 
     // Menu du personnage (modifiable dans Options > Contrôles)
     private static final KeyMapping CHARACTER_KEY = registerKey("key.bloxpiece.character", SDLScancode.SDL_SCANCODE_G);
@@ -59,6 +78,42 @@ public class BloxPieceClient implements ClientModInitializer {
         // Le poing de feu de Hiken (même principe : calque du modèle d'abord, renderer ensuite)
         ModelLayerRegistry.registerModelLayer(HikenFistModel.LAYER, HikenFistModel::createBodyLayer);
         EntityRendererRegistry.register(ModEntities.HIKEN_FIST, HikenFistRenderer::new);
+        // La Paume du Bouddha (même principe)
+        ModelLayerRegistry.registerModelLayer(BuddhaPalmModel.LAYER, BuddhaPalmModel::createBodyLayer);
+        EntityRendererRegistry.register(ModEntities.BUDDHA_PALM, BuddhaPalmRenderer::new);
+        // Le sceau doré au sol de la Paume du Bouddha
+        ModelLayerRegistry.registerModelLayer(BuddhaSealModel.LAYER, BuddhaSealModel::createBodyLayer);
+        EntityRendererRegistry.register(ModEntities.BUDDHA_SEAL, BuddhaSealRenderer::new);
+
+        // Particules personnalisées du fruit du Bouddha (sprites : assets/bloxpiece/particles + textures/particle)
+        ParticleProviderRegistry particles = ParticleProviderRegistry.getInstance();
+        particles.register(ModParticles.BUDDHA_GLOW, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.GLOW));
+        particles.register(ModParticles.BUDDHA_GLOW_PALE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.GLOW_PALE));
+        particles.register(ModParticles.BUDDHA_GLOW_ORANGE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.GLOW_ORANGE));
+        particles.register(ModParticles.BUDDHA_SPARK, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.SPARK));
+        particles.register(ModParticles.BUDDHA_PETAL, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.PETAL));
+        particles.register(ModParticles.BUDDHA_FLASH, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FLASH));
+        particles.register(ModParticles.BUDDHA_MIST, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.MIST));
+        // Particules personnalisées du fruit du Feu
+        particles.register(ModParticles.FIRE_FLAME, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FIRE_FLAME));
+        particles.register(ModParticles.FIRE_EMBER, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FIRE_EMBER));
+        particles.register(ModParticles.FIRE_SMOKE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FIRE_SMOKE));
+        particles.register(ModParticles.FIRE_LIMB, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FIRE_LIMB));
+        // Particules personnalisées du fruit de la Glace
+        particles.register(ModParticles.ICE_SHARD, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.ICE_SHARD));
+        particles.register(ModParticles.SNOWFLAKE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.SNOWFLAKE));
+        particles.register(ModParticles.FROST_MIST, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FROST_MIST));
+        particles.register(ModParticles.FROST_GLOW, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FROST_GLOW));
+
+        // Entités du fruit de la Glace (calques des modèles d'abord, renderers ensuite)
+        ModelLayerRegistry.registerModelLayer(IceModels.TridentModel.LAYER, IceModels.TridentModel::createLayer);
+        ModelLayerRegistry.registerModelLayer(IceModels.EagleModel.LAYER, IceModels.EagleModel::createLayer);
+        ModelLayerRegistry.registerModelLayer(IceModels.SpikeModel.LAYER, IceModels.SpikeModel::createLayer);
+        ModelLayerRegistry.registerModelLayer(IceModels.StatueModel.LAYER, IceModels.StatueModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.ICE_TRIDENT, IceRenderers.Trident::new);
+        EntityRendererRegistry.register(ModEntities.ICE_EAGLE, IceRenderers.Eagle::new);
+        EntityRendererRegistry.register(ModEntities.ICE_SPIKE, IceRenderers.Spike::new);
+        EntityRendererRegistry.register(ModEntities.ICE_STATUE, IceRenderers.Statue::new);
 
         // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();
@@ -70,9 +125,22 @@ public class BloxPieceClient implements ClientModInitializer {
                 ClientCooldowns.set(payload.key(), payload.ticks(), level.getGameTime());
             }
         });
+        // Tremblement de caméra demandé par le serveur (attaques du Bouddha)
+        ClientPlayNetworking.registerGlobalReceiver(ShakePayload.TYPE,
+                (payload, context) -> CameraShake.start(payload.strength(), payload.ticks()));
         ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> ClientCooldowns.clear());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            CameraShake.tick(client);
+            // Trident de glace en main : chaque nouveau clic d'attaque déclenche l'estoc (chez tous les joueurs, via le serveur)
+            boolean attackDown = client.options.keyAttack.isDown() && client.gui.screen() == null;
+            if (attackDown && !attackWasDown && client.player != null
+                    && IceSaberAbility.isHeld(client.player)) {
+                ClientPlayNetworking.send(new SaberStrikePayload(0));
+            }
+            attackWasDown = attackDown;
+            ClientWaterCurse.tick(client);
+            LogiaClient.tick(client);
             if (client.player == null || client.getConnection() == null) {
                 return;
             }
@@ -85,9 +153,16 @@ public class BloxPieceClient implements ClientModInitializer {
 
             for (int slot = 0; slot < ABILITY_KEYS.length; slot++) {
                 // while : au cas où la touche a été pressée plusieurs fois dans le même tick
+                boolean pressed = false;
                 while (ABILITY_KEYS[slot].consumeClick()) {
-                    ClientPlayNetworking.send(new UseAbilityPayload(slot));
+                    ClientPlayNetworking.send(new UseAbilityPayload(slot, true));
+                    pressed = true;
                 }
+                boolean down = ABILITY_KEYS[slot].isDown();
+                if (!down && (KEY_WAS_DOWN[slot] || pressed)) { // appui très bref : relâchée dans le même tick
+                    ClientPlayNetworking.send(new UseAbilityPayload(slot, false)); // touche relâchée
+                }
+                KEY_WAS_DOWN[slot] = down;
             }
         });
     }

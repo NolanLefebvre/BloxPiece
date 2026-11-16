@@ -54,4 +54,8 @@ public interface Ability {
 
     /** Exécuté côté serveur quand le joueur déclenche l'attaque. */
     void use(ServerPlayer player);
+
+    /** Exécuté côté serveur quand le joueur relâche la touche de l'attaque (attaques à charge). Par défaut : rien. */
+    default void release(ServerPlayer player) {
+    }
 }

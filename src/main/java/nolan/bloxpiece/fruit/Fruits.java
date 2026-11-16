@@ -4,10 +4,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import nolan.bloxpiece.ability.BuddhaPalmAbility;
+import nolan.bloxpiece.ability.BuddhaShockwaveAbility;
 import nolan.bloxpiece.ability.BuddhaTransformAbility;
+import nolan.bloxpiece.ability.BuddhaUltimateAbility;
 import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.ability.FireAbility;
 import nolan.bloxpiece.ability.HikenAbility;
+import nolan.bloxpiece.ability.IceAgeAbility;
+import nolan.bloxpiece.ability.IceEagleAbility;
+import nolan.bloxpiece.ability.IceSaberAbility;
+import nolan.bloxpiece.ability.IceTridentThrowAbility;
 import nolan.bloxpiece.ability.MeteorRainAbility;
 
 /** Liste de tous les fruits du mod. Pour en ajouter un : créer ses attaques puis l'enregistrer ici. */
@@ -25,14 +32,28 @@ public class Fruits {
                     new DaiEnkaiEnteiAbility()  // touche 4 : Dai Enkai: Entei (ultime)
             )));
 
-    // Fruit du Bouddha : pour l'instant une seule attaque (touche 1 : transformation en Bouddha géant). Ni faiblesse, ni immunité.
-    // Les autres attaques s'ajouteront à la suite dans la liste (touches 2 à 4), comme pour le fruit du feu.
+    // Fruit du Bouddha : 4 attaques, comme le fruit du feu. Malédiction de l'eau, pas d'immunité.
     public static final DevilFruit BUDDHA = register(new DevilFruit(
             "buddha",
-            null,  // pas de faiblesse pour le moment
+            new WaterCurse(), // faiblesse : malédiction de l'eau (comme tous les fruits du démon)
             false, // pas d'immunité au feu
             List.of(
-                    new BuddhaTransformAbility() // touche 1 : transformation en Bouddha
+                    new BuddhaTransformAbility(), // touche 1 : transformation en Bouddha
+                    new BuddhaPalmAbility(),      // touche 2 : Paume du Bouddha (la main géante qui tombe du ciel)
+                    new BuddhaShockwaveAbility(), // touche 3 : Onde de choc (cône devant le joueur)
+                    new BuddhaUltimateAbility()   // touche 4 : Déflagration du Bouddha (ultime)
+            )));
+
+    // Fruit de la Glace (Hie Hie no Mi) : 4 attaques. Malédiction de l'eau comme tous les fruits du démon, pas d'immunité.
+    public static final DevilFruit ICE = register(new DevilFruit(
+            "ice",
+            new WaterCurse(),
+            false,
+            List.of(
+                    new IceSaberAbility(),        // touche 1 : Ice Saber (trident de glace en main)
+                    new IceTridentThrowAbility(), // touche 2 : Partisan (lancer du trident)
+                    new IceEagleAbility(),        // touche 3 : Pheasant Peck (aigle de glace)
+                    new IceAgeAbility()           // touche 4 : Ice Age (ultime)
             )));
 
     private static DevilFruit register(DevilFruit fruit) {

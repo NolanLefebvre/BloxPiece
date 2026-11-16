@@ -11,6 +11,7 @@ import net.minecraft.world.entity.projectile.hurtingprojectile.LargeFireball;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.FireEffects;
+import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Troisième attaque du fruit du feu : une pluie de météores enflammés
@@ -71,9 +72,9 @@ public class MeteorRainAbility implements Ability {
         double clearance = AimHelper.clearanceAbove(level, target, MAX_SKY_HEIGHT);
 
         // Lancement : triple onde de choc, double tornade de feu autour du joueur
-        FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.35);
-        FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.6);
-        FireEffects.shockwave(level, ParticleTypes.LARGE_SMOKE, player.getX(), player.getY() + 0.3, player.getZ(), 48, 0.45);
+        FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.35);
+        FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.6);
+        FireEffects.shockwave(level, ModParticles.FIRE_SMOKE, player.getX(), player.getY() + 0.3, player.getZ(), 48, 0.45);
         FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.8, 5.0, 3);
         FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.2, 5.0, -3);
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY() + 1.0, player.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
@@ -83,7 +84,7 @@ public class MeteorRainAbility implements Ability {
         FireEffects.groundRing(level, target.x, target.y, target.z, SPREAD * 0.6, 48);
         FireEffects.groundRing(level, target.x, target.y, target.z, SPREAD * 0.3, 24);
         for (int h = 0; h < Math.min(40, (int) clearance); h++) {
-            level.sendParticles(ParticleTypes.FLAME, target.x, target.y + h, target.z, 3, 0.3, 0.3, 0.3, 0.02);
+            level.sendParticles(ModParticles.FIRE_FLAME, target.x, target.y + h, target.z, 3, 0.3, 0.3, 0.3, 0.02);
         }
 
         // Les météores apparaissent au-dessus de la zone, sous le plafond s'il y en a un (grotte, bâtiment, Nether)
@@ -115,7 +116,7 @@ public class MeteorRainAbility implements Ability {
             FireEffects.track(meteor, player, FireEffects.Kind.METEOR);
 
             // Éclat dans le ciel à l'apparition du météore
-            level.sendParticles(ParticleTypes.FLAME, x, y, z, 40, 0.8, 0.8, 0.8, 0.1);
+            level.sendParticles(ModParticles.FIRE_FLAME, x, y, z, 40, 0.8, 0.8, 0.8, 0.1);
         }
 
         level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 2.0f, 0.5f);

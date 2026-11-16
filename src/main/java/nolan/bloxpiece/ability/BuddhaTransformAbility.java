@@ -10,10 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.core.Holder;
-import net.minecraft.core.particles.ColorParticleOption;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -40,6 +37,7 @@ import net.minecraft.world.phys.Vec3;
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Première attaque du fruit du Bouddha : transformation en Bouddha géant (inspirée de Sengoku).
@@ -82,10 +80,13 @@ public class BuddhaTransformAbility implements Ability {
     private static final double WAVE_RADIUS = 16.0;
     /** Durée de propagation : l'onde atteint son rayon maximal en 8 ticks (0,4 s), donc très rapide. */
     private static final int WAVE_TICKS = 8;
-    /** Vitesse de propulsion (blocs/tick) au contact du joueur ; elle diminue linéairement jusqu'à 0 au rayon maximal. */
-    private static final double WAVE_MAX_PUSH = 2.2;
-    /** Petite poussée vers le haut (blocs/tick), plus forte près du joueur, pour décoller les entités du sol. */
-    private static final double WAVE_MAX_LIFT = 0.55;
+    /**
+     * Vitesse de propulsion (blocs/tick) au contact du joueur ; elle diminue linéairement jusqu'à 0 au rayon maximal.
+     * Doublée (x2) par rapport à la version précédente (2,2) : l'onde est deux fois plus puissante, avec le même rayon.
+     */
+    private static final double WAVE_MAX_PUSH = 4.4;
+    /** Poussée vers le haut (blocs/tick), plus forte près du joueur, pour décoller les entités du sol. Doublée elle aussi (avant : 0,55). */
+    private static final double WAVE_MAX_LIFT = 1.1;
 
     /** Un seul identifiant pour tous les modificateurs de la transformation (un par attribut). */
     private static final Identifier MODIFIER_ID = BloxPiece.id("buddha_form");
@@ -215,6 +216,17 @@ public class BuddhaTransformAbility implements Ability {
         }
     }
 
+    /** Vrai si le joueur est transformé, en train de grandir ou de rétrécir (la transformation n'est pas terminée). */
+    public static boolean isActive(ServerPlayer player) {
+        return FORMS.containsKey(player.getUUID());
+    }
+
+    /** Vrai si le joueur est actuellement transformé en Bouddha (taille maximale atteinte, pas en train de rétrécir). */
+    public static boolean isTransformed(ServerPlayer player) {
+        Form form = FORMS.get(player.getUUID());
+        return form != null && form.wanted && form.progress >= 1.0F;
+    }
+
     /** Retire la transformation d'un joueur tout de suite (mort, réapparition, connexion). */
     public static void reset(ServerPlayer player) {
         FORMS.remove(player.getUUID());
@@ -325,12 +337,12 @@ public class BuddhaTransformAbility implements Ability {
             double a = 2.0 * Math.PI * i / points;
             double x = c.x + Math.cos(a) * radius;
             double z = c.z + Math.sin(a) * radius;
-            level.sendParticles(new DustParticleOptions(0xFFC83C, 2.2F), true, true, x, groundY, z, 1, 0.0, 0.0, 0.0, 0.0);
+            level.sendParticles(ModParticles.BUDDHA_GLOW, true, true, x, groundY, z, 1, 0.0, 0.0, 0.0, 0.0);
             if (i % 2 == 0) {
-                level.sendParticles(ParticleTypes.END_ROD, true, true, x, groundY + 0.1, z, 1, 0.0, 0.0, 0.0, 0.0);
+                level.sendParticles(ModParticles.BUDDHA_SPARK, true, true, x, groundY + 0.1, z, 1, 0.0, 0.0, 0.0, 0.0);
             }
             if (i % 3 == 0) {
-                level.sendParticles(ParticleTypes.WAX_ON, true, true, x, groundY + 0.3, z, 1, 0.1, 0.1, 0.1, 0.0);
+                level.sendParticles(ModParticles.BUDDHA_PETAL, true, true, x, groundY + 0.3, z, 1, 0.1, 0.1, 0.1, 0.0);
             }
         }
         // Dôme : quelques points sur la sphère, au-dessus du sol
@@ -340,7 +352,7 @@ public class BuddhaTransformAbility implements Ability {
             double dy = (i + 0.5) / dome;           // 0..1 : moitié supérieure de la sphère
             double ringR = Math.sqrt(1.0 - dy * dy);
             double a = i * goldenAngle;
-            level.sendParticles(ParticleTypes.END_ROD, true, true,
+            level.sendParticles(ModParticles.BUDDHA_SPARK, true, true,
                     c.x + Math.cos(a) * ringR * radius, c.y + dy * radius * 0.6, c.z + Math.sin(a) * ringR * radius,
                     1, 0.0, 0.0, 0.0, 0.0);
         }
@@ -409,7 +421,7 @@ public class BuddhaTransformAbility implements Ability {
     private static void transitionEffects(ServerLevel level, ServerPlayer player) {
         double width = player.getBbWidth();
         double height = player.getBbHeight();
-        level.sendParticles(ParticleTypes.WAX_ON, player.getX(), player.getY() + height * 0.5, player.getZ(),
+        level.sendParticles(ModParticles.BUDDHA_PETAL, player.getX(), player.getY() + height * 0.5, player.getZ(),
                 4, width * 0.5, height * 0.4, width * 0.5, 0.0);
     }
 
@@ -427,14 +439,14 @@ public class BuddhaTransformAbility implements Ability {
         int points = big ? 160 : 50;
         double speed = big ? 0.9 : 0.3;
 
-        sphere(level, ParticleTypes.END_ROD, x, y, z, points, speed);
-        sphere(level, ParticleTypes.WAX_ON, x, y, z, points, speed * 0.7);
-        sphere(level, ParticleTypes.ELECTRIC_SPARK, x, y, z, points / 2, speed * 1.2);
+        sphere(level, ModParticles.BUDDHA_SPARK, x, y, z, points, speed);
+        sphere(level, ModParticles.BUDDHA_PETAL, x, y, z, points, speed * 0.7);
+        sphere(level, ModParticles.BUDDHA_SPARK, x, y, z, points / 2, speed * 1.2);
         // poussière dorée qui flotte autour du corps
-        level.sendParticles(new DustParticleOptions(0xFFC83C, big ? 2.5F : 1.5F), true, true, x, y, z, big ? 120 : 40, 1.5, 1.5, 1.5, 0.0);
+        level.sendParticles(ModParticles.BUDDHA_GLOW, true, true, x, y, z, big ? 120 : 40, 1.5, 1.5, 1.5, 0.0);
         if (big) {
             // éclair de lumière doré au centre
-            level.sendParticles(ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFE9A0), true, true, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+            level.sendParticles(ModParticles.BUDDHA_FLASH, true, true, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 
@@ -444,9 +456,9 @@ public class BuddhaTransformAbility implements Ability {
         double y = player.getY() + 0.2;
         double z = player.getZ();
         double speed = 0.5 + 0.12 * step;
-        ring(level, ParticleTypes.END_ROD, x, y, z, 48, speed);
+        ring(level, ModParticles.BUDDHA_SPARK, x, y, z, 48, speed);
         if (step % 2 == 0) {
-            ring(level, ParticleTypes.WAX_ON, x, y, z, 48, speed * 0.8);
+            ring(level, ModParticles.BUDDHA_PETAL, x, y, z, 48, speed * 0.8);
         }
     }
 

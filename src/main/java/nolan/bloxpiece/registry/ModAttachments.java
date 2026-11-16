@@ -54,6 +54,33 @@ public class ModAttachments {
             builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
     );
 
+    /**
+     * Pose des bras pendant une attaque du fruit du Bouddha (1 = bras tendu vers l'avant, paume ouverte ; 2 = bras levés et
+     * écartés). Pas sauvegardé, synchronisé avec TOUS les joueurs qui le voient (pose appliquée par PlayerModelMixin).
+     */
+    public static final AttachmentType<Integer> BUDDHA_POSE = AttachmentRegistry.create(
+            BloxPiece.id("buddha_pose"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Passif Logia du fruit du Feu : parties du corps actuellement dispersées en flammes (bits de LogiaIntangibility : tête,
+     * torse, bras, jambes). Pas sauvegardé, synchronisé avec TOUS les joueurs (le client cache ces membres, voir PlayerModelMixin).
+     */
+    public static final AttachmentType<Integer> LOGIA_PARTS = AttachmentRegistry.create(
+            BloxPiece.id("logia_parts"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Fruit de la Glace : instant (temps de jeu) du dernier coup porté avec le trident de glace. Pas sauvegardé, synchronisé avec
+     * TOUS les joueurs : chacun anime l'estoc à partir de cet instant (voir PlayerModelMixin).
+     */
+    public static final AttachmentType<Integer> ICE_SABER_STRIKE = AttachmentRegistry.create(
+            BloxPiece.id("ice_saber_strike"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
     public static void initialize() {
     }
 }

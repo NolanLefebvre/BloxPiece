@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +22,7 @@ import nolan.bloxpiece.fx.EnteiFireball;
 import nolan.bloxpiece.fx.EnteiSun;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Quatrième attaque (ultime) du fruit du feu : Dai Enkai: Entei.
@@ -149,7 +149,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
      */
     private static boolean isStillValid(Charge charge) {
         ServerPlayer player = charge.player;
-        if (player.isRemoved() || !player.isAlive() || player.level() != charge.level) {
+        if (player.isRemoved() || !player.isAlive() || player.level() != charge.level || player.isInWater()) {
             return false;
         }
         DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
@@ -202,7 +202,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
             double pz = player.getZ() + Math.sin(angle) * distance;
             Vec3 toCenter = new Vec3(center.x - px, center.y - py, center.z - pz).normalize();
             // count = 0 : les "offsets" servent de direction à la particule
-            level.sendParticles(ParticleTypes.FLAME, px, py, pz, 0, toCenter.x, toCenter.y, toCenter.z, 0.45);
+            level.sendParticles(ModParticles.FIRE_FLAME, px, py, pz, 0, toCenter.x, toCenter.y, toCenter.z, 0.45);
         }
 
         // 2. Deux anneaux de flammes inclinés qui tournent autour de la boule (juste à l'extérieur du modèle)
@@ -217,7 +217,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
         for (int j = 0; j < 4; j++) {
             double angle = charge.age * 0.5 + j * Math.PI / 2.0;
             double height = ((charge.age * 0.12 + j * 0.25) % 1.0) * 2.4;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     player.getX() + Math.cos(angle) * 0.9, player.getY() + height, player.getZ() + Math.sin(angle) * 0.9,
                     1, 0.02, 0.02, 0.02, 0.0);
         }
@@ -226,23 +226,23 @@ public class DaiEnkaiEnteiAbility implements Ability {
         for (int i = 0; i < 5; i++) {
             double angle = random.nextDouble() * 2 * Math.PI;
             double distance = 0.7 + random.nextDouble() * 1.8;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     player.getX() + Math.cos(angle) * distance, player.getY() + random.nextDouble() * 0.5, player.getZ() + Math.sin(angle) * distance,
                     0, 0.0, 1.0, 0.0, 0.12 + random.nextDouble() * 0.1);
         }
 
         // 5. Étincelles dans la paume levée ; gouttes de lave sous la boule
-        level.sendParticles(ParticleTypes.FLAME, hand.x, hand.y, hand.z, 3, 0.2, 0.2, 0.2, 0.03);
+        level.sendParticles(ModParticles.FIRE_FLAME, hand.x, hand.y, hand.z, 3, 0.2, 0.2, 0.2, 0.03);
         if (charge.age % 3 == 0) {
-            level.sendParticles(ParticleTypes.LAVA, hand.x, hand.y, hand.z, 1, 0.2, 0.2, 0.2, 0.0);
-            level.sendParticles(ParticleTypes.LAVA, center.x, center.y - radius, center.z, 2, radius * 0.4, 0.2, radius * 0.4, 0.0);
+            level.sendParticles(ModParticles.FIRE_EMBER, hand.x, hand.y, hand.z, 1, 0.2, 0.2, 0.2, 0.0);
+            level.sendParticles(ModParticles.FIRE_EMBER, center.x, center.y - radius, center.z, 2, radius * 0.4, 0.2, radius * 0.4, 0.0);
         }
 
         // 6. Anneau de feu au sol qui se resserre + onde de chaleur qui part du joueur toutes les 10 ticks
         FireEffects.groundRing(level, player.getX(), player.getY(), player.getZ(), 1.0 + 6.0 * (1.0 - progress), 48);
         FireEffects.groundRing(level, player.getX(), player.getY(), player.getZ(), 0.5 + 3.0 * (1.0 - progress), 24);
         if (charge.age % 10 == 0) {
-            FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 40, 0.3 + 0.3 * progress);
+            FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 40, 0.3 + 0.3 * progress);
         }
 
         if (charge.age % 8 == 0) {
@@ -286,10 +286,10 @@ public class DaiEnkaiEnteiAbility implements Ability {
 
         // Lancement : déflagration au point de départ, ondes de choc et double tornade de feu autour du joueur
         // (peu de particules sur la boule elle-même, pour qu'on voie le modèle)
-        level.sendParticles(ParticleTypes.FLAME, center.x, center.y, center.z, 60, 1.2, 1.2, 1.2, 0.2);
-        level.sendParticles(ParticleTypes.LAVA, center.x, center.y, center.z, 20, 1.5, 1.5, 1.5, 0.0);
-        FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 96, 0.9);
-        FireEffects.shockwave(level, ParticleTypes.LARGE_SMOKE, player.getX(), player.getY() + 0.3, player.getZ(), 64, 0.5);
+        level.sendParticles(ModParticles.FIRE_FLAME, center.x, center.y, center.z, 60, 1.2, 1.2, 1.2, 0.2);
+        level.sendParticles(ModParticles.FIRE_EMBER, center.x, center.y, center.z, 20, 1.5, 1.5, 1.5, 0.0);
+        FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 96, 0.9);
+        FireEffects.shockwave(level, ModParticles.FIRE_SMOKE, player.getX(), player.getY() + 0.3, player.getZ(), 64, 0.5);
         FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 2.6, 8.0, 3);
         FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.8, 8.0, -3);
 

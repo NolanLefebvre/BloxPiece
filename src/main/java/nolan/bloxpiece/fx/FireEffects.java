@@ -13,6 +13,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import nolan.bloxpiece.registry.ModParticles;
+
 /**
  * Tous les effets visuels (et les dégâts de zone bonus) des attaques de feu.
  * Les projectiles sont "suivis" : à chaque tick on dessine leur traînée, et quand ils disparaissent
@@ -158,6 +160,16 @@ public class FireEffects {
         return false;
     }
 
+    /** Vrai si cette entité est un projectile d'une attaque de feu en vol (utile pour reconnaître les attaques de fruit). */
+    public static boolean isTracked(Entity entity) {
+        for (Tracked t : TRACKED) {
+            if (t.projectile == entity || t.visual == entity) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Appelé à chaque tick serveur. */
     public static void tick() {
         tickBlasts();
@@ -224,7 +236,7 @@ public class FireEffects {
             double angle = t.age * 0.7 + i * Math.PI;
             double cos = Math.cos(angle) * k.trailRadius;
             double sin = Math.sin(angle) * k.trailRadius;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     t.x + u.x * cos + v.x * sin,
                     t.y + u.y * cos + v.y * sin,
                     t.z + u.z * cos + v.z * sin,
@@ -232,19 +244,19 @@ public class FireEffects {
         }
 
         // Coeur incandescent
-        level.sendParticles(ParticleTypes.FLAME, t.x, t.y, t.z,
+        level.sendParticles(ModParticles.FIRE_FLAME, t.x, t.y, t.z,
                 k.coreCount, k.trailRadius * 0.4, k.trailRadius * 0.4, k.trailRadius * 0.4, 0.03);
 
         // Fumée derrière le projectile
         if (k.smokeCount > 0) {
-            level.sendParticles(ParticleTypes.LARGE_SMOKE,
+            level.sendParticles(ModParticles.FIRE_SMOKE,
                     t.x - dir.x * 0.8, t.y - dir.y * 0.8, t.z - dir.z * 0.8,
                     k.smokeCount, k.trailRadius * 0.5, k.trailRadius * 0.5, k.trailRadius * 0.5, 0.01);
         }
 
         // Grosse boule de feu (Entei) : nuage de flammes + enveloppe qui tourne, centrés sur le projectile
         if (k.sphereRadius > 0) {
-            level.sendParticles(ParticleTypes.FLAME, t.x, t.y, t.z,
+            level.sendParticles(ModParticles.FIRE_FLAME, t.x, t.y, t.z,
                     40, k.sphereRadius * 0.4, k.sphereRadius * 0.4, k.sphereRadius * 0.4, 0.02);
             fireSphere(level, t.x, t.y, t.z, k.sphereRadius, 28, t.age * 0.35);
         }
@@ -259,9 +271,18 @@ public class FireEffects {
             hikenSparks(t, dir);
         }
 
-        // Gouttes de lave de temps en temps
+        // Légère traînée de fumée noire et braises qui se détachent et flottent derrière le projectile
+        if (t.age % 2 == 0) {
+            double back = 1.0 + k.trailRadius;
+            level.sendParticles(ModParticles.FIRE_SMOKE, t.x - dir.x * back, t.y - dir.y * back, t.z - dir.z * back,
+                    1, k.trailRadius * 0.4, k.trailRadius * 0.4, k.trailRadius * 0.4, 0.01);
+            level.sendParticles(ModParticles.FIRE_EMBER, t.x - dir.x * back, t.y - dir.y * back, t.z - dir.z * back,
+                    k == Kind.SMALL ? 1 : 3, k.trailRadius * 0.8, k.trailRadius * 0.8, k.trailRadius * 0.8, 0.02);
+        }
+
+        // Braises plus grosses de temps en temps
         if (k != Kind.SMALL && k != Kind.ENTEI && t.age % 2 == 0) {
-            level.sendParticles(ParticleTypes.LAVA, t.x, t.y, t.z, 2, k.trailRadius, k.trailRadius, k.trailRadius, 0.0);
+            level.sendParticles(ModParticles.FIRE_EMBER, t.x, t.y, t.z, 2, k.trailRadius, k.trailRadius, k.trailRadius, 0.0);
         }
     }
 
@@ -277,7 +298,7 @@ public class FireEffects {
                 double a = 2 * Math.PI * i / points + spin;
                 double cos = Math.cos(a) * ringRadius * (ring == 0 ? 1.0 : 0.8);
                 double sin = Math.sin(a) * ringRadius * (ring == 0 ? 1.0 : 0.8);
-                level.sendParticles(ParticleTypes.FLAME,
+                level.sendParticles(ModParticles.FIRE_FLAME,
                         t.x + u.x * cos + v.x * sin,
                         t.y + u.y * cos + v.y * sin,
                         t.z + u.z * cos + v.z * sin,
@@ -288,12 +309,12 @@ public class FireEffects {
         // Traîne de braises derrière le soleil, comme une comète
         for (int i = 0; i < 8; i++) {
             double back = 2.0 + level.getRandom().nextDouble() * 8.0;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     t.x - dir.x * back, t.y - dir.y * back, t.z - dir.z * back,
                     2, 1.2, 1.2, 1.2, 0.02);
         }
         if (t.age % 2 == 0) {
-            level.sendParticles(ParticleTypes.LAVA, t.x - dir.x * 2.0, t.y - dir.y * 2.0, t.z - dir.z * 2.0,
+            level.sendParticles(ModParticles.FIRE_EMBER, t.x - dir.x * 2.0, t.y - dir.y * 2.0, t.z - dir.z * 2.0,
                     3, 2.0, 2.0, 2.0, 0.0);
         }
     }
@@ -304,7 +325,7 @@ public class FireEffects {
         for (int i = 0; i < 5; i++) {
             double back = 4.0 + level.getRandom().nextDouble() * 18.0;
             double spread = 0.4 + back * 0.06;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     t.x - dir.x * back, t.y - dir.y * back, t.z - dir.z * back,
                     1, spread, spread, spread, 0.02);
         }
@@ -318,6 +339,9 @@ public class FireEffects {
         double x = t.x, y = t.y, z = t.z;
         double r = k.impactRadius;
 
+        // Pluie de braises qui retombent doucement en flottant après l'explosion
+        level.sendParticles(ModParticles.FIRE_EMBER, x, y + 1.0, z, Math.max(10, k.burst / 4), r * 0.5, r * 0.4, r * 0.5, 0.08);
+
         // Grosses explosions visuelles
         if (k.emitters > 0) {
             // Entei : les gerbes sont réparties en volume (même étalement en hauteur qu'en largeur), pas en nappe plate
@@ -326,26 +350,26 @@ public class FireEffects {
         }
 
         // Boule de feu qui jaillit dans toutes les directions
-        level.sendParticles(ParticleTypes.FLAME, x, y + 0.5, z, k.burst, r * 0.35, r * 0.3, r * 0.35, 0.3);
-        level.sendParticles(ParticleTypes.LAVA, x, y + 0.5, z, k.burst / 3, r * 0.4, r * 0.2, r * 0.4, 0.0);
-        level.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 1.0, z, k.burst / 2, r * 0.3, r * 0.3, r * 0.3, 0.08);
+        level.sendParticles(ModParticles.FIRE_FLAME, x, y + 0.5, z, k.burst, r * 0.35, r * 0.3, r * 0.35, 0.3);
+        level.sendParticles(ModParticles.FIRE_EMBER, x, y + 0.5, z, k.burst / 3, r * 0.4, r * 0.2, r * 0.4, 0.0);
+        level.sendParticles(ModParticles.FIRE_SMOKE, x, y + 1.0, z, k.burst / 2, r * 0.3, r * 0.3, r * 0.3, 0.08);
 
         // Onde de choc : anneau de flammes (puis de fumée) qui s'étend vers l'extérieur.
         // Avec count = 0, les "offsets" servent de direction de la particule.
         // Dai Enkai: Entei : l'onde part dans TOUTES les directions (sphère) au lieu d'un anneau horizontal plat
         if (k == Kind.ENTEI) {
-            sphericalShock(level, ParticleTypes.FLAME, x, y + 0.5, z, k.shockPoints, k.shockSpeed);
-            sphericalShock(level, ParticleTypes.LARGE_SMOKE, x, y + 0.5, z, k.shockPoints, k.shockSpeed * 0.6);
+            sphericalShock(level, ModParticles.FIRE_FLAME, x, y + 0.5, z, k.shockPoints, k.shockSpeed);
+            sphericalShock(level, ModParticles.FIRE_SMOKE, x, y + 0.5, z, k.shockPoints, k.shockSpeed * 0.6);
         } else {
-            shockwave(level, ParticleTypes.FLAME, x, y + 0.2, z, k.shockPoints, k.shockSpeed);
-            shockwave(level, ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, k.shockPoints, k.shockSpeed * 0.6);
+            shockwave(level, ModParticles.FIRE_FLAME, x, y + 0.2, z, k.shockPoints, k.shockSpeed);
+            shockwave(level, ModParticles.FIRE_SMOKE, x, y + 0.3, z, k.shockPoints, k.shockSpeed * 0.6);
         }
 
         // Colonne de feu qui monte vers le ciel
         for (int h = 0; h < k.columnHeight * 2; h++) {
-            level.sendParticles(ParticleTypes.FLAME, x, y + h * 0.5, z, 4, 0.35, 0.15, 0.35, 0.06);
+            level.sendParticles(ModParticles.FIRE_FLAME, x, y + h * 0.5, z, 4, 0.35, 0.15, 0.35, 0.06);
             if (h % 3 == 0) {
-                level.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + h * 0.5, z, 1, 0.3, 0.1, 0.3, 0.02);
+                level.sendParticles(ModParticles.FIRE_SMOKE, x, y + h * 0.5, z, 1, 0.3, 0.1, 0.3, 0.02);
             }
         }
 
@@ -395,7 +419,7 @@ public class FireEffects {
                 int ringPoints = Math.max(24, Math.min(480, (int) (radius * 7)));
                 for (int i = 0; i < ringPoints; i++) {
                     double a = 2 * Math.PI * i / ringPoints;
-                    b.level.sendParticles(ParticleTypes.FLAME,
+                    b.level.sendParticles(ModParticles.FIRE_FLAME,
                             b.x + Math.cos(a) * radius, b.y + 0.3, b.z + Math.sin(a) * radius,
                             1, 0.0, 0.1, 0.0, 0.0);
                 }
@@ -407,14 +431,14 @@ public class FireEffects {
                     double yy = (i + 0.5) / domePoints;             // 0..1 : du sol au sommet
                     double ring = Math.sqrt(1.0 - yy * yy);
                     double a = i * goldenAngle;
-                    b.level.sendParticles(ParticleTypes.FLAME,
+                    b.level.sendParticles(ModParticles.FIRE_FLAME,
                             b.x + Math.cos(a) * ring * radius, b.y + yy * radius * 0.8, b.z + Math.sin(a) * ring * radius,
                             1, 0.0, 0.0, 0.0, 0.0);
                 }
 
                 // Fumée à l'arrière du front de feu
                 if (b.age % 2 == 0) {
-                    shockwave(b.level, ParticleTypes.LARGE_SMOKE, b.x, b.y + 0.5, b.z, 48, 0.2 + 0.15 * progress);
+                    shockwave(b.level, ModParticles.FIRE_SMOKE, b.x, b.y + 0.5, b.z, 48, 0.2 + 0.15 * progress);
                 }
             }
 
@@ -431,7 +455,7 @@ public class FireEffects {
      */
     private static void emitSphere(Blast b, double radius) {
         BlastSphere.emit(b.x, b.y + 0.5, b.z, radius, b.age, (px, py, pz, kind) -> {
-            var particle = kind == BlastSphere.Kind.SMOKE ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME;
+            var particle = kind == BlastSphere.Kind.SMOKE ? ModParticles.FIRE_SMOKE : ModParticles.FIRE_FLAME;
             for (ServerPlayer player : b.level.players()) {
                 b.level.sendParticles(player, particle, true, true, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
             }
@@ -467,7 +491,7 @@ public class FireEffects {
             double z1 = py * sinX + pz * cosX;
             double x2 = px * cosZ - y1 * sinZ;
             double y2 = px * sinZ + y1 * cosZ;
-            level.sendParticles(ParticleTypes.FLAME, center.x + x2, center.y + y2, center.z + z1, 1, 0.0, 0.0, 0.0, 0.0);
+            level.sendParticles(ModParticles.FIRE_FLAME, center.x + x2, center.y + y2, center.z + z1, 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 
@@ -484,7 +508,7 @@ public class FireEffects {
     public static void groundRing(ServerLevel level, double cx, double y, double cz, double radius, int points) {
         for (int i = 0; i < points; i++) {
             double angle = 2 * Math.PI * i / points;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     cx + Math.cos(angle) * radius, y + 0.1, cz + Math.sin(angle) * radius,
                     2, 0.05, 0.15, 0.05, 0.01);
         }
@@ -497,7 +521,7 @@ public class FireEffects {
             double y = 1.0 - 2.0 * (i + 0.5) / points;
             double ring = Math.sqrt(1.0 - y * y);
             double angle = i * goldenAngle + spin;
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     cx + Math.cos(angle) * ring * radius, cy + y * radius, cz + Math.sin(angle) * ring * radius,
                     1, 0.0, 0.0, 0.0, 0.0);
         }
@@ -510,7 +534,7 @@ public class FireEffects {
             double progress = (double) i / steps;
             double angle = progress * turns * 2 * Math.PI;
             double rr = radius * (1.0 - progress * 0.4);
-            level.sendParticles(ParticleTypes.FLAME,
+            level.sendParticles(ModParticles.FIRE_FLAME,
                     x + Math.cos(angle) * rr, y + progress * height, z + Math.sin(angle) * rr,
                     2, 0.05, 0.05, 0.05, 0.02);
         }

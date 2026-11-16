@@ -45,6 +45,12 @@ public class AbilityManager {
             return;
         }
 
+        // Faiblesse à l'eau : les pieds dans l'eau suffisent à bloquer tous les pouvoirs (transformation comprise)
+        if (player.isInWater()) {
+            player.sendSystemMessage(Component.translatable("message.bloxpiece.water_weakness"), true);
+            return;
+        }
+
         // Attaque verrouillée : le niveau du joueur (côté serveur) est trop bas. Quel que soit le client, rien ne part.
         if (!ability.isUnlockedFor(player)) {
             player.sendSystemMessage(Component.translatable("message.bloxpiece.ability_locked",
@@ -70,6 +76,15 @@ public class AbilityManager {
         // Affichage uniquement : le HUD du joueur démarre son compte à rebours
         ServerPlayNetworking.send(player, new CooldownPayload(key, ability.cooldownTicks()));
         ability.use(player);
+    }
+
+    /** Le joueur a relâché la touche de ce slot : prévient l'attaque (seules les attaques à charge s'en servent). */
+    public static void release(ServerPlayer player, int slot) {
+        DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
+        Ability ability = fruit == null || slot < 0 || slot >= DevilFruit.MAX_ABILITIES ? null : fruit.getAbility(slot);
+        if (ability != null) {
+            ability.release(player);
+        }
     }
 
     /** Renvoie au client ses recharges encore en cours (à appeler quand le joueur rejoint le serveur). */

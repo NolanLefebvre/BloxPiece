@@ -13,6 +13,7 @@ import nolan.bloxpiece.registry.ModEntities;
 import nolan.bloxpiece.registry.ModEvents;
 import nolan.bloxpiece.registry.ModItems;
 import nolan.bloxpiece.registry.ModNetworking;
+import nolan.bloxpiece.registry.ModParticles;
 import nolan.bloxpiece.registry.ModSpawns;
 
 public class BloxPiece implements ModInitializer {
@@ -27,6 +28,7 @@ public class BloxPiece implements ModInitializer {
 
         ModAttachments.initialize();
         ModItems.initialize();
+        ModParticles.initialize();
         ModEntities.initialize();
         ModSpawns.initialize();
         ModNetworking.initialize();

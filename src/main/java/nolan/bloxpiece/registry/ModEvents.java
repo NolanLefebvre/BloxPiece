@@ -1,6 +1,8 @@
 package nolan.bloxpiece.registry;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.minecraft.world.InteractionResult;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -8,10 +10,20 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerPlayer;
 
 import nolan.bloxpiece.ability.AbilityManager;
+import nolan.bloxpiece.ability.BuddhaPalmAbility;
+import nolan.bloxpiece.ability.BuddhaShockwaveAbility;
+import nolan.bloxpiece.ability.BuddhaUltimateAbility;
+import nolan.bloxpiece.ability.IceAgeAbility;
+import nolan.bloxpiece.ability.IceEagleAbility;
+import nolan.bloxpiece.ability.IceFreeze;
+import nolan.bloxpiece.ability.IceSaberAbility;
+import nolan.bloxpiece.ability.IceTerrain;
 import nolan.bloxpiece.ability.BuddhaTransformAbility;
 import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
+import nolan.bloxpiece.fruit.LogiaIntangibility;
+import nolan.bloxpiece.fx.BuddhaEffects;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.mob.BloxMob;
 
@@ -25,6 +37,19 @@ public class ModEvents {
             DaiEnkaiEnteiAbility.tick();
             // Transformation en Bouddha (croissance / rétrécissement progressifs)
             BuddhaTransformAbility.tick(server);
+            // Paume du Bouddha : charge, puis onde de choc dorée après l'impact
+            BuddhaPalmAbility.tick(server);
+            BuddhaShockwaveAbility.tick(server);
+            BuddhaUltimateAbility.tick(server);
+            BuddhaEffects.tick();
+            // Passif Logia du fruit du Feu : membres dispersés en flammes
+            LogiaIntangibility.tick(server);
+            // Fruit de la Glace : trident en main, aigle en formation, Ère glaciaire, cibles gelées, terrain qui dégèle
+            IceSaberAbility.tick(server);
+            IceEagleAbility.tick(server);
+            IceAgeAbility.tick(server);
+            IceFreeze.tick(server);
+            IceTerrain.tick();
 
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
@@ -50,6 +75,11 @@ public class ModEvents {
                 return false;
             }
 
+            // Passif Logia du fruit du Feu : les dégâts physiques traversent le corps de feu (sauf attaques de fruits du démon)
+            if (entity instanceof ServerPlayer player && LogiaIntangibility.absorbs(player, source)) {
+                return false;
+            }
+
             if (entity instanceof ServerPlayer player) {
                 DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
                 if (fruit != null && fruit.isImmuneTo(source)) {
@@ -57,6 +87,14 @@ public class ModEvents {
                 }
             }
             return true;
+        });
+
+        // Fruit de la Glace : coups de mêlée portés avec le trident de glace en main
+        AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+            if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
+                IceSaberAbility.onMelee(serverPlayer, entity);
+            }
+            return InteractionResult.PASS;
         });
 
         // Quand un mob du mod meurt : XP BloxPiece pour le joueur responsable (s'il y en a un).
@@ -85,6 +123,15 @@ public class ModEvents {
             FireEffects.clear();
             DaiEnkaiEnteiAbility.clear();
             BuddhaTransformAbility.clear();
+            BuddhaPalmAbility.clear();
+            BuddhaShockwaveAbility.clear();
+            BuddhaUltimateAbility.clear();
+            BuddhaEffects.clear();
+            LogiaIntangibility.clear();
+            IceEagleAbility.clear();
+            IceAgeAbility.clear();
+            IceFreeze.clear();
+            IceTerrain.clear(); // le terrain gelé redevient comme avant
         });
     }
 }
