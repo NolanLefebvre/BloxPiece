@@ -61,6 +61,11 @@ public class DevilFruit {
         return abilities.get(slot);
     }
 
+    /** Ce fruit a-t-il au moins une attaque ? (le menu des attaques affiche un message sinon) */
+    public boolean hasAbilities() {
+        return !abilities.isEmpty();
+    }
+
     public boolean isFireproof() {
         return fireproof;
     }

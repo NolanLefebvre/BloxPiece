@@ -40,8 +40,17 @@ public class ModItems {
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
     );
 
+    public static final Item BUDDHA_FRUIT = register(
+            "buddha_fruit",
+            properties -> new DevilFruitItem(properties, Fruits.BUDDHA),
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
+    );
+
     public static void initialize() {
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS)
-                .register(tab -> tab.accept(FIRE_FRUIT));
+                .register(tab -> {
+                    tab.accept(FIRE_FRUIT);
+                    tab.accept(BUDDHA_FRUIT);
+                });
     }
 }

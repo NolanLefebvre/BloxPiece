@@ -14,12 +14,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraft.world.entity.projectile.hurtingprojectile.LargeFireball;
 import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
+import nolan.bloxpiece.fx.EnteiFireball;
 import nolan.bloxpiece.fx.EnteiSun;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.registry.ModAttachments;
@@ -44,7 +44,8 @@ public class DaiEnkaiEnteiAbility implements Ability {
     private static final double MAX_AIM_RANGE = 64.0;      // distance maximale du point visé
     private static final double START_BALL_RADIUS = 0.1;   // taille de la boule au début de la charge (elle grossit jusqu'à MAX_BALL_RADIUS)
     private static final double MAX_BALL_RADIUS = 5.4;     // rayon final du soleil rassemblé au-dessus du joueur (avant : 3.6, soit +50 %)
-    private static final double REQUIRED_HEADROOM = 10.0;  // hauteur libre nécessaire au-dessus du joueur (avant : 7.0, la boule est 50 % plus grosse)
+    private static final double BALL_HEIGHT = 3.0;         // hauteur du BAS de la boule au-dessus des pieds du joueur (avant : 2.0) : bien visible, sans chevaucher le personnage
+    private static final double REQUIRED_HEADROOM = 11.0;  // hauteur libre nécessaire au-dessus du joueur (10.0 + 1.0 : la boule est montée d'un bloc)
 
     // joueur -> charge en cours (une seule à la fois par joueur)
     private static final Map<UUID, Charge> CHARGES = new HashMap<>();
@@ -163,7 +164,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
         return false;
     }
 
-    /** Centre de la boule : au-dessus du joueur côté main droite ; son bas reste 2 blocs au-dessus des pieds (hors du champ de vision), elle monte en grossissant. */
+    /** Centre de la boule : au-dessus du joueur côté main droite ; son bas reste BALL_HEIGHT blocs au-dessus des pieds (hors du champ de vision), elle monte en grossissant. */
     private static Vec3 ballCenter(ServerPlayer player, double radius) {
         double yaw = Math.toRadians(player.getYRot());
         double forwardX = -Math.sin(yaw);
@@ -172,7 +173,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
         double rightZ = -Math.sin(yaw);
         return new Vec3(
                 player.getX() + rightX * 0.5 + forwardX * 0.5,
-                player.getY() + 2.0 + radius,
+                player.getY() + BALL_HEIGHT + radius,
                 player.getZ() + rightZ * 0.5 + forwardZ * 0.5);
     }
 
@@ -268,7 +269,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
         Vec3 direction = toAim.lengthSqr() < 4.0 ? look : toAim.normalize();
 
         // Le projectile (invisible sous le soleil) porte les dégâts et l'explosion ; le soleil le suit jusqu'à l'impact
-        LargeFireball projectile = new LargeFireball(level, player, direction, EXPLOSION_POWER);
+        EnteiFireball projectile = new EnteiFireball(level, player, direction, EXPLOSION_POWER);
         projectile.setPos(center.x, center.y, center.z);
         projectile.setDeltaMovement(direction.scale(SPEED));
         level.addFreshEntity(projectile);

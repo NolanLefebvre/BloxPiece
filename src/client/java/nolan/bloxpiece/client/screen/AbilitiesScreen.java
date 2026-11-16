@@ -75,6 +75,10 @@ public class AbilitiesScreen extends BloxPanelScreen {
             // Le fruit a disparu pendant que la page était ouverte (ex : /removedf)
             g.centeredText(font, Component.translatable("screen.bloxpiece.character.no_fruit"),
                     PANEL_W / 2, PANEL_H / 2 - 4, COLOR_LABEL);
+        } else if (!fruit.hasAbilities()) {
+            // Fruit sans attaque (pas encore développées) : on l'indique plutôt que d'afficher une page vide
+            g.centeredText(font, Component.translatable("screen.bloxpiece.abilities.none"),
+                    PANEL_W / 2, PANEL_H / 2 - 4, COLOR_LABEL);
         } else {
             Component tooltip = null;
             int y = ROWS_Y;

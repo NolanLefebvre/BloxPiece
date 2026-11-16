@@ -46,7 +46,7 @@ public class ModEntities {
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("hiken_fist"));
 
     public static final EntityType<HikenFist> HIKEN_FIST = EntityType.Builder.<HikenFist>of(HikenFist::new, MobCategory.MISC)
-            .sized(1.0F, 1.0F)        // hitbox 1x1 : le poing n'est jamais une cible, la collision part du devant des phalanges (voir HikenFist)
+            .sized(1.0F, 1.0F)        // dimensions nominales seulement : la vraie hitbox (celle du poing visible, orientée) est calculée par HikenFist.makeBoundingBox
             .fireImmune()
             .noSave()                 // un poing en vol n'est jamais écrit dans la sauvegarde du monde
             .noSummon()               // pas de /summon : seul Hiken crée un poing

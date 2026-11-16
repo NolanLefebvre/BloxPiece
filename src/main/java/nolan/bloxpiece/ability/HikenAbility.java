@@ -8,6 +8,9 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.FireEffects;
@@ -19,15 +22,18 @@ import nolan.bloxpiece.fx.HikenFist;
  *
  * Un gigantesque poing de feu (modèle 3D : poing fermé + avant-bras de flammes + masse de flammes, entité HikenFist) jaillit
  * devant le joueur et fonce dans la direction de son regard. Le poing EST le projectile : HikenFist est une entité projectile
- * personnalisée (déplacement, collisions et explosion propres), sans aucune boule de feu vanilla. À l'impact : dégâts directs,
- * explosion, puis dégâts de zone + mise à feu + onde de choc et colonne de flammes (FireEffects.Kind.HIKEN).
+ * personnalisée (déplacement, collisions et explosion propres), sans aucune boule de feu vanilla. Sa hitbox épouse le poing visible
+ * (voir HikenFist). À l'impact : une seule explosion dont le rayon (HikenFist.BLAST_RADIUS) fixe à la fois les blocs détruits, les dégâts de
+ * zone, la mise à feu, le recul et les particules (onde de choc, anneau et colonne de flammes : FireEffects.Kind.HIKEN).
  * Tout est géré côté serveur ; l'entité HikenFist (position, orientation) est synchronisée avec les clients par Minecraft.
  */
 public class HikenAbility implements Ability {
 
     private static final double SPEED = 1.8;           // rapide : un bras propulsé (l'ancienne Grande boule de feu : 1.3)
-    private static final int EXPLOSION_POWER = 4;      // 3 = ancienne Grande boule de feu / météores, 4 = TNT
     private static final double START_DISTANCE = 2.5;  // distance entre les yeux du joueur et le devant du poing au départ
+    private static final double SIDE_OFFSET = 6.0;     // décalage du point d'apparition vers la DROITE du joueur (blocs) : le poing (~7 blocs de large) sort du champ de vision
+    private static final double MAX_AIM_RANGE = 64.0;  // distance maximale du point visé
+    private static final boolean AIM_AT_CROSSHAIR = true; // true : le poing part de la droite mais file vers le point visé ; false : même direction que le regard (trajet parallèle)
 
     @Override
     public String id() {
@@ -50,14 +56,37 @@ public class HikenAbility implements Ability {
         Vec3 look = player.getLookAngle();
 
         // Point de départ : devant les yeux du joueur, légèrement sous la ligne de visée (le bras sort de son épaule)
-        Vec3 start = new Vec3(
+        Vec3 base = new Vec3(
                 player.getX() + look.x * START_DISTANCE,
                 player.getEyeY() - 0.3 + look.y * START_DISTANCE,
                 player.getZ() + look.z * START_DISTANCE);
 
+        // Décalage latéral : vers la droite du joueur (horizontal), réduit si un mur gêne pour que le poing n'apparaisse jamais dans un bloc
+        double yaw = Math.toRadians(player.getYRot());
+        Vec3 right = new Vec3(-Math.cos(yaw), 0.0, -Math.sin(yaw));
+        double side = SIDE_OFFSET;
+        BlockHitResult wall = level.clip(new ClipContext(base, base.add(right.scale(SIDE_OFFSET)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        if (wall.getType() != HitResult.Type.MISS) {
+            side = Math.max(0.0, wall.getLocation().distanceTo(base) - 0.5);
+        }
+        Vec3 start = base.add(right.scale(side));
+
+        // Direction : celle du regard. Depuis la droite, un trajet strictement parallèle passerait à côté de la cible visée (le poing fait 7 blocs
+        // de large mais est décalé de 6) : il file donc vers le point visé par le curseur (comme Dai Enkai: Entei), ou loin devant si rien n'est visé.
+        Vec3 direction = look;
+        if (AIM_AT_CROSSHAIR) {
+            Vec3 aim = AimHelper.findTarget(player, MAX_AIM_RANGE);
+            if (aim == null) {
+                aim = player.getEyePosition().add(look.scale(MAX_AIM_RANGE));
+            }
+            Vec3 toAim = aim.subtract(start);
+            direction = toAim.lengthSqr() < 4.0 ? look : toAim.normalize();
+        }
+
         // Le poing de feu est le projectile lui-même : le devant de ses phalanges part de `start` et fonce vers le regard du joueur.
         // FireEffects suit cette entité (traînée de particules) et déclenche l'effet d'impact quand elle disparaît.
-        HikenFist fist = HikenFist.spawn(level, player, start, look, SPEED, EXPLOSION_POWER);
+        HikenFist fist = HikenFist.spawn(level, player, start, direction, SPEED);
         FireEffects.track(fist, player, FireEffects.Kind.HIKEN);
 
         // Le joueur envoie son coup avec son bras principal

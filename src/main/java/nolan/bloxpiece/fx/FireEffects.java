@@ -25,8 +25,10 @@ public class FireEffects {
         //     rayon traînée, flammes coeur, fumée, rayon impact, dégâts, feu (s), particules impact, gerbes d'explosion, points onde, vitesse onde, hauteur colonne, rayon de la sphère de feu (0 = aucune)
         SMALL (0.25, 3,  0, 2.5, 3.0f, 3, 25,  0, 24, 0.25, 0,  0.0),
         // Hiken : un poing de feu géant (le projectile est le modèle 3D HikenFist lui-même, pas de sphère de particules). Rayon de traînée = taille du poing ;
-        // peu de flammes au coeur pour ne pas cacher le modèle ; impact un peu plus large que l'ancienne Grande boule de feu, un peu moins que le météore.
-        HIKEN (1.10, 2,  0, 9.0, 14.0f, 8, 260, 3, 64, 0.75, 9,  0.0),
+        // peu de flammes au coeur pour ne pas cacher le modèle. Le rayon d'impact est celui de l'explosion (HikenFist.BLAST_RADIUS) : particules, vague de feu
+        // et explosion de blocs ont la même taille. Dégâts et mise à feu : 0 ici, c'est HikenFist qui les applique (une seule fois, avec décroissance).
+        // Pas d'EXPLOSION_EMITTER (emitters = 0) : l'explosion vanilla en émet déjà un, deux se superposeraient en une explosion qui semble double.
+        HIKEN (1.10, 2,  0, HikenFist.BLAST_RADIUS, 0.0f, 0, 220, 0, 56, 0.6, 6,  0.0),
         METEOR(0.90, 12, 4, 7.5, 10.0f, 8, 160, 3, 56, 0.65, 8, 0.0),
         // Dai Enkai: Entei : un petit soleil. Dégâts et rayon au-dessus du météore, mais un seul projectile.
         // (sa boule visible est le modèle Blockbench de EnteiSun : pas de sphère de particules)
@@ -95,18 +97,23 @@ public class FireEffects {
         final ServerLevel level;
         final double x, y, z;
         final double maxRadius;
+        final int ticks;      // durée de l'expansion
+        final int domePoints; // densité du dôme de flammes
         int age;
 
-        Blast(ServerLevel level, double x, double y, double z, double maxRadius) {
+        Blast(ServerLevel level, double x, double y, double z, double maxRadius, int ticks, int domePoints) {
             this.level = level;
             this.x = x;
             this.y = y;
             this.z = z;
             this.maxRadius = maxRadius;
+            this.ticks = ticks;
+            this.domePoints = domePoints;
         }
     }
 
-    private static final int BLAST_TICKS = 20; // durée de l'expansion (20 ticks = 1 seconde)
+    private static final int BLAST_TICKS = 20; // durée de l'expansion de Dai Enkai: Entei (20 ticks = 1 seconde)
+    private static final int HIKEN_BLAST_TICKS = 8; // Hiken : un choc plus bref et plus sec
     private static final List<Blast> BLASTS = new ArrayList<>();
 
     /** À appeler juste après avoir fait apparaître un projectile : il aura traînée + impact spectaculaire. */
@@ -163,10 +170,14 @@ public class FireEffects {
                     t.visual.discard(); // le soleil disparaît dans l'explosion
                 }
                 if (e instanceof HikenFist fist) {
-                    Vec3 front = fist.front(); // le poing s'est calé sur le point d'impact avant d'exploser
-                    t.x = front.x;
-                    t.y = front.y;
-                    t.z = front.z;
+                    if (!fist.hasImpacted()) {
+                        it.remove(); // disparu sans exploser (monde déchargé, /kill...) : pas d'impact fantôme
+                        continue;
+                    }
+                    Vec3 point = fist.impactPoint(); // le point exact de l'explosion
+                    t.x = point.x;
+                    t.y = point.y;
+                    t.z = point.z;
                 }
                 impact(t); // le projectile a disparu = il a touché quelque chose
                 it.remove();
@@ -330,7 +341,14 @@ public class FireEffects {
 
         // Dai Enkai: Entei : en plus, une vague de feu en dôme qui s'étend jusqu'au rayon de l'impact
         if (k == Kind.ENTEI) {
-            BLASTS.add(new Blast(level, x, y, z, r));
+            BLASTS.add(new Blast(level, x, y, z, r, BLAST_TICKS, 200));
+        }
+
+        // Hiken : anneau de flammes au sol + petit dôme, jusqu'au bord de l'explosion. Les dégâts, la mise à feu et le recul
+        // sont déjà gérés par HikenFist (une seule fois par entité) : rien à ajouter ici.
+        if (k == Kind.HIKEN) {
+            BLASTS.add(new Blast(level, x, y, z, r, HIKEN_BLAST_TICKS, 70));
+            return;
         }
 
         // Dégâts bonus en zone + mise à feu (en plus de l'explosion normale)
@@ -355,7 +373,7 @@ public class FireEffects {
         while (it.hasNext()) {
             Blast b = it.next();
             b.age++;
-            double progress = Math.min(1.0, (double) b.age / BLAST_TICKS);
+            double progress = Math.min(1.0, (double) b.age / b.ticks);
             double eased = 1.0 - (1.0 - progress) * (1.0 - progress); // part vite, ralentit à la fin
             double radius = b.maxRadius * eased;
 
@@ -370,7 +388,7 @@ public class FireEffects {
 
             // Dôme : demi-sphère de flammes (points répartis régulièrement, hémisphère du haut)
             double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
-            int domePoints = 200; // le dôme final fait 64 blocs de rayon : 2x plus de points pour rester dense
+            int domePoints = b.domePoints; // Entei : 200 (dôme final de 64 blocs de rayon) ; Hiken : 70
             for (int i = 0; i < domePoints; i++) {
                 double yy = (i + 0.5) / domePoints;             // 0..1 : du sol au sommet
                 double ring = Math.sqrt(1.0 - yy * yy);
@@ -385,7 +403,7 @@ public class FireEffects {
                 shockwave(b.level, ParticleTypes.LARGE_SMOKE, b.x, b.y + 0.5, b.z, 48, 0.2 + 0.15 * progress);
             }
 
-            if (b.age >= BLAST_TICKS) {
+            if (b.age >= b.ticks) {
                 it.remove();
             }
         }

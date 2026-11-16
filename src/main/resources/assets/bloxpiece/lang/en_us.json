@@ -1,5 +1,6 @@
 {
   "item.bloxpiece.fire_fruit": "Fruit du Feu",
+  "item.bloxpiece.buddha_fruit": "Fruit du Bouddha",
   "entity.bloxpiece.pirate": "Pirate",
   "entity.bloxpiece.entei_sun": "Dai Enkai: Entei",
   "entity.bloxpiece.hiken_fist": "Hiken",
@@ -52,6 +53,7 @@
   "screen.bloxpiece.abilities.title_fruit": "Attaques : %s",
   "screen.bloxpiece.abilities.required_level": "Niveau requis : %s",
   "screen.bloxpiece.abilities.locked_tooltip": "Verrouillée : atteins le niveau %1$s (niveau actuel : %2$s)",
+  "screen.bloxpiece.abilities.none": "Aucune attaque disponible pour le moment.",
   "screen.bloxpiece.abilities.back": "< Retour",
   "screen.bloxpiece.abilities.hint": "%s : fermer  -  Échap : retour"
 }

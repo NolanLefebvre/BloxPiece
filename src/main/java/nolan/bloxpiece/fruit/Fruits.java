@@ -24,6 +24,14 @@ public class Fruits {
                     new DaiEnkaiEnteiAbility()  // touche 4 : Dai Enkai: Entei (ultime)
             )));
 
+    // Fruit du Bouddha : pour l'instant seulement le fruit (item, consommation, menu). Ni faiblesse, ni immunité, ni attaque :
+    // les capacités s'ajouteront en remplaçant List.of() par la liste de ses attaques (touches 1 à 4), comme pour le fruit du feu.
+    public static final DevilFruit BUDDHA = register(new DevilFruit(
+            "buddha",
+            null,  // pas de faiblesse pour le moment
+            false, // pas d'immunité au feu
+            List.of()));
+
     private static DevilFruit register(DevilFruit fruit) {
         REGISTRY.put(fruit.id(), fruit);
         return fruit;
