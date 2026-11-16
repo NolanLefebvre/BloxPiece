@@ -23,8 +23,8 @@ import nolan.bloxpiece.registry.ModEntities;
  */
 public class EnteiSun extends Mob {
 
-    /** Rayon (en blocs) du modèle Blockbench à l'échelle 1 (la grosse coque de feu, sans les rayons de plasma). */
-    public static final double MODEL_RADIUS = 1.3;
+    /** Rayon (en blocs) du corps du soleil Blockbench à l'échelle 1 (noyau + coques de feu, sans les langues de flamme ni les braises). */
+    public static final double MODEL_RADIUS = 0.9;
 
     /** Vrai seulement pour un soleil créé par l'attaque : un soleil rechargé depuis une sauvegarde est supprimé. */
     private boolean managed;

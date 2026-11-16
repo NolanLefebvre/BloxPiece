@@ -20,7 +20,7 @@ import nolan.bloxpiece.fx.FireEffects;
  */
 public class MeteorRainAbility implements Ability {
 
-    private static final double MAX_RANGE = 32.0;       // distance maximale à laquelle on peut viser
+    private static final double MAX_RANGE = 64.0;       // distance maximale à laquelle on peut viser (avant : 32)
     private static final double SPREAD = 8.0;           // rayon de la zone touchée autour du point visé
     private static final int METEOR_COUNT = 14;
     private static final int EXPLOSION_POWER = 3;

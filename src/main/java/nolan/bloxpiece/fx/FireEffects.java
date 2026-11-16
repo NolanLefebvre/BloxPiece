@@ -20,15 +20,21 @@ import net.minecraft.world.phys.Vec3;
  */
 public class FireEffects {
 
-    /** Les 4 tailles de projectiles. Modifie ces valeurs pour régler l'intensité de chaque attaque. */
+    /** Les tailles de projectiles (une par attaque de feu). Modifie ces valeurs pour régler l'intensité de chaque attaque. */
     public enum Kind {
         //     rayon traînée, flammes coeur, fumée, rayon impact, dégâts, feu (s), particules impact, gerbes d'explosion, points onde, vitesse onde, hauteur colonne, rayon de la sphère de feu (0 = aucune)
         SMALL (0.25, 3,  0, 2.5, 3.0f, 3, 25,  0, 24, 0.25, 0,  0.0),
-        GREAT (0.60, 8,  3, 7.0, 8.0f, 6, 120, 2, 48, 0.55, 6,  0.0),
+        // Hiken : un poing de feu géant (le projectile est le modèle 3D HikenFist lui-même, pas de sphère de particules). Rayon de traînée = taille du poing ;
+        // peu de flammes au coeur pour ne pas cacher le modèle ; impact un peu plus large que l'ancienne Grande boule de feu, un peu moins que le météore.
+        HIKEN (1.10, 2,  0, 9.0, 14.0f, 8, 260, 3, 64, 0.75, 9,  0.0),
         METEOR(0.90, 12, 4, 7.5, 10.0f, 8, 160, 3, 56, 0.65, 8, 0.0),
         // Dai Enkai: Entei : un petit soleil. Dégâts et rayon au-dessus du météore, mais un seul projectile.
         // (sa boule visible est le modèle Blockbench de EnteiSun : pas de sphère de particules)
-        ENTEI (3.00, 3, 0, 12.0, 16.0f, 10, 300, 6, 72, 0.80, 12, 0.0);
+        // Traînée +50 % (4.5) pour suivre la taille de la boule. Impact COLOSSAL, taille DOUBLÉE par rapport à la version précédente :
+        // rayon 64 blocs (avant : 32), 2 800 particules, 60 explosions, onde de choc deux fois plus large et rapide,
+        // colonne de feu de 80 blocs. Les dégâts (20) et la mise à feu (14 s) ne changent pas.
+        // En plus, une vague de feu en dôme s'étend jusqu'au rayon de l'impact (voir tickBlasts).
+        ENTEI (4.50, 4, 0, 64.0, 20.0f, 14, 2800, 60, 320, 3.6, 80, 0.0);
 
         final double trailRadius;
         final int coreCount;
@@ -66,7 +72,7 @@ public class FireEffects {
         final ServerLevel level;
         final ServerPlayer owner;
         final Kind kind;
-        final Entity visual; // corps visible qui suit le projectile (peut être null), supprimé à l'impact
+        final Entity visual; // corps visible qui suit le projectile (peut être null : Hiken n'en a pas, son poing est le projectile), supprimé à l'impact
         double x, y, z;
         int age;
 
@@ -83,6 +89,25 @@ public class FireEffects {
     }
 
     private static final List<Tracked> TRACKED = new ArrayList<>();
+
+    /** Vague de feu en dôme qui s'étend après l'impact de Dai Enkai: Entei (dessinée tick après tick). */
+    private static final class Blast {
+        final ServerLevel level;
+        final double x, y, z;
+        final double maxRadius;
+        int age;
+
+        Blast(ServerLevel level, double x, double y, double z, double maxRadius) {
+            this.level = level;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.maxRadius = maxRadius;
+        }
+    }
+
+    private static final int BLAST_TICKS = 20; // durée de l'expansion (20 ticks = 1 seconde)
+    private static final List<Blast> BLASTS = new ArrayList<>();
 
     /** À appeler juste après avoir fait apparaître un projectile : il aura traînée + impact spectaculaire. */
     public static void track(Entity projectile, ServerPlayer owner, Kind kind) {
@@ -103,6 +128,7 @@ public class FireEffects {
             }
         }
         TRACKED.clear();
+        BLASTS.clear();
     }
 
     /**
@@ -125,6 +151,8 @@ public class FireEffects {
 
     /** Appelé à chaque tick serveur. */
     public static void tick() {
+        tickBlasts();
+
         Iterator<Tracked> it = TRACKED.iterator();
         while (it.hasNext()) {
             Tracked t = it.next();
@@ -134,16 +162,30 @@ public class FireEffects {
                 if (t.visual != null) {
                     t.visual.discard(); // le soleil disparaît dans l'explosion
                 }
+                if (e instanceof HikenFist fist) {
+                    Vec3 front = fist.front(); // le poing s'est calé sur le point d'impact avant d'exploser
+                    t.x = front.x;
+                    t.y = front.y;
+                    t.z = front.z;
+                }
                 impact(t); // le projectile a disparu = il a touché quelque chose
                 it.remove();
                 continue;
             }
 
-            t.x = e.getX();
-            t.y = e.getY();
-            t.z = e.getZ();
-            if (t.visual != null) {
-                t.visual.setPos(t.x, t.y, t.z); // le soleil reste centré sur la boule de feu
+            if (e instanceof HikenFist fist) {
+                // Hiken : le poing EST le projectile ; traînée et impact se calent sur le devant de ses phalanges
+                Vec3 front = fist.front();
+                t.x = front.x;
+                t.y = front.y;
+                t.z = front.z;
+            } else {
+                t.x = e.getX();
+                t.y = e.getY();
+                t.z = e.getZ();
+                if (t.visual != null) {
+                    t.visual.setPos(t.x, t.y, t.z); // le soleil reste centré sur la boule de feu
+                }
             }
             trail(t);
             t.age++;
@@ -194,9 +236,64 @@ public class FireEffects {
             fireSphere(level, t.x, t.y, t.z, k.sphereRadius, 28, t.age * 0.35);
         }
 
+        // Dai Enkai: Entei : anneau de flammes qui tourne autour de la boule + traîne de comète
+        if (k == Kind.ENTEI) {
+            enteiAura(t, dir, u, v);
+        }
+
+        // Hiken : étincelles et braises autour de la masse de flammes (le poing et sa masse de flammes sont le modèle 3D)
+        if (k == Kind.HIKEN) {
+            hikenSparks(t, dir);
+        }
+
         // Gouttes de lave de temps en temps
         if (k != Kind.SMALL && k != Kind.ENTEI && t.age % 2 == 0) {
             level.sendParticles(ParticleTypes.LAVA, t.x, t.y, t.z, 2, k.trailRadius, k.trailRadius, k.trailRadius, 0.0);
+        }
+    }
+
+    /** Effets en vol du soleil : deux anneaux de flammes (perpendiculaires au vol) qui tournent, et une traîne de braises. */
+    private static void enteiAura(Tracked t, Vec3 dir, Vec3 u, Vec3 v) {
+        ServerLevel level = t.level;
+        double ringRadius = t.kind.trailRadius * 1.1;
+        int points = 24;
+
+        for (int ring = 0; ring < 2; ring++) {
+            double spin = t.age * (ring == 0 ? 0.4 : -0.3);
+            for (int i = 0; i < points; i++) {
+                double a = 2 * Math.PI * i / points + spin;
+                double cos = Math.cos(a) * ringRadius * (ring == 0 ? 1.0 : 0.8);
+                double sin = Math.sin(a) * ringRadius * (ring == 0 ? 1.0 : 0.8);
+                level.sendParticles(ParticleTypes.FLAME,
+                        t.x + u.x * cos + v.x * sin,
+                        t.y + u.y * cos + v.y * sin,
+                        t.z + u.z * cos + v.z * sin,
+                        1, 0.0, 0.0, 0.0, 0.0);
+            }
+        }
+
+        // Traîne de braises derrière le soleil, comme une comète
+        for (int i = 0; i < 8; i++) {
+            double back = 2.0 + level.getRandom().nextDouble() * 8.0;
+            level.sendParticles(ParticleTypes.FLAME,
+                    t.x - dir.x * back, t.y - dir.y * back, t.z - dir.z * back,
+                    2, 1.2, 1.2, 1.2, 0.02);
+        }
+        if (t.age % 2 == 0) {
+            level.sendParticles(ParticleTypes.LAVA, t.x - dir.x * 2.0, t.y - dir.y * 2.0, t.z - dir.z * 2.0,
+                    3, 2.0, 2.0, 2.0, 0.0);
+        }
+    }
+
+    /** Hiken : quelques braises irrégulières qui se détachent de la masse de flammes, derrière le poing (le poing lui-même est le modèle 3D). */
+    private static void hikenSparks(Tracked t, Vec3 dir) {
+        ServerLevel level = t.level;
+        for (int i = 0; i < 5; i++) {
+            double back = 4.0 + level.getRandom().nextDouble() * 18.0;
+            double spread = 0.4 + back * 0.06;
+            level.sendParticles(ParticleTypes.FLAME,
+                    t.x - dir.x * back, t.y - dir.y * back, t.z - dir.z * back,
+                    1, spread, spread, spread, 0.02);
         }
     }
 
@@ -231,6 +328,11 @@ public class FireEffects {
             }
         }
 
+        // Dai Enkai: Entei : en plus, une vague de feu en dôme qui s'étend jusqu'au rayon de l'impact
+        if (k == Kind.ENTEI) {
+            BLASTS.add(new Blast(level, x, y, z, r));
+        }
+
         // Dégâts bonus en zone + mise à feu (en plus de l'explosion normale)
         AABB box = new AABB(x - r, y - r, z - r, x + r, y + r, z + r);
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box,
@@ -247,7 +349,67 @@ public class FireEffects {
         }
     }
 
+    /** Fait avancer les vagues de feu en dôme : un anneau au sol + un dôme de flammes qui grossissent jusqu'au rayon final. */
+    private static void tickBlasts() {
+        Iterator<Blast> it = BLASTS.iterator();
+        while (it.hasNext()) {
+            Blast b = it.next();
+            b.age++;
+            double progress = Math.min(1.0, (double) b.age / BLAST_TICKS);
+            double eased = 1.0 - (1.0 - progress) * (1.0 - progress); // part vite, ralentit à la fin
+            double radius = b.maxRadius * eased;
+
+            // Anneau de flammes au sol (plus il est grand, plus il a de points)
+            int ringPoints = Math.max(24, Math.min(480, (int) (radius * 7)));
+            for (int i = 0; i < ringPoints; i++) {
+                double a = 2 * Math.PI * i / ringPoints;
+                b.level.sendParticles(ParticleTypes.FLAME,
+                        b.x + Math.cos(a) * radius, b.y + 0.3, b.z + Math.sin(a) * radius,
+                        1, 0.0, 0.1, 0.0, 0.0);
+            }
+
+            // Dôme : demi-sphère de flammes (points répartis régulièrement, hémisphère du haut)
+            double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
+            int domePoints = 200; // le dôme final fait 64 blocs de rayon : 2x plus de points pour rester dense
+            for (int i = 0; i < domePoints; i++) {
+                double yy = (i + 0.5) / domePoints;             // 0..1 : du sol au sommet
+                double ring = Math.sqrt(1.0 - yy * yy);
+                double a = i * goldenAngle;
+                b.level.sendParticles(ParticleTypes.FLAME,
+                        b.x + Math.cos(a) * ring * radius, b.y + yy * radius * 0.8, b.z + Math.sin(a) * ring * radius,
+                        1, 0.0, 0.0, 0.0, 0.0);
+            }
+
+            // Fumée à l'arrière du front de feu
+            if (b.age % 2 == 0) {
+                shockwave(b.level, ParticleTypes.LARGE_SMOKE, b.x, b.y + 0.5, b.z, 48, 0.2 + 0.15 * progress);
+            }
+
+            if (b.age >= BLAST_TICKS) {
+                it.remove();
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- effets de lancement
+
+    /** Anneau de flammes qui tourne autour d'un point, dans un plan incliné (tiltX / tiltZ en radians). */
+    public static void orbitRing(ServerLevel level, Vec3 center, double radius, int points, double spin, double tiltX, double tiltZ) {
+        double cosX = Math.cos(tiltX), sinX = Math.sin(tiltX);
+        double cosZ = Math.cos(tiltZ), sinZ = Math.sin(tiltZ);
+        for (int i = 0; i < points; i++) {
+            double a = 2 * Math.PI * i / points + spin;
+            double px = Math.cos(a) * radius;
+            double py = 0.0;
+            double pz = Math.sin(a) * radius;
+            // inclinaison autour de X, puis autour de Z
+            double y1 = py * cosX - pz * sinX;
+            double z1 = py * sinX + pz * cosX;
+            double x2 = px * cosZ - y1 * sinZ;
+            double y2 = px * sinZ + y1 * cosZ;
+            level.sendParticles(ParticleTypes.FLAME, center.x + x2, center.y + y2, center.z + z1, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+    }
 
     /** Anneau de particules qui part de (x,y,z) vers l'extérieur. */
     public static void shockwave(ServerLevel level, net.minecraft.core.particles.SimpleParticleType particle,

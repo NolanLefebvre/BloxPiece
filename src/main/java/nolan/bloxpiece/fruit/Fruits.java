@@ -6,7 +6,7 @@ import java.util.Map;
 
 import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.ability.FireAbility;
-import nolan.bloxpiece.ability.GreatFireballAbility;
+import nolan.bloxpiece.ability.HikenAbility;
 import nolan.bloxpiece.ability.MeteorRainAbility;
 
 /** Liste de tous les fruits du mod. Pour en ajouter un : créer ses attaques puis l'enregistrer ici. */
@@ -19,7 +19,7 @@ public class Fruits {
             true,             // immunisé au feu et à la lave
             List.of(
                     new FireAbility(),          // touche 1 : boule de feu
-                    new GreatFireballAbility(), // touche 2 : grosse boule de feu explosive
+                    new HikenAbility(),         // touche 2 : Hiken (poing de feu géant)
                     new MeteorRainAbility(),    // touche 3 : pluie de météores
                     new DaiEnkaiEnteiAbility()  // touche 4 : Dai Enkai: Entei (ultime)
             )));

@@ -4,6 +4,7 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
@@ -13,40 +14,37 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import nolan.bloxpiece.BloxPiece;
 
 /**
- * Modèle de Dai Enkai: Entei : un soleil facetté fait de couches de plaques (noyau blanc-jaune, plaques jaunes puis
- * orange, croûte rouge sombre), entouré de pointes de plasma plates et de braises. Généré d'après le visuel de référence.
- *
- * 6 groupes centrés sur le soleil, qui tournent à des vitesses différentes :
- * - core : le noyau incandescent
- * - inner_layers : plaques internes très chaudes
- * - fire_layers : croûte rouge sombre + plaques orange (le corps visible)
- * - plasma_rays : pointes de plasma plates et fines stries
- * - embers : braises qui flottent autour
- *
- * La texture fait 256x512 ; chaque taille de cube a sa propre zone dans la texture (voir dai_enkai_entei.png).
+ * GENERE par make_entei_model.py : ne pas editer a la main.
+ * Gros soleil de feu : coeur blanc-jaune, deux coques de disques orange, langues de feu croisees et braises.
+ * Pour changer l'allure, modifie les parametres en haut de make_entei_model.py, relance-le et recopie
+ * EnteiSunModel.java + dai_enkai_entei.png. La texture est 4x plus detaillee que la taille declaree dans
+ * la LayerDefinition : c'est voulu (les UV sont normalises).
  */
 public class EnteiSunModel extends EntityModel<EnteiSunRenderState> {
 
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(BloxPiece.id("entei_sun"), "main");
 
-    private static final float[] CORE_SPEED = {0.03F, 0.07F, 0.02F};
-    private static final float[] INNER_SPEED = {-0.05F, 0.04F, -0.03F};
-    private static final float[] FIRE_SPEED = {-0.02F, -0.03F, 0.015F};
-    private static final float[] RAYS_SPEED = {0.012F, 0.05F, -0.03F};
-    private static final float[] EMBERS_SPEED = {0.015F, -0.035F, 0.02F};
+    private static final float[] CORE_SPEED = {0.020F, -0.060F, 0.015F};
+    private static final float[] MID_SPEED = {-0.015F, 0.045F, -0.020F};
+    private static final float[] OUTER_SPEED = {0.010F, -0.030F, 0.012F};
+    private static final float[] TONGUES_A_SPEED = {0.012F, 0.050F, -0.020F};
+    private static final float[] TONGUES_B_SPEED = {-0.018F, -0.035F, 0.025F};
+    private static final float[] EMBERS_SPEED = {0.015F, -0.040F, 0.020F};
 
     private final ModelPart core;
-    private final ModelPart innerLayers;
-    private final ModelPart fireLayers;
-    private final ModelPart plasmaRays;
+    private final ModelPart midShell;
+    private final ModelPart outerShell;
+    private final ModelPart tonguesA;
+    private final ModelPart tonguesB;
     private final ModelPart embers;
 
     public EnteiSunModel(ModelPart root) {
         super(root, RenderTypes::entityCutout);
         this.core = root.getChild("core");
-        this.innerLayers = root.getChild("inner_layers");
-        this.fireLayers = root.getChild("fire_layers");
-        this.plasmaRays = root.getChild("plasma_rays");
+        this.midShell = root.getChild("mid_shell");
+        this.outerShell = root.getChild("outer_shell");
+        this.tonguesA = root.getChild("tongues_a");
+        this.tonguesB = root.getChild("tongues_b");
         this.embers = root.getChild("embers");
     }
 
@@ -55,16 +53,16 @@ public class EnteiSunModel extends EntityModel<EnteiSunRenderState> {
         super.setupAnim(state);
         float age = state.ageInTicks;
         spin(this.core, CORE_SPEED, age);
-        spin(this.innerLayers, INNER_SPEED, age);
-        spin(this.fireLayers, FIRE_SPEED, age);
-        spin(this.plasmaRays, RAYS_SPEED, age);
+        spin(this.midShell, MID_SPEED, age);
+        spin(this.outerShell, OUTER_SPEED, age);
+        spin(this.tonguesA, TONGUES_A_SPEED, age);
+        spin(this.tonguesB, TONGUES_B_SPEED, age);
         spin(this.embers, EMBERS_SPEED, age);
-
-        // Les pointes de plasma vibrent légèrement : cela évite un contour trop rigide en jeu.
-        this.plasmaRays.y = 24.0F + (float) Math.sin(age * 0.22F) * 0.65F;
-
-        // Les braises flottent indépendamment du corps principal.
-        this.embers.y = 24.0F + (float) Math.sin(age * 0.15F) * 1.5F;
+        // Les langues de feu "vacillent" : petite oscillation en plus de la rotation
+        this.tonguesA.xRot += (float) Math.sin(age * 0.37F) * 0.10F;
+        this.tonguesA.zRot += (float) Math.cos(age * 0.29F) * 0.10F;
+        this.tonguesB.xRot += (float) Math.cos(age * 0.43F) * 0.12F;
+        this.tonguesB.zRot += (float) Math.sin(age * 0.31F) * 0.12F;
     }
 
     private static void spin(ModelPart group, float[] speed, float age) {
@@ -77,271 +75,246 @@ public class EnteiSunModel extends EntityModel<EnteiSunRenderState> {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
 
-        // ---- groupe "core" : noyau incandescent blanc-jaune (3 cubes, comme dans le .bbmodel)
-        PartDefinition core = group(root, "core");
-        cube(core, "core_center", 89, 0, -9.5F, -9.5F, -9.5F, 19F, 19F, 19F, 0F, 0F, 0F);
-        cube(core, "core_rot_xy", 89, 0, -9.5F, -9.5F, -9.5F, 19F, 19F, 19F, 45F, 45F, 0F);
-        cube(core, "core_rot_yz", 89, 0, -9.5F, -9.5F, -9.5F, 19F, 19F, 19F, 0F, 45F, 45F);
+        PartDefinition core = group(root, "core", 0F, 24F, 0F);
+        cube(core, "core_01", 0, 0, -6F, -6F, 4.601F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 74.065F, 69.281F, 146.658F);
+        cube(core, "core_02", 0, 0, -6F, -6F, 5.002F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -76.322F, -2.404F, 30.365F);
+        cube(core, "core_03", 0, 0, -6F, -6F, 5.31F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 150.764F, 42.79F, -149.382F);
+        cube(core, "core_04", 0, 0, -6F, -6F, 4.75F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 41.722F, -5.891F, 162.38F);
+        cube(core, "core_05", 0, 0, -6F, -6F, 4.878F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -130.771F, 52.657F, 22.574F);
+        cube(core, "core_06", 0, 0, -6F, -6F, 5.039F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -105.069F, 21.027F, -71.885F);
+        cube(core, "core_07", 0, 0, -6F, -6F, 5.055F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -31.804F, -17.033F, 36.254F);
+        cube(core, "core_08", 0, 0, -6F, -6F, 4.731F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -166.109F, -1.836F, 53.87F);
+        cube(core, "core_09", 0, 0, -6F, -6F, 4.935F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -42.516F, 34.921F, -54.023F);
+        cube(core, "core_10", 0, 0, -6F, -6F, 5.193F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -71.498F, -73.296F, 75.427F);
+        cube(core, "core_11", 0, 0, -6F, -6F, 5.441F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 136.862F, -0.564F, 75.291F);
+        cube(core, "core_12", 0, 0, -6F, -6F, 5.398F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -3.253F, -15.806F, 102.566F);
+        cube(core, "core_13", 0, 0, -6F, -6F, 4.766F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 137.475F, 23.302F, -34.778F);
+        cube(core, "core_14", 0, 0, -6F, -6F, 5.366F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -84.768F, 37.536F, -116.894F);
+        cube(core, "core_15", 0, 0, -6F, -6F, 4.863F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, -52.42F, -37.463F, 109.215F);
+        cube(core, "core_16", 0, 0, -6F, -6F, 5.061F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 136.892F, -21.004F, -11.69F);
+        cube(core, "core_17", 0, 0, -6F, -6F, 4.979F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 22.965F, -59.65F, 83.555F);
+        cube(core, "core_18", 0, 0, -6F, -6F, 4.937F, 12F, 12F, 1F, 0F, 0F, 0F, 0F, 103.292F, 68.551F, -6.193F);
 
-        // ---- groupe "inner_layers" : couche interne de plaques très chaudes (jaune vif)
-        PartDefinition inner_layers = group(root, "inner_layers");
-        cubeAt(inner_layers, "p_in_01", 54, 56, 5.884F, 1.23F, -3.892F, 9F, 9F, 2F, -109.605F, -54.64F, -77.866F);
-        cubeAt(inner_layers, "p_in_02", 95, 40, -3.43F, -1.533F, -6.122F, 7F, 11F, 2F, 163.273F, 35.953F, 7.985F);
-        cubeAt(inner_layers, "p_in_03", 77, 56, 4.962F, -2.818F, 3.409F, 11F, 8F, 2F, 62.711F, -7.25F, 80.879F);
-        cubeAt(inner_layers, "p_in_04", 54, 56, -6.632F, 6.37F, 1.53F, 9F, 9F, 2F, 93.152F, 73.342F, -135.723F);
-        cubeAt(inner_layers, "p_in_05", 77, 56, -5.371F, -4.037F, 2.806F, 11F, 8F, 2F, 15.546F, -47.487F, 21.605F);
-        cubeAt(inner_layers, "p_in_06", 54, 56, 3.706F, -5.511F, -4.781F, 9F, 9F, 2F, 165.076F, 18.676F, 86.496F);
-        cubeAt(inner_layers, "p_in_07", 77, 56, 2.256F, 6.807F, 0.702F, 11F, 8F, 2F, 95.613F, -7.565F, 163.032F);
-        cubeAt(inner_layers, "p_in_08", 54, 56, -7.488F, 1.922F, -2.296F, 9F, 9F, 2F, -120.585F, -3.876F, 55.178F);
-        cubeAt(inner_layers, "p_in_09", 77, 56, -2.776F, 1.617F, 8.738F, 11F, 8F, 2F, 21.736F, 7.016F, -140.872F);
-        cubeAt(inner_layers, "p_in_10", 54, 56, 2.462F, -6.454F, 1.994F, 9F, 9F, 2F, -42.207F, -44.158F, 135.921F);
-        cubeAt(inner_layers, "p_in_11", 77, 56, 1.578F, 4.722F, -5.022F, 11F, 8F, 2F, -139.494F, 10.831F, -68.327F);
-        cubeAt(inner_layers, "p_in_12", 77, 56, 4.845F, 4.569F, 6.759F, 11F, 8F, 2F, -33.636F, 38.81F, -5.312F);
+        PartDefinition midShell = group(root, "mid_shell", 0F, 24F, 0F);
+        cube(midShell, "mid_shell_01", 26, 0, -5F, -5F, 8.639F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 80.623F, 28.256F, 171.214F);
+        cube(midShell, "mid_shell_02", 26, 0, -5F, -5F, 8.931F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -106.294F, -50.174F, 32.57F);
+        cube(midShell, "mid_shell_03", 26, 0, -5F, -5F, 9.134F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -179.546F, -80.389F, 67.809F);
+        cube(midShell, "mid_shell_04", 26, 0, -5F, -5F, 8.946F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 55.345F, 37.454F, 172.176F);
+        cube(midShell, "mid_shell_05", 26, 0, -5F, -5F, 8.912F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -126.464F, 14.191F, 3.79F);
+        cube(midShell, "mid_shell_06", 26, 0, -5F, -5F, 9.209F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 57.534F, 53.288F, 115.929F);
+        cube(midShell, "mid_shell_07", 26, 0, -5F, -5F, 8.611F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 83.314F, -4.18F, -135.953F);
+        cube(midShell, "mid_shell_08", 26, 0, -5F, -5F, 8.556F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 138.422F, 33.101F, -179.819F);
+        cube(midShell, "mid_shell_09", 26, 0, -5F, -5F, 9.232F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -2.119F, -42.281F, -98.537F);
+        cube(midShell, "mid_shell_10", 26, 0, -5F, -5F, 9.162F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -155.499F, -53.56F, 107.29F);
+        cube(midShell, "mid_shell_11", 26, 0, -5F, -5F, 8.598F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 81.275F, -83.997F, 132.876F);
+        cube(midShell, "mid_shell_12", 26, 0, -5F, -5F, 8.701F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 50.449F, -7.192F, -120.747F);
+        cube(midShell, "mid_shell_13", 26, 0, -5F, -5F, 9.021F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -171.147F, 22.508F, -68.468F);
+        cube(midShell, "mid_shell_14", 26, 0, -5F, -5F, 9.251F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -45.003F, -17.152F, -70.913F);
+        cube(midShell, "mid_shell_15", 26, 0, -5F, -5F, 8.976F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -100.357F, -62.623F, 77.027F);
+        cube(midShell, "mid_shell_16", 26, 0, -5F, -5F, 8.599F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -138.744F, -45.855F, -28.368F);
+        cube(midShell, "mid_shell_17", 26, 0, -5F, -5F, 8.748F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 14.415F, -13.379F, -99.711F);
+        cube(midShell, "mid_shell_18", 26, 0, -5F, -5F, 9.188F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -171.185F, 33.293F, -11.72F);
+        cube(midShell, "mid_shell_19", 26, 0, -5F, -5F, 9.431F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -6.545F, -74.714F, -161.859F);
+        cube(midShell, "mid_shell_20", 26, 0, -5F, -5F, 9.449F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -53.125F, 53.332F, 114.829F);
+        cube(midShell, "mid_shell_21", 26, 0, -5F, -5F, 8.891F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -160.705F, -18.845F, -27.221F);
+        cube(midShell, "mid_shell_22", 26, 0, -5F, -5F, 8.656F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 16.941F, 10.974F, 71.723F);
+        cube(midShell, "mid_shell_23", 26, 0, -5F, -5F, 8.926F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 119.189F, 20.799F, -83.038F);
+        cube(midShell, "mid_shell_24", 26, 0, -5F, -5F, 9.135F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 106.878F, -20.558F, 81.344F);
+        cube(midShell, "mid_shell_25", 26, 0, -5F, -5F, 8.821F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -31.754F, -15.029F, 74.246F);
+        cube(midShell, "mid_shell_26", 26, 0, -5F, -5F, 8.673F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 174.908F, -8.524F, -125.81F);
+        cube(midShell, "mid_shell_27", 26, 0, -5F, -5F, 8.952F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -3.48F, 51.335F, -18.718F);
+        cube(midShell, "mid_shell_28", 26, 0, -5F, -5F, 8.736F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 79.726F, -68.147F, -70.477F);
+        cube(midShell, "mid_shell_29", 26, 0, -5F, -5F, 9.146F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 139.197F, 14.834F, 82.208F);
+        cube(midShell, "mid_shell_30", 26, 0, -5F, -5F, 8.771F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 5.698F, -18.719F, 65.277F);
+        cube(midShell, "mid_shell_31", 26, 0, -5F, -5F, 8.946F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -140.909F, -28.919F, 150.662F);
+        cube(midShell, "mid_shell_32", 26, 0, -5F, -5F, 9.406F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 85.786F, 22.353F, 67.649F);
+        cube(midShell, "mid_shell_33", 26, 0, -5F, -5F, 9.128F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 55.751F, -0.892F, -62.062F);
+        cube(midShell, "mid_shell_34", 26, 0, -5F, -5F, 8.822F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 157.186F, -12.82F, -11.016F);
+        cube(midShell, "mid_shell_35", 26, 0, -5F, -5F, 9.354F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -9.427F, 39.306F, -59.498F);
+        cube(midShell, "mid_shell_36", 26, 0, -5F, -5F, 9.059F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -101.216F, -4.543F, 124.502F);
+        cube(midShell, "mid_shell_37", 26, 0, -5F, -5F, 8.574F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -116.79F, 38.854F, -149.36F);
+        cube(midShell, "mid_shell_38", 26, 0, -5F, -5F, 8.88F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 39.056F, 18.378F, -41.669F);
+        cube(midShell, "mid_shell_39", 26, 0, -5F, -5F, 8.869F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -131.719F, 0.423F, 158.204F);
+        cube(midShell, "mid_shell_40", 26, 0, -5F, -5F, 9.018F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -50.604F, -58.727F, -172.637F);
+        cube(midShell, "mid_shell_41", 26, 0, -5F, -5F, 9.032F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 76.111F, 49.348F, -47.944F);
+        cube(midShell, "mid_shell_42", 26, 0, -5F, -5F, 8.828F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 139.756F, -46.674F, -17.333F);
+        cube(midShell, "mid_shell_43", 26, 0, -5F, -5F, 8.957F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -41.337F, 47.111F, -132.409F);
+        cube(midShell, "mid_shell_44", 26, 0, -5F, -5F, 9.392F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, 107.322F, 2.492F, -23.8F);
+        cube(midShell, "mid_shell_45", 26, 0, -5F, -5F, 8.875F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -93.84F, -51.702F, -159.163F);
+        cube(midShell, "mid_shell_46", 26, 0, -5F, -5F, 8.798F, 10F, 10F, 1F, 0F, 0F, 0F, 0F, -76.826F, 50.485F, -175.592F);
 
-        // ---- groupe "fire_layers" : croûte rouge sombre + couches de plaques orange / jaune qui forment le corps facetté du soleil
-        PartDefinition fire_layers = group(root, "fire_layers");
-        cube(fire_layers, "fire_crust_1", 0, 0, -14F, -11.5F, -8F, 28F, 23F, 16F, -35F, 20F, 40F);
-        cube(fire_layers, "fire_crust_2", 0, 0, -14F, -11.5F, -8F, 28F, 23F, 16F, 40F, -35F, 20F);
-        cube(fire_layers, "fire_crust_3", 0, 0, -14F, -11.5F, -8F, 28F, 23F, 16F, 20F, 40F, -35F);
-        cube(fire_layers, "fire_crust_4", 0, 0, -14F, -11.5F, -8F, 28F, 23F, 16F, 35F, 20F, -40F);
-        cube(fire_layers, "fire_crust_5", 0, 0, -14F, -11.5F, -8F, 28F, 23F, 16F, -40F, -35F, -20F);
-        cubeAt(fire_layers, "p_mid_01", 41, 40, 2.361F, 13.276F, 0.182F, 10F, 13F, 2F, 96.556F, 45.694F, 177.87F);
-        cubeAt(fire_layers, "p_mid_02", 176, 40, -5.308F, -7.231F, -5.955F, 11F, 11F, 2F, -123.054F, -2.336F, 171.562F);
-        cubeAt(fire_layers, "p_mid_03", 0, 56, -12.666F, 2.796F, 3.478F, 13F, 9F, 2F, -62.808F, -43.694F, 61.287F);
-        cubeAt(fire_layers, "p_mid_04", 176, 40, 6.522F, -9.646F, -1.028F, 11F, 11F, 2F, 77.586F, -44.484F, 53.616F);
-        cubeAt(fire_layers, "p_mid_05", 41, 40, -10.556F, -1.564F, -5.791F, 10F, 13F, 2F, 127.671F, -42.626F, -130.42F);
-        cubeAt(fire_layers, "p_mid_06", 176, 40, 11.049F, 0.295F, 1.969F, 11F, 11F, 2F, -101.303F, 37.707F, -119.351F);
-        cubeAt(fire_layers, "p_mid_07", 41, 40, -1.21F, -8.218F, 9.883F, 10F, 13F, 2F, -33.178F, 16.413F, -146.461F);
-        cubeAt(fire_layers, "p_mid_08", 176, 40, 0.194F, 8.963F, -6.432F, 11F, 11F, 2F, -140.002F, -33.787F, 52.459F);
-        cubeAt(fire_layers, "p_mid_09", 0, 56, -3.506F, 5.805F, 10.932F, 13F, 9F, 2F, 18.698F, -3.058F, -130.855F);
-        cubeAt(fire_layers, "p_mid_10", 0, 56, -2.334F, 11.124F, 2.491F, 13F, 9F, 2F, -47.025F, 77.063F, 50.516F);
-        cubeAt(fire_layers, "p_mid_11", 176, 40, -11.081F, -7.487F, 0.623F, 11F, 11F, 2F, 104.133F, -53.502F, -83.502F);
-        cubeAt(fire_layers, "p_mid_12", 176, 40, -6.723F, -0.826F, -9.09F, 11F, 11F, 2F, 157.545F, 41.694F, -18.905F);
-        cubeAt(fire_layers, "p_mid_13", 0, 56, -3.266F, -3.54F, -11.212F, 13F, 9F, 2F, -178.053F, -4.901F, 24.632F);
-        cubeAt(fire_layers, "p_mid_14", 176, 40, 11.593F, -1.765F, -0.064F, 11F, 11F, 2F, 84.375F, -49.645F, 70.796F);
-        cubeAt(fire_layers, "p_mid_15", 176, 40, 5.873F, 6.802F, 8.08F, 11F, 11F, 2F, 33.997F, -45.121F, 178.417F);
-        cubeAt(fire_layers, "p_mid_16", 0, 56, -0.938F, -9.256F, -3.851F, 13F, 9F, 2F, -117.589F, 66.733F, 177.647F);
-        cubeAt(fire_layers, "p_mid_17", 176, 40, 6.881F, -7.808F, -5.278F, 11F, 11F, 2F, 121.019F, -40.279F, 18.929F);
-        cubeAt(fire_layers, "p_mid_18", 0, 56, -6.468F, 7.805F, 0.254F, 13F, 9F, 2F, -101.869F, 79.98F, 25.329F);
-        cubeAt(fire_layers, "p_mid_19", 41, 40, 7.561F, -5.164F, 6.021F, 10F, 13F, 2F, 74.077F, -21.704F, 35.759F);
-        cubeAt(fire_layers, "p_mid_20", 0, 56, 5.328F, 3.325F, -11.329F, 13F, 9F, 2F, -144.142F, -33.146F, 2.647F);
-        cubeAt(fire_layers, "p_mid_21", 0, 56, 4.337F, 3.819F, 10.304F, 13F, 9F, 2F, -29.028F, 32.77F, -46.789F);
-        cubeAt(fire_layers, "p_mid_22", 176, 40, -6.039F, -3.633F, 10.518F, 11F, 11F, 2F, -42.744F, 6.963F, 125F);
-        cubeAt(fire_layers, "p_mid_23", 0, 56, -4.329F, -11.645F, 1.843F, 13F, 9F, 2F, -70.397F, -66.825F, 141.541F);
-        cubeAt(fire_layers, "p_mid_24", 41, 40, 8.691F, 7.347F, -6.704F, 10F, 13F, 2F, 132.319F, 78.811F, 154.153F);
-        cubeAt(fire_layers, "p_out_01", 166, 0, 2.163F, -8.62F, -12.29F, 11F, 16F, 2F, -178.051F, 32.704F, 126.774F);
-        cubeAt(fire_layers, "p_out_02", 166, 0, 11.49F, -4.353F, -10.662F, 11F, 16F, 2F, 158.263F, -40.539F, -7.425F);
-        cubeAt(fire_layers, "p_out_03", 0, 40, -11.1F, 13.165F, -2.979F, 18F, 13F, 2F, -116.832F, -80.772F, 65.53F);
-        cubeAt(fire_layers, "p_out_04", 114, 40, 4.344F, 3.294F, 13.661F, 15F, 11F, 2F, 65.799F, -6.875F, -96.201F);
-        cubeAt(fire_layers, "p_out_05", 66, 40, 11.365F, 7.214F, -7.674F, 12F, 12F, 2F, 156.961F, -21.724F, 71.062F);
-        cubeAt(fire_layers, "p_out_06", 31, 56, 11.88F, 5.907F, 5.464F, 9F, 9F, 2F, 60.318F, -30.795F, 137.358F);
-        cubeAt(fire_layers, "p_out_07", 31, 56, -2.592F, -12.852F, 6.269F, 9F, 9F, 2F, -36.917F, -45.088F, 126.555F);
-        cubeAt(fire_layers, "p_out_08", 114, 40, -9.498F, -9.703F, -3.86F, 15F, 11F, 2F, -106.603F, 40.667F, 135.446F);
-        cubeAt(fire_layers, "p_out_09", 66, 40, -14.793F, 3.585F, 6.123F, 12F, 12F, 2F, -45.08F, -32.692F, 52.716F);
-        cubeAt(fire_layers, "p_out_10", 166, 0, -10.232F, -7.812F, 7.737F, 11F, 16F, 2F, -37.971F, -19.501F, 83.185F);
-        cubeAt(fire_layers, "p_out_11", 66, 40, -12.456F, -4.17F, -9.155F, 12F, 12F, 2F, 106.353F, 7.602F, -62.033F);
-        cubeAt(fire_layers, "p_out_12", 166, 0, 13.623F, -4.667F, -2.673F, 11F, 16F, 2F, 129.398F, -69.827F, 33.234F);
-        cubeAt(fire_layers, "p_out_13", 114, 40, -3.032F, 10.788F, 9.382F, 15F, 11F, 2F, 33.702F, -38.973F, -119.203F);
-        cubeAt(fire_layers, "p_out_14", 166, 0, -0.668F, 11.709F, -7.685F, 11F, 16F, 2F, 29.235F, 73.092F, 58.487F);
-        cubeAt(fire_layers, "p_out_15", 0, 40, 16.57F, 2.36F, -2.509F, 18F, 13F, 2F, -115.821F, -10.418F, -83.826F);
-        cubeAt(fire_layers, "p_out_16", 114, 40, -8.636F, 14.377F, 3.562F, 15F, 11F, 2F, -24.427F, 51.844F, 68.942F);
-        cubeAt(fire_layers, "p_out_17", 66, 40, 5.343F, -9.619F, 11.256F, 12F, 12F, 2F, -28.826F, -37.367F, 160.962F);
-        cubeAt(fire_layers, "p_out_18", 66, 40, -16.959F, -0.465F, 1.817F, 12F, 12F, 2F, 84.809F, 39.805F, -85.884F);
-        cubeAt(fire_layers, "p_out_19", 114, 40, 3.074F, 15.437F, -1.947F, 15F, 11F, 2F, 86.447F, 74.579F, 159.222F);
-        cubeAt(fire_layers, "p_out_20", 114, 40, -0.106F, -15.449F, -4.509F, 15F, 11F, 2F, -149.699F, -62.985F, -122.859F);
-        cubeAt(fire_layers, "p_out_21", 31, 56, 2.973F, -15.129F, 1.399F, 9F, 9F, 2F, 131.554F, 80.485F, 64.447F);
-        cubeAt(fire_layers, "p_out_22", 166, 0, 5.977F, 5.292F, -14.337F, 11F, 16F, 2F, 132.789F, 27.618F, 120.799F);
-        cubeAt(fire_layers, "p_out_23", 31, 56, -0.953F, 0.634F, -14.261F, 9F, 9F, 2F, 156.032F, -13.763F, 137.889F);
-        cubeAt(fire_layers, "p_out_24", 66, 40, 8.395F, -11.62F, -6.28F, 12F, 12F, 2F, 169.157F, -47.633F, -61.641F);
-        cubeAt(fire_layers, "p_out_25", 166, 0, -12.634F, 3.778F, -5.309F, 11F, 16F, 2F, -111.402F, 5.756F, 69.599F);
-        cubeAt(fire_layers, "p_out_26", 166, 0, -4.738F, 9.167F, -13.635F, 11F, 16F, 2F, -93.439F, 10.033F, -47.928F);
-        cubeAt(fire_layers, "p_out_27", 66, 40, -7.811F, 4.132F, 14.682F, 12F, 12F, 2F, -20.853F, 46.094F, 149.202F);
-        cubeAt(fire_layers, "p_out_28", 66, 40, 1.74F, -4.137F, 15.928F, 12F, 12F, 2F, -10.158F, -22.195F, 137.732F);
-        cubeAt(fire_layers, "p_out_29", 114, 40, 11.707F, -3.144F, 9.045F, 15F, 11F, 2F, 42.523F, -26.94F, 100.417F);
-        cubeAt(fire_layers, "p_out_30", 66, 40, 2.734F, 12.001F, 7.126F, 12F, 12F, 2F, -33.033F, 67.006F, 26.411F);
-        cubeAt(fire_layers, "p_hot_01", 203, 40, 4.344F, 0.004F, 15.82F, 13F, 10F, 2F, 8.382F, 13.448F, 32.806F);
-        cubeAt(fire_layers, "p_hot_02", 203, 40, 15.116F, -0.217F, -5.799F, 13F, 10F, 2F, -122.022F, -13.885F, -104.171F);
-        cubeAt(fire_layers, "p_hot_03", 193, 0, -9.356F, -11.713F, 2.424F, 9F, 13F, 2F, -40.478F, -58.436F, 90.235F);
-        cubeAt(fire_layers, "p_hot_04", 203, 40, -6.119F, 8.878F, -12.389F, 13F, 10F, 2F, 137.889F, -8.535F, 179.202F);
-        cubeAt(fire_layers, "p_hot_05", 203, 40, 8.076F, -7.595F, -9.552F, 13F, 10F, 2F, 110.08F, 25.867F, 64.783F);
-        cubeAt(fire_layers, "p_hot_06", 193, 0, 5.411F, 2.25F, -14.177F, 9F, 13F, 2F, -163.578F, 10.434F, -64.902F);
-        cubeAt(fire_layers, "p_hot_07", 193, 0, -0.083F, 12.372F, -9.444F, 9F, 13F, 2F, -99.917F, -53.542F, 8.243F);
-        cubeAt(fire_layers, "p_hot_08", 203, 40, 10.848F, -9.332F, 1.755F, 13F, 10F, 2F, -61.32F, 63.318F, -111.361F);
-        cubeAt(fire_layers, "p_hot_09", 149, 40, 6.068F, 11.166F, 5.197F, 11F, 11F, 2F, 77.525F, 29.057F, 152.414F);
-        cubeAt(fire_layers, "p_hot_10", 193, 0, 13.383F, 3.745F, 6.152F, 9F, 13F, 2F, -84.206F, -7.412F, -95.314F);
-        cubeAt(fire_layers, "p_hot_11", 203, 40, 3.047F, 13.818F, 1.095F, 13F, 10F, 2F, -98.158F, -2.494F, -3.052F);
-        cubeAt(fire_layers, "p_hot_12", 203, 40, -3.475F, -13.829F, -1.542F, 13F, 10F, 2F, -117.823F, 25.307F, 148.251F);
-        cubeAt(fire_layers, "p_hot_13", 149, 40, 8.973F, 8.188F, -6.854F, 11F, 11F, 2F, -123.891F, -46.804F, -28.618F);
-        cubeAt(fire_layers, "p_hot_14", 203, 40, -4.544F, 9.033F, 9.785F, 13F, 10F, 2F, 43.332F, -4.515F, -121.577F);
-        cubeAt(fire_layers, "p_hot_15", 193, 0, 0.347F, -7.589F, 11.435F, 9F, 13F, 2F, -11.474F, -19.946F, -172.683F);
-        cubeAt(fire_layers, "p_hot_16", 149, 40, -11.384F, 8.564F, -2.451F, 11F, 11F, 2F, 133.716F, -47.206F, -140.529F);
-        cubeAt(fire_layers, "p_hot_17", 149, 40, -3.53F, 14.773F, 5.577F, 11F, 11F, 2F, 47.472F, -54.447F, -108.869F);
-        cubeAt(fire_layers, "p_hot_18", 149, 40, -8.516F, -7.094F, -8.685F, 11F, 11F, 2F, -126.271F, -11.03F, 132.42F);
-        cubeAt(fire_layers, "p_hot_19", 193, 0, -7.877F, -1.957F, 13.534F, 9F, 13F, 2F, -44.273F, 18.768F, 108.613F);
-        cubeAt(fire_layers, "p_hot_20", 149, 40, -0.344F, -13.33F, -8.172F, 11F, 11F, 2F, 109.572F, 15.974F, -25.545F);
-        cubeAt(fire_layers, "p_hot_21", 149, 40, -12.745F, -6.678F, 2.454F, 11F, 11F, 2F, -68.665F, 24.273F, 101.744F);
-        cubeAt(fire_layers, "p_hot_22", 149, 40, -3.337F, -3.411F, -14.09F, 11F, 11F, 2F, -143.58F, 5.708F, 155.569F);
-        cubeAt(fire_layers, "p_hot_23", 203, 40, 3.487F, -14.925F, 5.618F, 13F, 10F, 2F, -57.391F, 80.259F, -135.283F);
-        cubeAt(fire_layers, "p_hot_24", 203, 40, -11.552F, 2.936F, -7.148F, 13F, 10F, 2F, 122.613F, 17.873F, -93.088F);
-        cubeAt(fire_layers, "p_hot_25", 149, 40, 8.945F, -4.469F, 9.584F, 11F, 11F, 2F, -34.148F, 2.822F, -97.394F);
-        cubeAt(fire_layers, "p_hot_26", 203, 40, -14.613F, -0.182F, 0.966F, 13F, 10F, 2F, 95.834F, 18.976F, -87.465F);
+        PartDefinition outerShell = group(root, "outer_shell", 0F, 24F, 0F);
+        cube(outerShell, "outer_shell_01", 0, 13, -5.5F, -5.5F, 12.308F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -52.82F, 73.078F, 38.52F);
+        cube(outerShell, "outer_shell_02", 0, 13, -5.5F, -5.5F, 12.302F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -123.688F, 61.261F, -25.736F);
+        cube(outerShell, "outer_shell_03", 0, 13, -5.5F, -5.5F, 12.104F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 75.733F, -46.732F, 171.23F);
+        cube(outerShell, "outer_shell_04", 0, 13, -5.5F, -5.5F, 12.836F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -85.409F, -19.262F, 23.41F);
+        cube(outerShell, "outer_shell_05", 0, 13, -5.5F, -5.5F, 12.598F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -114.299F, -12.308F, -11.388F);
+        cube(outerShell, "outer_shell_06", 0, 13, -5.5F, -5.5F, 12.783F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -57.171F, 5.08F, -3.559F);
+        cube(outerShell, "outer_shell_07", 0, 13, -5.5F, -5.5F, 12.513F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -116.983F, -31.214F, 41.065F);
+        cube(outerShell, "outer_shell_08", 0, 13, -5.5F, -5.5F, 12.083F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 90.332F, 29.311F, 141.277F);
+        cube(outerShell, "outer_shell_09", 0, 13, -5.5F, -5.5F, 12.358F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -59.381F, 21.124F, 45.88F);
+        cube(outerShell, "outer_shell_10", 0, 13, -5.5F, -5.5F, 12.122F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -134.517F, 12.573F, -12.154F);
+        cube(outerShell, "outer_shell_11", 0, 13, -5.5F, -5.5F, 12.51F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 18.126F, -55.878F, -144.539F);
+        cube(outerShell, "outer_shell_12", 0, 13, -5.5F, -5.5F, 12.915F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 96.3F, 3.019F, -131.493F);
+        cube(outerShell, "outer_shell_13", 0, 13, -5.5F, -5.5F, 12.352F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 172.855F, 65.32F, -141.731F);
+        cube(outerShell, "outer_shell_14", 0, 13, -5.5F, -5.5F, 12.585F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 29.568F, 24.434F, 161.447F);
+        cube(outerShell, "outer_shell_15", 0, 13, -5.5F, -5.5F, 12.105F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 137.117F, 2.186F, -141.895F);
+        cube(outerShell, "outer_shell_16", 0, 13, -5.5F, -5.5F, 12.499F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -71.117F, 34.841F, -43.626F);
+        cube(outerShell, "outer_shell_17", 0, 13, -5.5F, -5.5F, 12.575F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 67.529F, -3.359F, -121.645F);
+        cube(outerShell, "outer_shell_18", 0, 13, -5.5F, -5.5F, 12.801F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -144.632F, -2.119F, -31.689F);
+        cube(outerShell, "outer_shell_19", 0, 13, -5.5F, -5.5F, 12.141F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 25.269F, -25.019F, -172.054F);
+        cube(outerShell, "outer_shell_20", 0, 13, -5.5F, -5.5F, 12.354F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -135.699F, -56.239F, 103.428F);
+        cube(outerShell, "outer_shell_21", 0, 13, -5.5F, -5.5F, 12.096F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -105.772F, -19.686F, -62.306F);
+        cube(outerShell, "outer_shell_22", 0, 13, -5.5F, -5.5F, 12.251F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -30.618F, -24.233F, 17.118F);
+        cube(outerShell, "outer_shell_23", 0, 13, -5.5F, -5.5F, 12.84F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 179.038F, -22.806F, 116.927F);
+        cube(outerShell, "outer_shell_24", 0, 13, -5.5F, -5.5F, 12.7F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 30.444F, -48.189F, 162.975F);
+        cube(outerShell, "outer_shell_25", 0, 13, -5.5F, -5.5F, 12.923F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 83.467F, -16.789F, -104.373F);
+        cube(outerShell, "outer_shell_26", 0, 13, -5.5F, -5.5F, 12.531F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 140.551F, 23.516F, 137.989F);
+        cube(outerShell, "outer_shell_27", 0, 13, -5.5F, -5.5F, 12.166F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -10.898F, -5.651F, -17.335F);
+        cube(outerShell, "outer_shell_28", 0, 13, -5.5F, -5.5F, 12.571F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -137.42F, -3.069F, 73.926F);
+        cube(outerShell, "outer_shell_29", 0, 13, -5.5F, -5.5F, 12.662F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -79.798F, -72.553F, -88.222F);
+        cube(outerShell, "outer_shell_30", 0, 13, -5.5F, -5.5F, 12.169F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -48.515F, -24.729F, 59.083F);
+        cube(outerShell, "outer_shell_31", 0, 13, -5.5F, -5.5F, 12.604F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -169.881F, 7.11F, -95.727F);
+        cube(outerShell, "outer_shell_32", 0, 13, -5.5F, -5.5F, 12.928F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 19.763F, -28.549F, 150.047F);
+        cube(outerShell, "outer_shell_33", 0, 13, -5.5F, -5.5F, 12.231F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 104.909F, -27.058F, -103.033F);
+        cube(outerShell, "outer_shell_34", 0, 13, -5.5F, -5.5F, 12.705F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -132.276F, 42.347F, -119.466F);
+        cube(outerShell, "outer_shell_35", 0, 13, -5.5F, -5.5F, 12.852F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 19.235F, -1.859F, -81.266F);
+        cube(outerShell, "outer_shell_36", 0, 13, -5.5F, -5.5F, 12.885F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -159.307F, -12.794F, 127.632F);
+        cube(outerShell, "outer_shell_37", 0, 13, -5.5F, -5.5F, 12.451F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -65.115F, 22.581F, -81.148F);
+        cube(outerShell, "outer_shell_38", 0, 13, -5.5F, -5.5F, 12.223F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 73.274F, 24.517F, -90.808F);
+        cube(outerShell, "outer_shell_39", 0, 13, -5.5F, -5.5F, 12.659F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 150.558F, -8.126F, 59.967F);
+        cube(outerShell, "outer_shell_40", 0, 13, -5.5F, -5.5F, 12.573F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -8.343F, 10.528F, -71.808F);
+        cube(outerShell, "outer_shell_41", 0, 13, -5.5F, -5.5F, 12.762F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -130.384F, 29.396F, 79.247F);
+        cube(outerShell, "outer_shell_42", 0, 13, -5.5F, -5.5F, 12.168F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 99.74F, 49.297F, 87.146F);
+        cube(outerShell, "outer_shell_43", 0, 13, -5.5F, -5.5F, 12.266F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -24.731F, -33.016F, 60.899F);
+        cube(outerShell, "outer_shell_44", 0, 13, -5.5F, -5.5F, 12.073F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 167.54F, -3.596F, -36.676F);
+        cube(outerShell, "outer_shell_45", 0, 13, -5.5F, -5.5F, 12.703F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -2.466F, 46.765F, -27.083F);
+        cube(outerShell, "outer_shell_46", 0, 13, -5.5F, -5.5F, 12.479F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -94.375F, 50.689F, 102.312F);
+        cube(outerShell, "outer_shell_47", 0, 13, -5.5F, -5.5F, 12.678F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -128.71F, -2.871F, -112.631F);
+        cube(outerShell, "outer_shell_48", 0, 13, -5.5F, -5.5F, 12.572F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 4.429F, -22.746F, 65.249F);
+        cube(outerShell, "outer_shell_49", 0, 13, -5.5F, -5.5F, 12.757F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 147.289F, 23.964F, -21.929F);
+        cube(outerShell, "outer_shell_50", 0, 13, -5.5F, -5.5F, 12.42F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 68.26F, -52.157F, 80.325F);
+        cube(outerShell, "outer_shell_51", 0, 13, -5.5F, -5.5F, 12.884F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 23.085F, -59.757F, 4.075F);
+        cube(outerShell, "outer_shell_52", 0, 13, -5.5F, -5.5F, 12.525F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -156.855F, 26.819F, 164.42F);
+        cube(outerShell, "outer_shell_53", 0, 13, -5.5F, -5.5F, 12.529F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 27.005F, 30.515F, -12.701F);
+        cube(outerShell, "outer_shell_54", 0, 13, -5.5F, -5.5F, 12.922F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 134.012F, -58.907F, -95.312F);
+        cube(outerShell, "outer_shell_55", 0, 13, -5.5F, -5.5F, 12.315F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 112.126F, -38.713F, 38.054F);
+        cube(outerShell, "outer_shell_56", 0, 13, -5.5F, -5.5F, 12.713F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -8.401F, 43.853F, -133.311F);
+        cube(outerShell, "outer_shell_57", 0, 13, -5.5F, -5.5F, 12.235F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -141.069F, 14.084F, 145.83F);
+        cube(outerShell, "outer_shell_58", 0, 13, -5.5F, -5.5F, 12.113F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -66.975F, 14.376F, -127.368F);
+        cube(outerShell, "outer_shell_59", 0, 13, -5.5F, -5.5F, 12.362F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -82.794F, -2.802F, 132.05F);
+        cube(outerShell, "outer_shell_60", 0, 13, -5.5F, -5.5F, 12.566F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -166.773F, -55.843F, -75.871F);
+        cube(outerShell, "outer_shell_61", 0, 13, -5.5F, -5.5F, 12.36F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -46.002F, -8.623F, 176.576F);
+        cube(outerShell, "outer_shell_62", 0, 13, -5.5F, -5.5F, 12.878F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -163.564F, 62.419F, 73.508F);
+        cube(outerShell, "outer_shell_63", 0, 13, -5.5F, -5.5F, 12.408F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -90.231F, 28.099F, -139.7F);
+        cube(outerShell, "outer_shell_64", 0, 13, -5.5F, -5.5F, 12.656F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 67.3F, -8.821F, -21.657F);
+        cube(outerShell, "outer_shell_65", 0, 13, -5.5F, -5.5F, 12.722F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -141.051F, -47.676F, -131.885F);
+        cube(outerShell, "outer_shell_66", 0, 13, -5.5F, -5.5F, 12.372F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -61.884F, 29.816F, -147.147F);
+        cube(outerShell, "outer_shell_67", 0, 13, -5.5F, -5.5F, 12.465F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -92.942F, 36.255F, 153.661F);
+        cube(outerShell, "outer_shell_68", 0, 13, -5.5F, -5.5F, 12.856F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 115.26F, 60.924F, 41.699F);
+        cube(outerShell, "outer_shell_69", 0, 13, -5.5F, -5.5F, 12.079F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, -69.684F, 39.828F, -171.523F);
+        cube(outerShell, "outer_shell_70", 0, 13, -5.5F, -5.5F, 12.237F, 11F, 11F, 1F, 0F, 0F, 0F, 0F, 104.734F, -55.553F, -18.388F);
 
-        // ---- groupe "plasma_rays" : pointes de plasma fines et courtes + quelques stries qui dépassent
-        PartDefinition plasma_rays = group(root, "plasma_rays");
-        cube(plasma_rays, "spike_01", 113, 56, 18.267F, -1F, -0.5F, 14F, 2F, 1F, 126.86F, 9.308F, 86.026F);
-        cube(plasma_rays, "spike_02", 112, 71, 16.292F, -0.5F, -0.5F, 6F, 1F, 1F, -87.16F, -12.248F, 96.216F);
-        cube(plasma_rays, "spike_03", 144, 56, 18.811F, -0.75F, -0.5F, 11F, 1.5F, 1F, 7.277F, 15.887F, 91.98F);
-        cube(plasma_rays, "spike_04", 127, 71, 17.381F, -0.5F, -0.5F, 4F, 1F, 1F, -167.112F, -12.999F, 69.124F);
-        cube(plasma_rays, "spike_05", 169, 56, 18.905F, -0.75F, -0.5F, 8F, 1.5F, 1F, -84.993F, -0.618F, 113.653F);
-        cube(plasma_rays, "spike_06", 144, 56, 16.836F, -0.75F, -0.5F, 11F, 1.5F, 1F, 142.588F, 30.498F, 60.716F);
-        cube(plasma_rays, "spike_07", 127, 71, 15.688F, -0.5F, -0.5F, 4F, 1F, 1F, -3.319F, -26.92F, 82.053F);
-        cube(plasma_rays, "spike_08", 144, 56, 17.509F, -0.75F, -0.5F, 11F, 1.5F, 1F, -152.838F, 28.781F, 110.462F);
-        cube(plasma_rays, "spike_09", 144, 56, 17.617F, -0.75F, -0.5F, 11F, 1.5F, 1F, 131.686F, -13.699F, 66.445F);
-        cube(plasma_rays, "spike_10", 169, 56, 15.859F, -0.75F, -0.5F, 8F, 1.5F, 1F, -94.115F, -11.99F, 127.434F);
-        cube(plasma_rays, "spike_11", 169, 56, 18.501F, -0.75F, -0.5F, 8F, 1.5F, 1F, 123.196F, 14.111F, 71.422F);
-        cube(plasma_rays, "spike_12", 169, 56, 16.382F, -0.75F, -0.5F, 8F, 1.5F, 1F, 103.637F, -40.916F, 84.383F);
-        cube(plasma_rays, "spike_13", 112, 71, 17.571F, -0.5F, -0.5F, 6F, 1F, 1F, 15.111F, 24.471F, 126.297F);
-        cube(plasma_rays, "spike_14", 144, 56, 16.487F, -0.75F, -0.5F, 11F, 1.5F, 1F, 77.002F, 13.3F, 54.263F);
-        cube(plasma_rays, "spike_15", 113, 56, 15.949F, -1F, -0.5F, 14F, 2F, 1F, 45.138F, -45.262F, 118.2F);
-        cube(plasma_rays, "spike_16", 127, 71, 18.803F, -0.5F, -0.5F, 4F, 1F, 1F, -55.225F, 49.171F, 92.432F);
-        cube(plasma_rays, "spike_17", 169, 56, 16.689F, -0.75F, -0.5F, 8F, 1.5F, 1F, 132.719F, -24.746F, 57.634F);
-        cube(plasma_rays, "spike_18", 169, 56, 18.286F, -0.75F, -0.5F, 8F, 1.5F, 1F, 19.056F, -13.181F, 138.738F);
-        cube(plasma_rays, "spike_19", 144, 56, 15.651F, -0.75F, -0.5F, 11F, 1.5F, 1F, -24.435F, 34.736F, 36.078F);
-        cube(plasma_rays, "spike_20", 112, 71, 18.91F, -0.5F, -0.5F, 6F, 1F, 1F, -41.24F, -72.098F, 89.815F);
-        cube(plasma_rays, "spike_21", 169, 56, 16.302F, -0.75F, -0.5F, 8F, 1.5F, 1F, -57.862F, 42.654F, 146.378F);
-        cube(plasma_rays, "spike_22", 169, 56, 18.102F, -0.75F, -0.5F, 8F, 1.5F, 1F, 44.132F, -0.119F, 31.761F);
-        cube(plasma_rays, "spike_23", 169, 56, 18.152F, -0.75F, -0.5F, 8F, 1.5F, 1F, 132.049F, -39.594F, 150.416F);
-        cube(plasma_rays, "spike_24", 112, 71, 18.442F, -0.5F, -0.5F, 6F, 1F, 1F, 12.234F, 54.971F, 68.199F);
-        cube(plasma_rays, "spike_25", 112, 71, 17.034F, -0.5F, -0.5F, 6F, 1F, 1F, 62.726F, -42.654F, 46.062F);
-        cube(plasma_rays, "spike_26", 127, 71, 18.283F, -0.5F, -0.5F, 4F, 1F, 1F, -18.033F, 17.551F, 161.392F);
-        cube(plasma_rays, "spike_27", 144, 56, 17.661F, -0.75F, -0.5F, 11F, 1.5F, 1F, -68.907F, 29.725F, 43.066F);
-        cube(plasma_rays, "spike_28", 112, 71, 15.731F, -0.5F, -0.5F, 6F, 1F, 1F, -153.251F, -56.189F, 137.298F);
-        cube(plasma_rays, "spike_29", 127, 71, 17F, -0.5F, -0.5F, 4F, 1F, 1F, 152.07F, 65.083F, 101.023F);
-        cube(plasma_rays, "spike_30", 127, 71, 18.837F, -0.5F, -0.5F, 4F, 1F, 1F, 63.841F, -22.844F, 21.098F);
-        cube(plasma_rays, "spike_31", 112, 71, 15.592F, -0.5F, -0.5F, 6F, 1F, 1F, -16.156F, -29.426F, 171.487F);
-        cube(plasma_rays, "spike_32", 144, 56, 17.89F, -0.75F, -0.5F, 11F, 1.5F, 1F, 75.595F, 39.901F, 23.806F);
-        cube(plasma_rays, "spike_33", 169, 56, 17.804F, -0.75F, -0.5F, 8F, 1.5F, 1F, -8.878F, -65.404F, 79.524F);
-        cube(plasma_rays, "spike_34", 127, 71, 16.646F, -0.5F, -0.5F, 4F, 1F, 1F, -90.079F, 37.152F, 160.411F);
-        cube(plasma_rays, "spike_35", 144, 56, 16.78F, -0.75F, -0.5F, 11F, 1.5F, 1F, 41.234F, 8.491F, 5.219F);
-        cube(plasma_rays, "spike_36", 127, 71, 16.508F, -0.5F, -0.5F, 4F, 1F, 1F, 113.23F, -43.865F, 150.929F);
-        cube(plasma_rays, "spike_37", 169, 56, 18.852F, -0.75F, -0.5F, 8F, 1.5F, 1F, -61.956F, 76.589F, 55.976F);
-        cube(plasma_rays, "spike_38", 127, 71, 16.026F, -0.5F, -0.5F, 4F, 1F, 1F, 65.999F, -54.891F, 19.271F);
-        cube(plasma_rays, "spike_39", 144, 56, 17.079F, -0.75F, -0.5F, 11F, 1.5F, 1F, -77.203F, 4.307F, 173.304F);
-        cube(plasma_rays, "spike_40", 127, 71, 16.993F, -0.5F, -0.5F, 4F, 1F, 1F, -152.809F, 40.932F, 4.899F);
-        cube(plasma_rays, "spike_41", 127, 71, 17.379F, -0.5F, -0.5F, 4F, 1F, 1F, 13.818F, -78.283F, 109.782F);
-        cube(plasma_rays, "spike_42", 127, 71, 18.056F, -0.5F, -0.5F, 4F, 1F, 1F, -168.395F, 52.613F, 167.7F);
-        cube(plasma_rays, "spike_43", 169, 56, 15.932F, -0.75F, -0.5F, 8F, 1.5F, 1F, 141.129F, -4.252F, -6.112F);
-        cube(plasma_rays, "spike_44", 144, 56, 17.727F, -0.75F, -0.5F, 11F, 1.5F, 1F, 147.585F, -19.79F, 170.709F);
-        cube(plasma_rays, "spike_45", 112, 71, 17.073F, -0.5F, -0.5F, 6F, 1F, 1F, 67.463F, 66.941F, 71.283F);
-        cube(plasma_rays, "spike_46", 112, 71, 15.818F, -0.5F, -0.5F, 6F, 1F, 1F, 2.465F, -69.039F, 33.806F);
-        cube(plasma_rays, "spike_47", 113, 56, 15.808F, -1F, -0.5F, 14F, 2F, 1F, -19.787F, 20.161F, -166.42F);
-        cube(plasma_rays, "spike_48", 112, 71, 15.844F, -0.5F, -0.5F, 6F, 1F, 1F, -138.134F, 15.277F, -7.374F);
-        cube(plasma_rays, "spike_49", 127, 71, 16.298F, -0.5F, -0.5F, 4F, 1F, 1F, 6.925F, -51.893F, -156.376F);
-        cube(plasma_rays, "spike_50", 169, 56, 16.714F, -0.75F, -0.5F, 8F, 1.5F, 1F, -26.959F, 75.674F, -173.212F);
-        cube(plasma_rays, "spike_51", 169, 56, 16.919F, -0.75F, -0.5F, 8F, 1.5F, 1F, 74.304F, -41.495F, -9.367F);
-        cube(plasma_rays, "spike_52", 144, 56, 16.571F, -0.75F, -0.5F, 11F, 1.5F, 1F, -109.668F, -3.246F, -176.537F);
-        cube(plasma_rays, "spike_53", 144, 56, 15.645F, -0.75F, -0.5F, 11F, 1.5F, 1F, -123.875F, 46.21F, 0.333F);
-        cube(plasma_rays, "spike_54", 127, 71, 15.785F, -0.5F, -0.5F, 4F, 1F, 1F, -166.25F, -86.192F, -119.336F);
-        cube(plasma_rays, "spike_55", 127, 71, 16.663F, -0.5F, -0.5F, 4F, 1F, 1F, 46.869F, 48.576F, -167.236F);
-        cube(plasma_rays, "spike_56", 144, 56, 17.668F, -0.75F, -0.5F, 11F, 1.5F, 1F, 134.981F, 0.086F, -11.117F);
-        cube(plasma_rays, "spike_57", 127, 71, 18.598F, -0.5F, -0.5F, 4F, 1F, 1F, 55.224F, -41.251F, -159.018F);
-        cube(plasma_rays, "spike_58", 113, 56, 16.866F, -1F, -0.5F, 14F, 2F, 1F, 120.706F, 54.771F, -56.605F);
-        cube(plasma_rays, "spike_59", 112, 71, 16.473F, -0.5F, -0.5F, 6F, 1F, 1F, -97.394F, -45.62F, -23.325F);
-        cube(plasma_rays, "spike_60", 112, 71, 16.394F, -0.5F, -0.5F, 6F, 1F, 1F, -162.26F, 12.004F, -158.651F);
-        cube(plasma_rays, "spike_61", 127, 71, 18.364F, -0.5F, -0.5F, 4F, 1F, 1F, 73.021F, 34.831F, -27.774F);
-        cube(plasma_rays, "spike_62", 169, 56, 17.263F, -0.75F, -0.5F, 8F, 1.5F, 1F, -109.454F, -58.268F, -116.432F);
-        cube(plasma_rays, "spike_63", 127, 71, 18.77F, -0.5F, -0.5F, 4F, 1F, 1F, -138.413F, 56.233F, -141.812F);
-        cube(plasma_rays, "spike_64", 169, 56, 15.66F, -0.75F, -0.5F, 8F, 1.5F, 1F, 79.998F, -28.325F, -12.125F);
-        cube(plasma_rays, "spike_65", 127, 71, 15.927F, -0.5F, -0.5F, 4F, 1F, 1F, -168.739F, -29.006F, -158.186F);
-        cube(plasma_rays, "spike_66", 112, 71, 15.729F, -0.5F, -0.5F, 6F, 1F, 1F, -178.207F, 52.218F, -35.106F);
-        cube(plasma_rays, "spike_67", 144, 56, 16.393F, -0.75F, -0.5F, 11F, 1.5F, 1F, 30.061F, -71.382F, -96.169F);
-        cube(plasma_rays, "spike_68", 127, 71, 18.02F, -0.5F, -0.5F, 4F, 1F, 1F, 57.295F, 30.045F, -142.592F);
-        cube(plasma_rays, "spike_69", 169, 56, 18.06F, -0.75F, -0.5F, 8F, 1.5F, 1F, 42.797F, 10.224F, -27.13F);
-        cube(plasma_rays, "spike_70", 169, 56, 16.489F, -0.75F, -0.5F, 8F, 1.5F, 1F, 75.015F, -42.022F, -124.727F);
-        cube(plasma_rays, "spike_71", 112, 71, 16.789F, -0.5F, -0.5F, 6F, 1F, 1F, 104.197F, 59.041F, -104.783F);
-        cube(plasma_rays, "spike_72", 144, 56, 17.573F, -0.75F, -0.5F, 11F, 1.5F, 1F, -122.889F, -40.548F, -28.301F);
-        cube(plasma_rays, "spike_73", 144, 56, 16.533F, -0.75F, -0.5F, 11F, 1.5F, 1F, -61.492F, -2.016F, -136.381F);
-        cube(plasma_rays, "spike_74", 112, 71, 15.519F, -0.5F, -0.5F, 6F, 1F, 1F, 84.003F, 37.621F, -50.338F);
-        cube(plasma_rays, "spike_75", 112, 71, 18.057F, -0.5F, -0.5F, 6F, 1F, 1F, 45.394F, -61.671F, -92.29F);
-        cube(plasma_rays, "spike_76", 169, 56, 17.967F, -0.75F, -0.5F, 8F, 1.5F, 1F, 24.125F, 34.978F, -119.454F);
-        cube(plasma_rays, "spike_77", 127, 71, 16.153F, -0.5F, -0.5F, 4F, 1F, 1F, -38.72F, -13.074F, -53.53F);
-        cube(plasma_rays, "spike_78", 144, 56, 16.713F, -0.75F, -0.5F, 11F, 1.5F, 1F, -88.913F, -25.241F, -138.865F);
-        cube(plasma_rays, "spike_79", 169, 56, 17.794F, -0.75F, -0.5F, 8F, 1.5F, 1F, -5.162F, 39.325F, -86.512F);
-        cube(plasma_rays, "spike_80", 169, 56, 17.756F, -0.75F, -0.5F, 8F, 1.5F, 1F, -6.502F, -27.782F, -66.297F);
-        cube(plasma_rays, "spike_81", 144, 56, 15.573F, -0.75F, -0.5F, 11F, 1.5F, 1F, 111.786F, 6.886F, -122.676F);
-        cube(plasma_rays, "spike_82", 112, 71, 16.065F, -0.5F, -0.5F, 6F, 1F, 1F, 136.172F, 15.83F, -58.524F);
-        cube(plasma_rays, "spike_83", 169, 56, 15.573F, -0.75F, -0.5F, 8F, 1.5F, 1F, -1.265F, -32.799F, -111.878F);
-        cube(plasma_rays, "spike_84", 112, 71, 16.401F, -0.5F, -0.5F, 6F, 1F, 1F, 165.259F, 18.397F, -103.304F);
-        cube(plasma_rays, "spike_85", 169, 56, 17.381F, -0.75F, -0.5F, 8F, 1.5F, 1F, 128.13F, 1.832F, -53.581F);
-        cube(plasma_rays, "spike_86", 127, 71, 17.268F, -0.5F, -0.5F, 4F, 1F, 1F, 131.328F, 2.536F, -103.028F);
-        cube(plasma_rays, "spike_87", 169, 56, 17.845F, -0.75F, -0.5F, 8F, 1.5F, 1F, 109.399F, 27.032F, -72.943F);
-        cube(plasma_rays, "spike_88", 169, 56, 16.307F, -0.75F, -0.5F, 8F, 1.5F, 1F, 96.111F, -25.583F, -96.358F);
-        cube(plasma_rays, "spike_89", 169, 56, 17.333F, -0.75F, -0.5F, 8F, 1.5F, 1F, 75.937F, 20.933F, -97.227F);
-        cube(plasma_rays, "spike_90", 113, 56, 17.051F, -1F, -0.5F, 14F, 2F, 1F, -105.825F, 3.914F, -91.57F);
-        cube(plasma_rays, "streak_1", 0, 71, -26F, -0.5F, -0.5F, 52F, 1F, 1F, -176.807F, -5.801F, 61.791F);
-        cube(plasma_rays, "streak_2", 0, 71, -26F, -0.5F, -0.5F, 52F, 1F, 1F, -50.835F, -31.642F, 134.915F);
-        cube(plasma_rays, "streak_3", 95, 68, -29F, -0.5F, -0.5F, 58F, 1F, 1F, -147.993F, 42.928F, 107.524F);
-        cube(plasma_rays, "streak_4", 0, 71, -26F, -0.5F, -0.5F, 52F, 1F, 1F, 135.042F, -64.856F, 34.69F);
-        cube(plasma_rays, "streak_5", 0, 68, -23F, -0.5F, -0.5F, 46F, 1F, 1F, -95.421F, 11.569F, 164.908F);
-        cube(plasma_rays, "streak_6", 0, 71, -26F, -0.5F, -0.5F, 52F, 1F, 1F, -134.001F, 26.692F, 23.053F);
+        PartDefinition tonguesA = group(root, "tongues_a", 0F, 24F, 0F);
+        cube(tonguesA, "tongues_a_01a", 24, 13, -3F, 10.431F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 20.086F, 51.807F, -7.039F);
+        cube(tonguesA, "tongues_a_01b", 24, 13, -3F, 10.431F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 164.881F, 35.5F, 148.01F);
+        cube(tonguesA, "tongues_a_02a", 24, 13, -3F, 9.741F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 174.802F, 43.188F, -148.127F);
+        cube(tonguesA, "tongues_a_02b", 24, 13, -3F, 9.741F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 174.487F, -46.562F, -140.556F);
+        cube(tonguesA, "tongues_a_03a", 24, 13, -3F, 10.488F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -138.471F, 18.507F, 158.181F);
+        cube(tonguesA, "tongues_a_03b", 24, 13, -3F, 10.488F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -116.788F, -45.228F, 87.899F);
+        cube(tonguesA, "tongues_a_04a", 24, 13, -3F, 10.032F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 77.315F, -33.039F, -80.709F);
+        cube(tonguesA, "tongues_a_04b", 24, 13, -3F, 10.032F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 56.311F, 10.607F, 2.295F);
+        cube(tonguesA, "tongues_a_05a", 24, 13, -3F, 9.544F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -105.833F, 47.3F, -47.043F);
+        cube(tonguesA, "tongues_a_05b", 24, 13, -3F, 9.544F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -138.403F, -10.662F, -125.27F);
+        cube(tonguesA, "tongues_a_06a", 24, 13, -3F, 10.246F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -7.31F, -8.213F, -78.331F);
+        cube(tonguesA, "tongues_a_06b", 24, 13, -3F, 10.246F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -41.398F, 79.022F, -120.255F);
+        cube(tonguesA, "tongues_a_07a", 24, 13, -3F, 9.832F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 69.691F, 38.177F, 137.37F);
+        cube(tonguesA, "tongues_a_07b", 24, 13, -3F, 9.832F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 129.976F, 15.834F, -119.746F);
+        cube(tonguesA, "tongues_a_08a", 24, 13, -3F, 9.548F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -86.781F, -8.09F, -115.029F);
+        cube(tonguesA, "tongues_a_08b", 24, 13, -3F, 9.548F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -81.898F, 3.187F, 155.424F);
+        cube(tonguesA, "tongues_a_09a", 24, 13, -3F, 10.557F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 97.161F, 43.952F, 0.786F);
+        cube(tonguesA, "tongues_a_09b", 24, 13, -3F, 10.557F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 134.176F, -5.149F, 85.802F);
+        cube(tonguesA, "tongues_a_10a", 24, 13, -3F, 9.586F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -172.658F, 0.138F, -72.937F);
+        cube(tonguesA, "tongues_a_10b", 24, 13, -3F, 9.586F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -91.076F, -82.657F, -161.87F);
+        cube(tonguesA, "tongues_a_11a", 24, 13, -3F, 10.321F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -150.788F, -33.912F, 33.777F);
+        cube(tonguesA, "tongues_a_11b", 24, 13, -3F, 10.321F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -35.978F, -46.415F, -101.159F);
+        cube(tonguesA, "tongues_a_12a", 24, 13, -3F, 9.82F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 124.483F, 21.08F, -51.535F);
+        cube(tonguesA, "tongues_a_12b", 24, 13, -3F, 9.82F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 115.062F, -31.889F, 24.589F);
+        cube(tonguesA, "tongues_a_13a", 24, 13, -3F, 10.444F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -135.869F, 26.628F, 1.959F);
+        cube(tonguesA, "tongues_a_13b", 24, 13, -3F, 10.444F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, -125.756F, -39.913F, -63.244F);
+        cube(tonguesA, "tongues_a_14a", 24, 13, -3F, 9.887F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 171.652F, -33.9F, 24.086F);
+        cube(tonguesA, "tongues_a_14b", 24, 13, -3F, 9.887F, -0.5F, 6F, 13F, 1F, 0F, 0F, 0F, 0F, 12.191F, -55.207F, -170.653F);
 
-        // ---- groupe "embers" : braises : petits cubes qui flottent autour
-        PartDefinition embers = group(root, "embers");
-        cubeAt(embers, "ember_01", 104, 56, 1.528F, 20.261F, -2.834F, 2F, 2F, 2F, 126.856F, 6.144F, -155.295F);
-        cubeAt(embers, "ember_02", 107, 71, -5.206F, 9.654F, 22.886F, 1F, 1F, 1F, 167.95F, -17.303F, 175.505F);
-        cubeAt(embers, "ember_03", 104, 56, 1.898F, 18.096F, -3.618F, 2F, 2F, 2F, -39.994F, -22.862F, -120.831F);
-        cubeAt(embers, "ember_04", 107, 71, 4.547F, 19.088F, 6.875F, 1F, 1F, 1F, -173.706F, -46.562F, 54.125F);
-        cubeAt(embers, "ember_05", 104, 56, -8.264F, 18.908F, -2.718F, 2F, 2F, 2F, -157.08F, -7.858F, -114.703F);
-        cubeAt(embers, "ember_06", 104, 56, -0.861F, 25.264F, -14.9F, 2F, 2F, 2F, 168.652F, -52.959F, 26.417F);
-        cubeAt(embers, "ember_07", 107, 71, 1.725F, 11.551F, 20.204F, 1F, 1F, 1F, -121.338F, 49.368F, -138.627F);
-        cubeAt(embers, "ember_08", 104, 56, -9.506F, 15.427F, -11.696F, 2F, 2F, 2F, 172.965F, 63.772F, 152.763F);
-        cubeAt(embers, "ember_09", 104, 56, 20.673F, 9.394F, 18.38F, 2F, 2F, 2F, -98.294F, 26.398F, 100.647F);
-        cubeAt(embers, "ember_10", 104, 56, -14.842F, -11.07F, 12.703F, 2F, 2F, 2F, -69.597F, -6.867F, 87.604F);
-        cubeAt(embers, "ember_11", 104, 56, 16.45F, 7.553F, -12.75F, 2F, 2F, 2F, 61.629F, 81.008F, -174.182F);
-        cubeAt(embers, "ember_12", 104, 56, 8.395F, 6.141F, 23.005F, 2F, 2F, 2F, 151.549F, -58.997F, 79.189F);
-        cubeAt(embers, "ember_13", 107, 71, -25.359F, 6.845F, -6.347F, 1F, 1F, 1F, -24.242F, 11.142F, -43.047F);
-        cubeAt(embers, "ember_14", 107, 71, 24.638F, 11.445F, -2.932F, 1F, 1F, 1F, 147.435F, 26.082F, 9.174F);
-        cubeAt(embers, "ember_15", 104, 56, -7F, 3.614F, 24.842F, 2F, 2F, 2F, 40.936F, -0.629F, 133.142F);
-        cubeAt(embers, "ember_16", 104, 56, -8.372F, -7.613F, -15.699F, 2F, 2F, 2F, 13.22F, -17.29F, -17.941F);
-        cubeAt(embers, "ember_17", 104, 56, 16.839F, -5.859F, 8.801F, 2F, 2F, 2F, 119.694F, -57.996F, 111.899F);
-        cubeAt(embers, "ember_18", 104, 56, -19.77F, -2.182F, -2.493F, 2F, 2F, 2F, -41.703F, -25.675F, 16.734F);
-        cubeAt(embers, "ember_19", 104, 56, 20.925F, 1.5F, -6.413F, 2F, 2F, 2F, -148.635F, 1.019F, 167.697F);
-        cubeAt(embers, "ember_20", 107, 71, -3.195F, -6.675F, 20.324F, 1F, 1F, 1F, 38.639F, -1.141F, -4.395F);
-        cubeAt(embers, "ember_21", 104, 56, -15.669F, -9.045F, -8.505F, 2F, 2F, 2F, -108.888F, 38.373F, 174.273F);
-        cubeAt(embers, "ember_22", 104, 56, 24.805F, -11.796F, -9.811F, 2F, 2F, 2F, 43.815F, -32.185F, 104.303F);
-        cubeAt(embers, "ember_23", 104, 56, -18.379F, -10.288F, 13.794F, 2F, 2F, 2F, 38.117F, -88.111F, -175.091F);
-        cubeAt(embers, "ember_24", 104, 56, 1.897F, -17.321F, -19.629F, 2F, 2F, 2F, -61.638F, 88.282F, -170.625F);
-        cubeAt(embers, "ember_25", 107, 71, 9.172F, -24.448F, 11.112F, 1F, 1F, 1F, -158.561F, -20.631F, -112.688F);
-        cubeAt(embers, "ember_26", 107, 71, -21.307F, -15.558F, -1.25F, 1F, 1F, 1F, 78.936F, -3.931F, 66.124F);
-        cubeAt(embers, "ember_27", 104, 56, 19.618F, -22.048F, -4.104F, 2F, 2F, 2F, -65.296F, -71.427F, -106.713F);
-        cubeAt(embers, "ember_28", 104, 56, -1.929F, -10.137F, 24.43F, 2F, 2F, 2F, 49.879F, -60.382F, 103.425F);
-        cubeAt(embers, "ember_29", 104, 56, -1.249F, -22.734F, -0.23F, 2F, 2F, 2F, -16.445F, -78.47F, -66.781F);
-        cubeAt(embers, "ember_30", 107, 71, -4.046F, -23.915F, 17.207F, 1F, 1F, 1F, 56.72F, 10.348F, 22.3F);
+        PartDefinition tonguesB = group(root, "tongues_b", 0F, 24F, 0F);
+        cube(tonguesB, "tongues_b_01a", 38, 13, -2F, 10.968F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 167.034F, -72.903F, -155.934F);
+        cube(tonguesB, "tongues_b_01b", 38, 13, -2F, 10.968F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 3.948F, -16.648F, 10.523F);
+        cube(tonguesB, "tongues_b_02a", 38, 13, -2F, 11.562F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -40.795F, -27.226F, 3.337F);
+        cube(tonguesB, "tongues_b_02b", 38, 13, -2F, 11.562F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -51.78F, 42.312F, -58.734F);
+        cube(tonguesB, "tongues_b_03a", 38, 13, -2F, 10.733F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 36.861F, 30.226F, -1.7F);
+        cube(tonguesB, "tongues_b_03b", 38, 13, -2F, 10.733F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 134.164F, 43.734F, 122.178F);
+        cube(tonguesB, "tongues_b_04a", 38, 13, -2F, 10.593F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -141.305F, -46.769F, -159.239F);
+        cube(tonguesB, "tongues_b_04b", 38, 13, -2F, 10.593F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -30.443F, -32.316F, 68.472F);
+        cube(tonguesB, "tongues_b_05a", 38, 13, -2F, 10.76F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -28.634F, 55.389F, -81.434F);
+        cube(tonguesB, "tongues_b_05b", 38, 13, -2F, 10.76F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -161.7F, 29.903F, 132.126F);
+        cube(tonguesB, "tongues_b_06a", 38, 13, -2F, 10.756F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 125.588F, -11.297F, -111.614F);
+        cube(tonguesB, "tongues_b_06b", 38, 13, -2F, 10.756F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 76.199F, -34.797F, -13.635F);
+        cube(tonguesB, "tongues_b_07a", 38, 13, -2F, 11.308F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -106.501F, -13.608F, 159.62F);
+        cube(tonguesB, "tongues_b_07b", 38, 13, -2F, 11.308F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -75.831F, -16.025F, 65.633F);
+        cube(tonguesB, "tongues_b_08a", 38, 13, -2F, 10.713F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 78.063F, -56.365F, -158.335F);
+        cube(tonguesB, "tongues_b_08b", 38, 13, -2F, 10.713F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 33.06F, 6.578F, -78.317F);
+        cube(tonguesB, "tongues_b_09a", 38, 13, -2F, 11.271F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 166.257F, -44.959F, -83.821F);
+        cube(tonguesB, "tongues_b_09b", 38, 13, -2F, 11.271F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 13.382F, -43.421F, 77.088F);
+        cube(tonguesB, "tongues_b_10a", 38, 13, -2F, 11.046F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -120.757F, -22.073F, 60.784F);
+        cube(tonguesB, "tongues_b_10b", 38, 13, -2F, 11.046F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -64.738F, -28.289F, -41.822F);
+        cube(tonguesB, "tongues_b_11a", 38, 13, -2F, 11.09F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 92.439F, 9.823F, -104.152F);
+        cube(tonguesB, "tongues_b_11b", 38, 13, -2F, 11.09F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 99.831F, -2.404F, -14.569F);
+        cube(tonguesB, "tongues_b_12a", 38, 13, -2F, 11.235F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -95.858F, 43.624F, 11.979F);
+        cube(tonguesB, "tongues_b_12b", 38, 13, -2F, 11.235F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -133.774F, -4.237F, -73.972F);
+        cube(tonguesB, "tongues_b_13a", 38, 13, -2F, 11.506F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 179.473F, 39.003F, 62.329F);
+        cube(tonguesB, "tongues_b_13b", 38, 13, -2F, 11.506F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 179.349F, -50.994F, 63.166F);
+        cube(tonguesB, "tongues_b_14a", 38, 13, -2F, 10.936F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 76.119F, 60.769F, -165.403F);
+        cube(tonguesB, "tongues_b_14b", 38, 13, -2F, 10.936F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 151.487F, 6.728F, -63.234F);
+        cube(tonguesB, "tongues_b_15a", 38, 13, -2F, 11F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -78.999F, 34.644F, 131.55F);
+        cube(tonguesB, "tongues_b_15b", 38, 13, -2F, 11F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -125.142F, 9.032F, 35.244F);
+        cube(tonguesB, "tongues_b_16a", 38, 13, -2F, 10.611F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 103.657F, -57.434F, 100.655F);
+        cube(tonguesB, "tongues_b_16b", 38, 13, -2F, 10.611F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, 31.825F, -7.302F, -157.772F);
+        cube(tonguesB, "tongues_b_17a", 38, 13, -2F, 10.627F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -163.074F, -60.128F, -45.104F);
+        cube(tonguesB, "tongues_b_17b", 38, 13, -2F, 10.627F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -9.493F, -28.457F, 154.235F);
+        cube(tonguesB, "tongues_b_18a", 38, 13, -2F, 10.879F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -9.265F, -50.98F, -150.143F);
+        cube(tonguesB, "tongues_b_18b", 38, 13, -2F, 10.879F, -0.5F, 4F, 8F, 1F, 0F, 0F, 0F, 0F, -7.433F, 38.417F, -162.001F);
 
-        return LayerDefinition.create(mesh, 256, 512);
+        PartDefinition embers = group(root, "embers", 0F, 24F, 0F);
+        cube(embers, "ember_01", 48, 13, -13.938F, -17.971F, -16.728F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 335.617F, 80.924F, 296.274F);
+        cube(embers, "ember_02", 48, 13, 22.398F, -13.535F, 3.988F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 204.603F, 346.957F, 186.587F);
+        cube(embers, "ember_03", 48, 13, -0.114F, 19.999F, 9.331F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 306.907F, 205.912F, 87.173F);
+        cube(embers, "ember_04", 48, 13, -13.796F, 14.009F, -4.85F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 51.49F, 99.575F, 280.245F);
+        cube(embers, "ember_05", 48, 13, -30.6F, 8.101F, -11.401F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 236.771F, 300.977F, 158.777F);
+        cube(embers, "ember_06", 48, 13, 3.156F, 9.126F, 18.188F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 203.241F, 45.274F, 116.35F);
+        cube(embers, "ember_07", 48, 13, 7.957F, -5.403F, 17.475F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 50.993F, 203.933F, 256.059F);
+        cube(embers, "ember_08", 48, 13, 19.583F, 0.583F, -21.375F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 56.549F, 335.916F, 46.304F);
+        cube(embers, "ember_09", 48, 13, -3.404F, 8.639F, -23.574F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 278.78F, 280.79F, 232.867F);
+        cube(embers, "ember_10", 48, 13, -5.756F, -23.199F, -1.221F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 184.452F, 298.064F, 197.282F);
+        cube(embers, "ember_11", 48, 13, 3.04F, 6.127F, -19.786F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 65.367F, 30.534F, 116.66F);
+        cube(embers, "ember_12", 48, 13, -8.685F, 4.076F, -31.638F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 117.021F, 190.888F, 14.875F);
+        cube(embers, "ember_13", 48, 13, 3.924F, -20.161F, -24.848F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 347.854F, 232.578F, 80.546F);
+        cube(embers, "ember_14", 48, 13, -25.208F, -0.51F, 3.773F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 342.251F, 226.065F, 329.65F);
+        cube(embers, "ember_15", 48, 13, -24.927F, 0.405F, -1.997F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 168.262F, 41.888F, 300.861F);
+        cube(embers, "ember_16", 48, 13, 6.058F, 19.498F, 1.732F, 2F, 2F, 2F, 0F, 0F, 0F, 0F, 246.51F, 30.665F, 91.596F);
+
+        return LayerDefinition.create(mesh, 64, 27);
     }
 
-    private static PartDefinition group(PartDefinition root, String name) {
-        return root.addOrReplaceChild(name, CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
+    private static PartDefinition group(PartDefinition root, String name, float x, float y, float z) {
+        return root.addOrReplaceChild(name, CubeListBuilder.create(), PartPose.offset(x, y, z));
     }
 
-    /** Cube dont la boîte est donnée en coordonnées du groupe (tourne autour du centre du soleil). */
+    /** Cube (boite relative a son pivot) place a (ox,oy,oz) du groupe, avec rotation en degres. */
     private static void cube(PartDefinition group, String name, int u, int v,
-                             float x, float y, float z, float dx, float dy, float dz,
-                             float rotX, float rotY, float rotZ) {
+                             float x, float y, float z, float dx, float dy, float dz, float inflate,
+                             float ox, float oy, float oz, float rotX, float rotY, float rotZ) {
         group.addOrReplaceChild(name,
-                CubeListBuilder.create().texOffs(u, v).addBox(x, y, z, dx, dy, dz),
-                PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F,
-                        (float) Math.toRadians(rotX), (float) Math.toRadians(rotY), (float) Math.toRadians(rotZ)));
-    }
-
-    /** Cube centré sur (cx, cy, cz), qui tourne sur lui-même. */
-    private static void cubeAt(PartDefinition group, String name, int u, int v,
-                               float cx, float cy, float cz, float dx, float dy, float dz,
-                               float rotX, float rotY, float rotZ) {
-        group.addOrReplaceChild(name,
-                CubeListBuilder.create().texOffs(u, v).addBox(-dx / 2.0F, -dy / 2.0F, -dz / 2.0F, dx, dy, dz),
-                PartPose.offsetAndRotation(cx, cy, cz,
+                CubeListBuilder.create().texOffs(u, v).addBox(x, y, z, dx, dy, dz, new CubeDeformation(inflate)),
+                PartPose.offsetAndRotation(ox, oy, oz,
                         (float) Math.toRadians(rotX), (float) Math.toRadians(rotY), (float) Math.toRadians(rotZ)));
     }
 }

@@ -15,6 +15,8 @@ import net.minecraft.client.multiplayer.ClientLevel;
 
 import nolan.bloxpiece.client.entity.EnteiSunModel;
 import nolan.bloxpiece.client.entity.EnteiSunRenderer;
+import nolan.bloxpiece.client.entity.HikenFistModel;
+import nolan.bloxpiece.client.entity.HikenFistRenderer;
 import nolan.bloxpiece.client.entity.PirateRenderer;
 import nolan.bloxpiece.client.hud.AbilityHud;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
@@ -54,6 +56,9 @@ public class BloxPieceClient implements ClientModInitializer {
         // Le calque du modèle doit être enregistré AVANT le renderer qui s'en sert
         ModelLayerRegistry.registerModelLayer(EnteiSunModel.LAYER, EnteiSunModel::createBodyLayer);
         EntityRendererRegistry.register(ModEntities.ENTEI_SUN, EnteiSunRenderer::new);
+        // Le poing de feu de Hiken (même principe : calque du modèle d'abord, renderer ensuite)
+        ModelLayerRegistry.registerModelLayer(HikenFistModel.LAYER, HikenFistModel::createBodyLayer);
+        EntityRendererRegistry.register(ModEntities.HIKEN_FIST, HikenFistRenderer::new);
 
         // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();

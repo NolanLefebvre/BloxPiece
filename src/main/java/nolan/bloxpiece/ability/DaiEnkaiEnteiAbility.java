@@ -12,7 +12,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.projectile.hurtingprojectile.LargeFireball;
+import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fruit.DevilFruit;
@@ -30,17 +33,18 @@ import nolan.bloxpiece.registry.ModAttachments;
  *
  * Tout est géré côté serveur : la charge est avancée à chaque tick (voir tick(), appelé par ModEvents) et
  * s'annule si le joueur meurt, quitte la dimension ou le serveur, perd son fruit ou repasse sous le niveau requis.
- * Le client n'a rien de spécial à faire : particules et sons viennent du serveur.
+ * Pendant la charge, le joueur LÈVE LE BRAS (attachment ENTEI_CHARGING, vu par tous les joueurs proches : le bras est
+ * relevé côté client par PlayerModelMixin) ; au tir, il le rabat d'un geste. Particules et sons viennent du serveur.
  */
 public class DaiEnkaiEnteiAbility implements Ability {
 
     private static final int CHARGE_TICKS = 30;            // durée de la charge (20 ticks = 1 seconde)
     private static final double SPEED = 1.0;               // plus lent que les autres boules de feu : c'est un soleil
-    private static final int EXPLOSION_POWER = 5;          // 3 = TNT (Grande boule de feu, météores), 5 = bien au-dessus
+    private static final int EXPLOSION_POWER = 36;         // 4 = TNT, 3 = Grande boule de feu / météores, 18 = version précédente (x2 = 36 : cratère colossal ; BAISSE-LA si le serveur lague au moment de l'impact)
     private static final double MAX_AIM_RANGE = 64.0;      // distance maximale du point visé
     private static final double START_BALL_RADIUS = 0.1;   // taille de la boule au début de la charge (elle grossit jusqu'à MAX_BALL_RADIUS)
-    private static final double MAX_BALL_RADIUS = 3.6;     // rayon final du soleil rassemblé au-dessus du joueur (les rayons de plasma dépassent encore)
-    private static final double REQUIRED_HEADROOM = 7.0;   // hauteur libre nécessaire au-dessus du joueur (le soleil est gros)
+    private static final double MAX_BALL_RADIUS = 5.4;     // rayon final du soleil rassemblé au-dessus du joueur (avant : 3.6, soit +50 %)
+    private static final double REQUIRED_HEADROOM = 10.0;  // hauteur libre nécessaire au-dessus du joueur (avant : 7.0, la boule est 50 % plus grosse)
 
     // joueur -> charge en cours (une seule à la fois par joueur)
     private static final Map<UUID, Charge> CHARGES = new HashMap<>();
@@ -95,6 +99,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
         ServerLevel level = (ServerLevel) player.level();
         EnteiSun sun = EnteiSun.spawn(level, ballCenter(player, START_BALL_RADIUS), START_BALL_RADIUS);
         CHARGES.put(player.getUUID(), new Charge(this, player, level, sun));
+        player.setAttached(ModAttachments.ENTEI_CHARGING, true); // le bras se lève (chez tout le monde)
         level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2.0f, 0.5f);
     }
 
@@ -108,11 +113,13 @@ public class DaiEnkaiEnteiAbility implements Ability {
             Charge charge = it.next();
             if (!isStillValid(charge)) {
                 charge.sun.discard(); // charge annulée : le soleil disparaît
+                lowerArm(charge.player);
                 it.remove();
                 continue;
             }
             charge.age++;
             if (charge.age >= CHARGE_TICKS) {
+                lowerArm(charge.player); // avant le tir : le geste de lancer prend le relais
                 launch(charge);
                 it.remove();
             } else {
@@ -125,8 +132,14 @@ public class DaiEnkaiEnteiAbility implements Ability {
     public static void clear() {
         for (Charge charge : CHARGES.values()) {
             charge.sun.discard();
+            lowerArm(charge.player);
         }
         CHARGES.clear();
+    }
+
+    /** Le joueur baisse le bras (fin ou annulation de la charge). */
+    private static void lowerArm(ServerPlayer player) {
+        player.removeAttached(ModAttachments.ENTEI_CHARGING);
     }
 
     /**
@@ -173,25 +186,63 @@ public class DaiEnkaiEnteiAbility implements Ability {
         double progress = (double) charge.age / CHARGE_TICKS;
         double radius = START_BALL_RADIUS + (MAX_BALL_RADIUS - START_BALL_RADIUS) * progress;
         Vec3 center = ballCenter(player, radius);
+        Vec3 hand = ballCenter(player, 0.0); // la paume levée, d'où naît la boule
 
         // La boule : le modèle Blockbench suit le joueur et grossit (aucune particule dessus : on veut voir le modèle)
         charge.sun.setPos(center.x, center.y, center.z);
         charge.sun.setRadius(radius);
 
-        // Les flammes des environs sont aspirées vers la boule
-        for (int i = 0; i < 2; i++) {
+        // 1. Les flammes des environs sont aspirées vers la boule (plus nombreuses, de plus loin à mesure qu'elle grossit)
+        for (int i = 0; i < 6; i++) {
             double angle = random.nextDouble() * 2 * Math.PI;
-            double distance = 3.0 + random.nextDouble() * 3.0;
+            double distance = 3.0 + radius + random.nextDouble() * 4.0;
             double px = player.getX() + Math.cos(angle) * distance;
-            double py = player.getY() + random.nextDouble() * 3.0;
+            double py = player.getY() + random.nextDouble() * 4.0;
             double pz = player.getZ() + Math.sin(angle) * distance;
             Vec3 toCenter = new Vec3(center.x - px, center.y - py, center.z - pz).normalize();
             // count = 0 : les "offsets" servent de direction à la particule
-            level.sendParticles(ParticleTypes.FLAME, px, py, pz, 0, toCenter.x, toCenter.y, toCenter.z, 0.35);
+            level.sendParticles(ParticleTypes.FLAME, px, py, pz, 0, toCenter.x, toCenter.y, toCenter.z, 0.45);
         }
 
-        // Anneau de feu au sol qui se resserre autour du joueur
-        FireEffects.groundRing(level, player.getX(), player.getY(), player.getZ(), 1.0 + 5.0 * (1.0 - progress), 40);
+        // 2. Deux anneaux de flammes inclinés qui tournent autour de la boule (juste à l'extérieur du modèle)
+        double spin = charge.age * 0.35;
+        FireEffects.orbitRing(level, center, radius * 1.25 + 0.2, 28, spin, 0.0, 0.0);
+        FireEffects.orbitRing(level, center, radius * 1.25 + 0.2, 28, -spin, Math.PI / 3.0, 0.0);
+        if (progress > 0.4) {
+            FireEffects.orbitRing(level, center, radius * 1.4 + 0.3, 32, spin * 0.7, -Math.PI / 3.0, Math.PI / 4.0);
+        }
+
+        // 3. Double spirale de feu qui monte le long du corps et du bras levé
+        for (int j = 0; j < 4; j++) {
+            double angle = charge.age * 0.5 + j * Math.PI / 2.0;
+            double height = ((charge.age * 0.12 + j * 0.25) % 1.0) * 2.4;
+            level.sendParticles(ParticleTypes.FLAME,
+                    player.getX() + Math.cos(angle) * 0.9, player.getY() + height, player.getZ() + Math.sin(angle) * 0.9,
+                    1, 0.02, 0.02, 0.02, 0.0);
+        }
+
+        // 4. Braises qui montent tout autour du joueur
+        for (int i = 0; i < 5; i++) {
+            double angle = random.nextDouble() * 2 * Math.PI;
+            double distance = 0.7 + random.nextDouble() * 1.8;
+            level.sendParticles(ParticleTypes.FLAME,
+                    player.getX() + Math.cos(angle) * distance, player.getY() + random.nextDouble() * 0.5, player.getZ() + Math.sin(angle) * distance,
+                    0, 0.0, 1.0, 0.0, 0.12 + random.nextDouble() * 0.1);
+        }
+
+        // 5. Étincelles dans la paume levée ; gouttes de lave sous la boule
+        level.sendParticles(ParticleTypes.FLAME, hand.x, hand.y, hand.z, 3, 0.2, 0.2, 0.2, 0.03);
+        if (charge.age % 3 == 0) {
+            level.sendParticles(ParticleTypes.LAVA, hand.x, hand.y, hand.z, 1, 0.2, 0.2, 0.2, 0.0);
+            level.sendParticles(ParticleTypes.LAVA, center.x, center.y - radius, center.z, 2, radius * 0.4, 0.2, radius * 0.4, 0.0);
+        }
+
+        // 6. Anneau de feu au sol qui se resserre + onde de chaleur qui part du joueur toutes les 10 ticks
+        FireEffects.groundRing(level, player.getX(), player.getY(), player.getZ(), 1.0 + 6.0 * (1.0 - progress), 48);
+        FireEffects.groundRing(level, player.getX(), player.getY(), player.getZ(), 0.5 + 3.0 * (1.0 - progress), 24);
+        if (charge.age % 10 == 0) {
+            FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 40, 0.3 + 0.3 * progress);
+        }
 
         if (charge.age % 8 == 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS,
@@ -228,11 +279,18 @@ public class DaiEnkaiEnteiAbility implements Ability {
         // Traînée + énorme impact (dégâts, onde de choc, colonne de feu) ; le soleil disparaît dans l'explosion
         FireEffects.track(projectile, player, FireEffects.Kind.ENTEI, charge.sun);
 
+        // Le joueur fait un geste de lancer avec le bras qui était levé (le bras droit : c'est de ce côté qu'est la boule)
+        InteractionHand throwingHand = player.getMainArm() == HumanoidArm.RIGHT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        player.swing(throwingHand, SwingAnimation.DEFAULT, true);
+
         // Lancement : déflagration au point de départ, ondes de choc et double tornade de feu autour du joueur
-        // (peu de particules : ni fumée ni déflagration sur la boule, pour qu'on voie le modèle)
-        level.sendParticles(ParticleTypes.FLAME, center.x, center.y, center.z, 20, 0.6, 0.6, 0.6, 0.1);
-        FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.7);
-        FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 2.0, 5.0, 3);
+        // (peu de particules sur la boule elle-même, pour qu'on voie le modèle)
+        level.sendParticles(ParticleTypes.FLAME, center.x, center.y, center.z, 60, 1.2, 1.2, 1.2, 0.2);
+        level.sendParticles(ParticleTypes.LAVA, center.x, center.y, center.z, 20, 1.5, 1.5, 1.5, 0.0);
+        FireEffects.shockwave(level, ParticleTypes.FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 96, 0.9);
+        FireEffects.shockwave(level, ParticleTypes.LARGE_SMOKE, player.getX(), player.getY() + 0.3, player.getZ(), 64, 0.5);
+        FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 2.6, 8.0, 3);
+        FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.8, 8.0, -3);
 
         level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 3.0f, 0.4f);
         level.playSound(null, player.blockPosition(), SoundEvents.GHAST_SHOOT, SoundSource.PLAYERS, 3.0f, 0.6f);

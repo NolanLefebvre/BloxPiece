@@ -13,7 +13,7 @@ import nolan.bloxpiece.fx.EnteiSun;
 
 /**
  * Affiche le soleil de Dai Enkai: Entei avec le modèle Blockbench (EnteiSunModel) :
- * pleine luminosité + rendu opaque (cutout) : les trous de la croûte laissent voir le noyau blanc-jaune.
+ * pleine luminosité + rendu opaque (cutout).
  */
 public class EnteiSunRenderer extends MobRenderer<EnteiSun, EnteiSunRenderState, EnteiSunModel> {
 
@@ -54,7 +54,7 @@ public class EnteiSunRenderer extends MobRenderer<EnteiSun, EnteiSunRenderState,
 
     @Override
     protected AABB getBoundingBoxForCulling(EnteiSun entity, float partialTick) {
-        // Les pointes de plasma dépassent largement de la hitbox de l'entité.
+        // Les langues de feu et les braises dépassent largement de la hitbox de l'entité.
         // Une marge plus large évite qu'elles disparaissent au bord de l'écran.
         return entity.getBoundingBox().inflate(entity.getBbWidth() * 4.0);
     }

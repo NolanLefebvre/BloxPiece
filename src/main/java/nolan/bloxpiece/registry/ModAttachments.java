@@ -44,6 +44,16 @@ public class ModAttachments {
                     .syncWith(PlayerProgress.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
     );
 
+    /**
+     * Vrai tant que le joueur charge Dai Enkai: Entei (bras levé). Pas sauvegardé (une charge ne survit pas à un arrêt),
+     * mais synchronisé avec TOUS les joueurs qui le voient : c'est ce qui permet d'afficher le bras levé chez les autres.
+     * Le serveur le met en début de charge et le retire à la fin / à l'annulation (voir DaiEnkaiEnteiAbility).
+     */
+    public static final AttachmentType<Boolean> ENTEI_CHARGING = AttachmentRegistry.create(
+            BloxPiece.id("entei_charging"),
+            builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
     public static void initialize() {
     }
 }
