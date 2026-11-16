@@ -99,9 +99,10 @@ public class FireEffects {
         final double maxRadius;
         final int ticks;      // durée de l'expansion
         final int domePoints; // densité du dôme de flammes
+        final boolean sphere; // true : vraie boule 3D (Dai Enkai: Entei, voir BlastSphere) ; false : anneau au sol + dôme (Hiken)
         int age;
 
-        Blast(ServerLevel level, double x, double y, double z, double maxRadius, int ticks, int domePoints) {
+        Blast(ServerLevel level, double x, double y, double z, double maxRadius, int ticks, int domePoints, boolean sphere) {
             this.level = level;
             this.x = x;
             this.y = y;
@@ -109,6 +110,7 @@ public class FireEffects {
             this.maxRadius = maxRadius;
             this.ticks = ticks;
             this.domePoints = domePoints;
+            this.sphere = sphere;
         }
     }
 
@@ -318,7 +320,9 @@ public class FireEffects {
 
         // Grosses explosions visuelles
         if (k.emitters > 0) {
-            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y + 0.5, z, k.emitters, r * 0.25, 0.3, r * 0.25, 0.0);
+            // Entei : les gerbes sont réparties en volume (même étalement en hauteur qu'en largeur), pas en nappe plate
+            double emitterHeight = k == Kind.ENTEI ? r * 0.25 : 0.3;
+            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y + 0.5, z, k.emitters, r * 0.25, emitterHeight, r * 0.25, 0.0);
         }
 
         // Boule de feu qui jaillit dans toutes les directions
@@ -328,8 +332,14 @@ public class FireEffects {
 
         // Onde de choc : anneau de flammes (puis de fumée) qui s'étend vers l'extérieur.
         // Avec count = 0, les "offsets" servent de direction de la particule.
-        shockwave(level, ParticleTypes.FLAME, x, y + 0.2, z, k.shockPoints, k.shockSpeed);
-        shockwave(level, ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, k.shockPoints, k.shockSpeed * 0.6);
+        // Dai Enkai: Entei : l'onde part dans TOUTES les directions (sphère) au lieu d'un anneau horizontal plat
+        if (k == Kind.ENTEI) {
+            sphericalShock(level, ParticleTypes.FLAME, x, y + 0.5, z, k.shockPoints, k.shockSpeed);
+            sphericalShock(level, ParticleTypes.LARGE_SMOKE, x, y + 0.5, z, k.shockPoints, k.shockSpeed * 0.6);
+        } else {
+            shockwave(level, ParticleTypes.FLAME, x, y + 0.2, z, k.shockPoints, k.shockSpeed);
+            shockwave(level, ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, k.shockPoints, k.shockSpeed * 0.6);
+        }
 
         // Colonne de feu qui monte vers le ciel
         for (int h = 0; h < k.columnHeight * 2; h++) {
@@ -341,13 +351,13 @@ public class FireEffects {
 
         // Dai Enkai: Entei : en plus, une vague de feu en dôme qui s'étend jusqu'au rayon de l'impact
         if (k == Kind.ENTEI) {
-            BLASTS.add(new Blast(level, x, y, z, r, BLAST_TICKS, 200));
+            BLASTS.add(new Blast(level, x, y, z, r, BLAST_TICKS, 200, true));
         }
 
         // Hiken : anneau de flammes au sol + petit dôme, jusqu'au bord de l'explosion. Les dégâts, la mise à feu et le recul
         // sont déjà gérés par HikenFist (une seule fois par entité) : rien à ajouter ici.
         if (k == Kind.HIKEN) {
-            BLASTS.add(new Blast(level, x, y, z, r, HIKEN_BLAST_TICKS, 70));
+            BLASTS.add(new Blast(level, x, y, z, r, HIKEN_BLAST_TICKS, 70, false));
             return;
         }
 
@@ -367,7 +377,7 @@ public class FireEffects {
         }
     }
 
-    /** Fait avancer les vagues de feu en dôme : un anneau au sol + un dôme de flammes qui grossissent jusqu'au rayon final. */
+    /** Fait avancer les vagues de feu : Entei = une boule 3D qui grossit (BlastSphere) ; Hiken = un anneau au sol + un dôme de flammes. */
     private static void tickBlasts() {
         Iterator<Blast> it = BLASTS.iterator();
         while (it.hasNext()) {
@@ -377,35 +387,67 @@ public class FireEffects {
             double eased = 1.0 - (1.0 - progress) * (1.0 - progress); // part vite, ralentit à la fin
             double radius = b.maxRadius * eased;
 
-            // Anneau de flammes au sol (plus il est grand, plus il a de points)
-            int ringPoints = Math.max(24, Math.min(480, (int) (radius * 7)));
-            for (int i = 0; i < ringPoints; i++) {
-                double a = 2 * Math.PI * i / ringPoints;
-                b.level.sendParticles(ParticleTypes.FLAME,
-                        b.x + Math.cos(a) * radius, b.y + 0.3, b.z + Math.sin(a) * radius,
-                        1, 0.0, 0.1, 0.0, 0.0);
-            }
+            if (b.sphere) {
+                // Dai Enkai: Entei : une vraie boule 3D (voir BlastSphere), visible de tous les côtés, avec ses cercles posés sur la surface
+                emitSphere(b, radius);
+            } else {
+                // Anneau de flammes au sol (plus il est grand, plus il a de points)
+                int ringPoints = Math.max(24, Math.min(480, (int) (radius * 7)));
+                for (int i = 0; i < ringPoints; i++) {
+                    double a = 2 * Math.PI * i / ringPoints;
+                    b.level.sendParticles(ParticleTypes.FLAME,
+                            b.x + Math.cos(a) * radius, b.y + 0.3, b.z + Math.sin(a) * radius,
+                            1, 0.0, 0.1, 0.0, 0.0);
+                }
 
-            // Dôme : demi-sphère de flammes (points répartis régulièrement, hémisphère du haut)
-            double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
-            int domePoints = b.domePoints; // Entei : 200 (dôme final de 64 blocs de rayon) ; Hiken : 70
-            for (int i = 0; i < domePoints; i++) {
-                double yy = (i + 0.5) / domePoints;             // 0..1 : du sol au sommet
-                double ring = Math.sqrt(1.0 - yy * yy);
-                double a = i * goldenAngle;
-                b.level.sendParticles(ParticleTypes.FLAME,
-                        b.x + Math.cos(a) * ring * radius, b.y + yy * radius * 0.8, b.z + Math.sin(a) * ring * radius,
-                        1, 0.0, 0.0, 0.0, 0.0);
-            }
+                // Dôme : demi-sphère de flammes (points répartis régulièrement, hémisphère du haut)
+                double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
+                int domePoints = b.domePoints; // Entei : 200 (dôme final de 64 blocs de rayon) ; Hiken : 70
+                for (int i = 0; i < domePoints; i++) {
+                    double yy = (i + 0.5) / domePoints;             // 0..1 : du sol au sommet
+                    double ring = Math.sqrt(1.0 - yy * yy);
+                    double a = i * goldenAngle;
+                    b.level.sendParticles(ParticleTypes.FLAME,
+                            b.x + Math.cos(a) * ring * radius, b.y + yy * radius * 0.8, b.z + Math.sin(a) * ring * radius,
+                            1, 0.0, 0.0, 0.0, 0.0);
+                }
 
-            // Fumée à l'arrière du front de feu
-            if (b.age % 2 == 0) {
-                shockwave(b.level, ParticleTypes.LARGE_SMOKE, b.x, b.y + 0.5, b.z, 48, 0.2 + 0.15 * progress);
+                // Fumée à l'arrière du front de feu
+                if (b.age % 2 == 0) {
+                    shockwave(b.level, ParticleTypes.LARGE_SMOKE, b.x, b.y + 0.5, b.z, 48, 0.2 + 0.15 * progress);
+                }
             }
 
             if (b.age >= b.ticks) {
                 it.remove();
             }
+        }
+    }
+
+    /**
+     * Envoie les particules de la boule de Dai Enkai: Entei pour ce tick. La boule fait jusqu'à 64 blocs de rayon : les particules
+     * sont envoyées avec la limite de distance levée (sinon elles n'apparaissent qu'à moins de 32 blocs du joueur, et on ne verrait que
+     * le morceau de sphère le plus proche, pas la boule entière sous tous les angles).
+     */
+    private static void emitSphere(Blast b, double radius) {
+        BlastSphere.emit(b.x, b.y + 0.5, b.z, radius, b.age, (px, py, pz, kind) -> {
+            var particle = kind == BlastSphere.Kind.SMOKE ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME;
+            for (ServerPlayer player : b.level.players()) {
+                b.level.sendParticles(player, particle, true, true, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+        });
+    }
+
+    /** Onde de choc sphérique : des particules qui partent du centre dans toutes les directions (points de Fibonacci sur la sphère). */
+    private static void sphericalShock(ServerLevel level, net.minecraft.core.particles.SimpleParticleType particle,
+                                       double x, double y, double z, int points, double speed) {
+        double goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
+        for (int i = 0; i < points; i++) {
+            double dy = 1.0 - 2.0 * (i + 0.5) / points;
+            double ring = Math.sqrt(1.0 - dy * dy);
+            double a = i * goldenAngle;
+            // count = 0 : les "offsets" servent de direction de la particule
+            level.sendParticles(particle, x, y, z, 0, Math.cos(a) * ring, dy, Math.sin(a) * ring, speed);
         }
     }
 

@@ -23,29 +23,30 @@ import net.minecraft.world.phys.Vec3;
  * Le projectile (invisible sous le soleil) de Dai Enkai: Entei : une boule de feu vanilla (même type, même vitesse, mêmes dégâts directs)
  * dont SEUL le cratère change.
  *
- * L'explosion vanilla creuse un cratère en lançant des rayons depuis une grille cubique : à cette puissance, le trou obtenu est carré /
- * cubique. Ici l'explosion garde exactement la même puissance pour les dégâts et le recul (mêmes entités touchées, mêmes dégâts, même
- * ordre : les dégâts sont calculés avant que les blocs ne disparaissent), mais elle ne détruit plus aucun bloc elle-même : le cratère est
- * creusé ensuite comme une sphère parfaite.
+ * L'explosion garde exactement la même puissance pour les dégâts et le recul (mêmes entités touchées, mêmes dégâts, même ordre : les
+ * dégâts sont calculés avant que les blocs ne disparaissent), mais elle ne détruit plus aucun bloc elle-même : le cratère est creusé
+ * ensuite, comme si une grosse boule avait été enfoncée dans le sol au point d'impact.
  * <ul>
- *   <li>Terrain meuble (résistance &lt; 3 : terre, sable, gravier, feuilles, bois...) : sphère de {@link #SOFT_RADIUS} blocs.</li>
- *   <li>Roches et minerais (résistance 3 à 100) : sphère plus petite, concentrique, de {@link #HARD_RADIUS} blocs (la roche résistait déjà
- *       bien plus que la terre dans l'explosion vanilla).</li>
- *   <li>Obsidienne, bedrock, eau, lave (résistance &ge; 100) : jamais détruits, comme avant.</li>
+ *   <li>Forme : une calotte sphérique (cuvette). Profondeur maximale au centre (le point d'impact), qui diminue progressivement
+ *       jusqu'au bord : pente régulière et arrondie, ni cylindre ni cube, pas de paroi verticale.</li>
+ *   <li>Taille : le rayon du cratère est proportionnel à la puissance de l'explosion ({@link #RADIUS_PER_POWER}) et la profondeur
+ *       à son rayon ({@link #DEPTH_RATIO}).</li>
+ *   <li>Une seule forme pour tous les matériaux (terre, pierre, minerais...) : plus de marche entre la couche de terre et la roche.</li>
+ *   <li>Jamais détruits : tout bloc incassable ou à très forte résistance (bedrock, obsidienne, eau, lave...), comme avant.</li>
  * </ul>
  * Comme avant, rien n'est détruit si la règle mobGriefing est désactivée ; les blocs à inventaire (coffres...) lâchent leur contenu et des
  * flammes se posent au hasard sur le fond du cratère.
  */
 public class EnteiFireball extends LargeFireball {
 
-    /** Rayon du cratère en terrain meuble (blocs). */
-    private static final double SOFT_RADIUS = 22.0;
+    /** Rayon du cratère à la surface (blocs) = puissance de l'explosion x ce facteur (36 -> ~22 blocs, comme avant). */
+    private static final double RADIUS_PER_POWER = 0.6;
 
-    /** Rayon du cratère dans la roche (blocs). */
-    private static final double HARD_RADIUS = 8.0;
-
-    /** En dessous : terrain meuble ; au-dessus (et jusqu'à {@link #INDESTRUCTIBLE}) : roche. */
-    private static final float SOFT_MAX_RESISTANCE = 3.0F;
+    /**
+     * Profondeur au centre = rayon x ce facteur. En dessous de 1 (une demi-sphère exacte aurait une paroi verticale au bord) : la cuvette
+     * est une calotte d'une sphère un peu plus grande, ce qui donne un bord en pente douce.
+     */
+    private static final double DEPTH_RATIO = 0.75;
 
     /** Résistance à partir de laquelle un bloc survit (obsidienne, bedrock, eau, lave...). */
     private static final float INDESTRUCTIBLE = 100.0F;
@@ -67,40 +68,52 @@ public class EnteiFireball extends LargeFireball {
             // Explosion de la même puissance (dégâts et recul inchangés), mais sans détruire de blocs : le cratère est creusé ci-dessous
             level.explode(this, this.getX(), this.getY(), this.getZ(), (float) this.blastPower, false, Level.ExplosionInteraction.NONE);
             if (level.getGameRules().get(GameRules.MOB_GRIEFING)) {
-                carveSphere(level, this.position(), this);
+                carveCrater(level, this.position(), this, this.blastPower);
             }
             this.discard();
         }
     }
 
-    /** Creuse le cratère sphérique autour de {@code center} (voir la description de la classe). */
-    private static void carveSphere(ServerLevel level, Vec3 center, Entity source) {
-        int reach = (int) Math.ceil(SOFT_RADIUS);
-        BlockPos origin = BlockPos.containing(center);
-        double softSqr = SOFT_RADIUS * SOFT_RADIUS;
-        double hardSqr = HARD_RADIUS * HARD_RADIUS;
+    /** Creuse la cuvette autour du point d'impact {@code impact} (voir la description de la classe). */
+    private static void carveCrater(ServerLevel level, Vec3 impact, Entity source, int power) {
+        double radius = power * RADIUS_PER_POWER;       // rayon à la surface
+        double depth = radius * DEPTH_RATIO;            // profondeur au centre
+        // Calotte sphérique : sphère de rayon R qui coupe le sol (au niveau de l'impact) selon un cercle de rayon "radius" et descend de
+        // "depth" sous le point d'impact. Son centre est donc un peu AU-DESSUS du sol.
+        double sphereRadius = (radius * radius + depth * depth) / (2.0 * depth);
+        double cx = impact.x;
+        double cy = impact.y + (sphereRadius - depth);
+        double cz = impact.z;
+        double sphereSqr = sphereRadius * sphereRadius;
+
+        int horizontal = (int) Math.ceil(radius) + 1;
+        int below = (int) Math.ceil(depth) + 1;
+        int above = (int) Math.ceil(sphereRadius - depth) + 1; // la partie de la boule au-dessus du sol nettoie les bosses (pas de mur)
+        BlockPos origin = BlockPos.containing(impact);
         BlockState air = Blocks.AIR.defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         List<BlockPos> removed = new ArrayList<>();
 
-        for (int dx = -reach; dx <= reach; dx++) {
-            for (int dy = -reach; dy <= reach; dy++) {
-                for (int dz = -reach; dz <= reach; dz++) {
+        for (int dx = -horizontal; dx <= horizontal; dx++) {
+            for (int dz = -horizontal; dz <= horizontal; dz++) {
+                for (int dy = -below; dy <= above; dy++) {
                     pos.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    // distance du centre du bloc au centre de l'explosion : la forme est une sphère exacte
-                    double ex = pos.getX() + 0.5 - center.x;
-                    double ey = pos.getY() + 0.5 - center.y;
-                    double ez = pos.getZ() + 0.5 - center.z;
-                    double distSqr = ex * ex + ey * ey + ez * ez;
-                    if (distSqr > softSqr || level.isOutsideBuildHeight(pos) || !level.hasChunkAt(pos)) {
+                    // distance du centre du bloc au centre de la boule : la surface du cratère est une sphère exacte
+                    double ex = pos.getX() + 0.5 - cx;
+                    double ey = pos.getY() + 0.5 - cy;
+                    double ez = pos.getZ() + 0.5 - cz;
+                    if (ex * ex + ey * ey + ez * ez > sphereSqr) {
+                        continue;
+                    }
+                    if (level.isOutsideBuildHeight(pos) || !level.hasChunkAt(pos)) {
                         continue;
                     }
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) {
                         continue;
                     }
-                    float resistance = state.getBlock().getExplosionResistance();
-                    if (resistance >= INDESTRUCTIBLE || (resistance >= SOFT_MAX_RESISTANCE && distSqr > hardSqr)) {
+                    // Règles de destruction : on ne touche jamais aux blocs incassables ni à ceux de très forte résistance
+                    if (state.getBlock().getExplosionResistance() >= INDESTRUCTIBLE || state.getDestroySpeed(level, pos) < 0.0F) {
                         continue;
                     }
                     BlockPos target = pos.immutable();
@@ -118,8 +131,8 @@ public class EnteiFireball extends LargeFireball {
         RandomSource random = level.getRandom();
         for (BlockPos p : removed) {
             if (random.nextInt(3) == 0 && level.getBlockState(p).isAir()) {
-                BlockPos below = p.below();
-                if (level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+                BlockPos below2 = p.below();
+                if (level.getBlockState(below2).isFaceSturdy(level, below2, Direction.UP)) {
                     level.setBlock(p, Blocks.FIRE.defaultBlockState(), Block.UPDATE_ALL);
                 }
             }
