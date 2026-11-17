@@ -42,7 +42,7 @@ public class IceTrident extends ModFxEntity {
     private static final int DIRECT_FREEZE_TICKS = 60;
     private static final double AREA_RADIUS = 4.5;
     private static final float AREA_DAMAGE = 12.0F;
-    private static final int SPIKES = 9;
+    private static final int SPIKES = 12;
 
     private Vec3 velocity = Vec3.ZERO;
     private int age;
@@ -127,11 +127,13 @@ public class IceTrident extends ModFxEntity {
                 IceFreeze.hit(level, owner, target, AREA_DAMAGE, 80);
             }
         }
-        // Le sol et l'eau gèlent autour de l'impact, puis des pics de glace jaillissent en cercle
-        IceTerrain.freezeDisc(level, point, 3.5, 20 * 15);
+        // Le sol et l'eau gèlent largement autour de l'impact (glace / neige), un petit amas de glace pousse au point touché,
+        // puis des pics de glace jaillissent en cercle
+        IceTerrain.freezeDisc(level, point, 6.5, 20 * 15);
+        IceTerrain.iceCluster(level, point, 2.0, 20 * 15);
         for (int i = 0; i < SPIKES; i++) {
             double a = 2.0 * Math.PI * i / SPIKES + level.getRandom().nextDouble() * 0.4;
-            double r = 1.4 + level.getRandom().nextDouble() * 1.8;
+            double r = 1.6 + level.getRandom().nextDouble() * 3.4;
             int x = Mth.floor(point.x + Math.cos(a) * r), z = Mth.floor(point.z + Math.sin(a) * r);
             double y = IceTerrain.freezeColumn(level, x, Mth.floor(point.y), z, 20 * 15);
             if (!Double.isNaN(y)) {

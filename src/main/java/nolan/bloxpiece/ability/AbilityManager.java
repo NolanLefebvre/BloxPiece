@@ -11,6 +11,8 @@ import net.minecraft.server.level.ServerPlayer;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.network.CooldownPayload;
+import nolan.bloxpiece.quest.QuestType;
+import nolan.bloxpiece.quest.Quests;
 import nolan.bloxpiece.registry.ModAttachments;
 
 /**
@@ -72,10 +74,25 @@ public class AbilityManager {
             return;
         }
 
-        playerCooldowns.put(key, now + ability.cooldownTicks());
-        // Affichage uniquement : le HUD du joueur démarre son compte à rebours
-        ServerPlayNetworking.send(player, new CooldownPayload(key, ability.cooldownTicks()));
+        if (!ability.cooldownOnRelease()) {
+            playerCooldowns.put(key, now + ability.cooldownTicks());
+            // Affichage uniquement : le HUD du joueur démarre son compte à rebours
+            ServerPlayNetworking.send(player, new CooldownPayload(key, ability.cooldownTicks()));
+        }
         ability.use(player);
+        Quests.progress(player, QuestType.USE_ABILITIES, 1); // quête journalière "utiliser des capacités"
+    }
+
+    /** Démarre la recharge d'une attaque à charge au moment où elle part (voir Ability.cooldownOnRelease). */
+    public static void startCooldown(ServerPlayer player, Ability ability) {
+        DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
+        if (fruit == null) {
+            return;
+        }
+        String key = cooldownKey(fruit, ability);
+        COOLDOWNS.computeIfAbsent(player.getUUID(), uuid -> new HashMap<>())
+                .put(key, player.level().getGameTime() + ability.cooldownTicks());
+        ServerPlayNetworking.send(player, new CooldownPayload(key, ability.cooldownTicks()));
     }
 
     /** Le joueur a relâché la touche de ce slot : prévient l'attaque (seules les attaques à charge s'en servent). */

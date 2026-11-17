@@ -24,10 +24,14 @@ import nolan.bloxpiece.client.entity.IceRenderers;
 import nolan.bloxpiece.client.entity.EnteiSunRenderer;
 import nolan.bloxpiece.client.entity.HikenFistModel;
 import nolan.bloxpiece.client.entity.HikenFistRenderer;
+import nolan.bloxpiece.client.entity.ArmedPirateRenderer;
+import nolan.bloxpiece.client.entity.PirateGearModels;
+import nolan.bloxpiece.client.entity.PirateBulletRenderer;
 import nolan.bloxpiece.client.entity.PirateRenderer;
 import nolan.bloxpiece.client.hud.AbilityHud;
 import nolan.bloxpiece.client.particle.ModParticle;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
+import nolan.bloxpiece.client.hud.HealthHud;
 import nolan.bloxpiece.client.screen.CharacterScreen;
 import nolan.bloxpiece.network.CooldownPayload;
 import nolan.bloxpiece.ability.IceSaberAbility;
@@ -70,8 +74,22 @@ public class BloxPieceClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        BloxXpTooltip.register(); // infobulle des objets d'XP BloxPiece
         // Apparence des mobs du mod (un renderer par type d'entité)
         EntityRendererRegistry.register(ModEntities.PIRATE, PirateRenderer::new);
+        // Pirates armés (arme 3D en main) et balle de pistolet 3D
+        // (4 skins chacun, équipement 3D : bandana + fourreau / tricorne + bandoulière)
+        ModelLayerRegistry.registerModelLayer(PirateGearModels.SWORDSMAN, PirateGearModels::swordsman);
+        ModelLayerRegistry.registerModelLayer(PirateGearModels.GUNNER, PirateGearModels::gunner);
+        EntityRendererRegistry.register(ModEntities.PIRATE_SWORDSMAN,
+                context -> new ArmedPirateRenderer(context, PirateGearModels.SWORDSMAN, "pirate_swordsman", 4));
+        EntityRendererRegistry.register(ModEntities.PIRATE_GUNNER,
+                context -> new ArmedPirateRenderer(context, PirateGearModels.GUNNER, "pirate_gunner", 4));
+        ModelLayerRegistry.registerModelLayer(PirateGearModels.CAPTAIN, PirateGearModels::captain);
+        EntityRendererRegistry.register(ModEntities.PIRATE_CAPTAIN,
+                context -> new ArmedPirateRenderer(context, PirateGearModels.CAPTAIN, "pirate_captain", 2));
+        ModelLayerRegistry.registerModelLayer(PirateBulletRenderer.LAYER, PirateBulletRenderer.BulletModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.PIRATE_BULLET, PirateBulletRenderer::new);
         // Le calque du modèle doit être enregistré AVANT le renderer qui s'en sert
         ModelLayerRegistry.registerModelLayer(EnteiSunModel.LAYER, EnteiSunModel::createBodyLayer);
         EntityRendererRegistry.register(ModEntities.ENTEI_SUN, EnteiSunRenderer::new);
@@ -117,6 +135,8 @@ public class BloxPieceClient implements ClientModInitializer {
 
         // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();
+        // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
+        HealthHud.register();
 
         // Le serveur nous indique les recharges en cours (affichage uniquement)
         ClientPlayNetworking.registerGlobalReceiver(CooldownPayload.TYPE, (payload, context) -> {

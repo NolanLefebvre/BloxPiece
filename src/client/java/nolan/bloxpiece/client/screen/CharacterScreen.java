@@ -44,6 +44,12 @@ public class CharacterScreen extends BloxPanelScreen {
 
     private static final int ICON_SIZE = 16;
 
+    // Bouton "Quêtes" sous la barre d'XP (le panneau est un peu plus haut pour lui laisser sa ligne)
+    private static final int QUESTS_X = PAD;
+    private static final int QUESTS_Y = XP_Y + 34;
+    private static final int QUESTS_W = 70;
+    private static final int QUESTS_H = 14;
+
     private final List<CharacterInfoRow> rows = CharacterInfoRows.create();
 
     // Barre d'XP animée : valeur affichée qui rattrape la valeur réelle
@@ -52,6 +58,11 @@ public class CharacterScreen extends BloxPanelScreen {
 
     public CharacterScreen(KeyMapping closeKey) {
         super(Component.translatable("screen.bloxpiece.character.title"), closeKey, true);
+    }
+
+    @Override
+    protected int panelHeight() {
+        return QUESTS_Y + QUESTS_H + 18;
     }
 
     @Override
@@ -65,6 +76,16 @@ public class CharacterScreen extends BloxPanelScreen {
         drawPortrait(g, font, player, mx, my);
         drawRows(g, font, player, mx, my, mouseX, mouseY);
         drawExperience(g, font, player, mx, my, mouseX, mouseY, dt);
+        drawQuestsButton(g, font, mx, my);
+    }
+
+    private void drawQuestsButton(GuiGraphicsExtractor g, Font font, int mx, int my) {
+        boolean hovered = inside(mx, my, QUESTS_X, QUESTS_Y, QUESTS_W, QUESTS_H);
+        g.fill(QUESTS_X, QUESTS_Y, QUESTS_X + QUESTS_W, QUESTS_Y + QUESTS_H,
+                hovered ? CharacterInfoRow.COLOR_BACKGROUND_HOVER : CharacterInfoRow.COLOR_BACKGROUND);
+        g.outline(QUESTS_X, QUESTS_Y, QUESTS_W, QUESTS_H, hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD);
+        g.centeredText(font, Component.translatable("screen.bloxpiece.quests.button"),
+                QUESTS_X + QUESTS_W / 2, QUESTS_Y + (QUESTS_H - font.lineHeight) / 2 + 1, hovered ? COLOR_GOLD_BRIGHT : COLOR_LABEL);
     }
 
     /** Clic sur une ligne cliquable (ex : le fruit) : elle fait son action. */
@@ -73,6 +94,11 @@ public class CharacterScreen extends BloxPanelScreen {
         LocalPlayer player = this.minecraft.player;
         if (player == null) {
             return false;
+        }
+        if (inside(mx, my, QUESTS_X, QUESTS_Y, QUESTS_W, QUESTS_H)) {
+            playClickSound();
+            this.minecraft.gui.setScreen(new QuestsScreen(this, closeKey));
+            return true;
         }
         int y = ROWS_Y;
         for (CharacterInfoRow row : rows) {

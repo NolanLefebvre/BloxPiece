@@ -18,6 +18,10 @@ public final class GroupSpawnRule {
 
     final EntityType<? extends BloxMob> type;
 
+    /** Variante mélangée au groupe (facultative) et sa proportion (0 à 1), ex : 35 % de tireurs parmi les sabreurs. */
+    EntityType<? extends BloxMob> mixType;
+    double mixChance;
+
     // --- Taille des groupes ---
     int minGroup = 2;
     int maxGroup = 8;
@@ -62,6 +66,23 @@ public final class GroupSpawnRule {
     }
 
     /** Nombre de mobs par groupe (tirage aléatoire entre min et max inclus). */
+    /** Mélange une autre variante dans les groupes : chaque membre a {@code chance} (0 à 1) d'être de ce type. */
+    public GroupSpawnRule mixWith(EntityType<? extends BloxMob> other, double chance) {
+        this.mixType = other;
+        this.mixChance = chance;
+        return this;
+    }
+
+    /** Le type d'un nouveau membre du groupe (le type principal, ou la variante mélangée). */
+    EntityType<? extends BloxMob> pickType(net.minecraft.util.RandomSource random) {
+        return this.mixType != null && random.nextDouble() < this.mixChance ? this.mixType : this.type;
+    }
+
+    /** Ce mob compte-t-il dans la population de cette règle (type principal ou variante) ? */
+    boolean matches(EntityType<?> other) {
+        return other == this.type || other == this.mixType;
+    }
+
     public GroupSpawnRule groupSize(int min, int max) {
         this.minGroup = Math.max(1, min);
         this.maxGroup = Math.max(this.minGroup, max);

@@ -24,10 +24,10 @@ final class AbilityRow {
     private static final int ICON_FRAME = 26;
     private static final int ICON_SIZE = 16;
     private static final int TEXT_X = 38;        // début des textes, à droite de l'icône
-    private static final int MAX_DESCRIPTION_LINES = 4;
+    private static final int MAX_DESCRIPTION_LINES = 8; // la description s'affiche en entier (la ligne s'agrandit)
     private static final int MIN_HEIGHT = 36;     // hauteur d'une ligne dont la description tient sur 1 ou 2 lignes
     private static final int DESCRIPTION_Y = 16;  // début de la description sous le nom
-    private static final int BOTTOM_PAD = 2;
+    private static final int BOTTOM_PAD = 4;
     private static final int RIGHT_PAD = 7;
 
     private static final int COLOR_ACCENT = 0xFFFF8A3D;

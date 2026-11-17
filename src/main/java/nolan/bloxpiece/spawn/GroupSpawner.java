@@ -137,8 +137,8 @@ public final class GroupSpawner {
     private static boolean trySpawnGroup(GroupSpawnRule rule, RuleState state, ServerLevel level, ServerPlayer player, int now) {
         // 1. Population : combien de mobs de ce type autour du joueur, et dans toute la dimension ?
         AABB zone = player.getBoundingBox().inflate(rule.populationRadius);
-        int nearPlayer = level.getEntitiesOfClass(BloxMob.class, zone, mob -> mob.getType() == rule.type).size();
-        int inLevel = level.getEntities(EntityTypeTest.forClass(BloxMob.class), mob -> mob.getType() == rule.type).size();
+        int nearPlayer = level.getEntitiesOfClass(BloxMob.class, zone, mob -> rule.matches(mob.getType())).size();
+        int inLevel = level.getEntities(EntityTypeTest.forClass(BloxMob.class), mob -> rule.matches(mob.getType())).size();
 
         int room = Math.min(rule.maxNearPlayer - nearPlayer, rule.maxPerLevel - inLevel);
         if (room < rule.minGroup) {
@@ -294,7 +294,7 @@ public final class GroupSpawner {
 
     /** Crée le mob à cet endroit (sans l'ajouter au monde). Null s'il manque de place ou s'il serait visible du joueur. */
     private static BloxMob createAt(GroupSpawnRule rule, ServerLevel level, BlockPos pos, ServerPlayer player) {
-        BloxMob mob = rule.type.create(level, EntitySpawnReason.NATURAL);
+        BloxMob mob = rule.pickType(level.getRandom()).create(level, EntitySpawnReason.NATURAL);
         if (mob == null) {
             return null;
         }

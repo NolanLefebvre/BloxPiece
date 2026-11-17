@@ -170,19 +170,40 @@ public final class IceEffects {
     }
 
     /** Front de l'Ère glaciaire au rayon {@code r} : mur de blizzard, brouillard glacé dense qui roule vers l'extérieur. */
-    public static void iceAgeFront(ServerLevel level, Vec3 center, double r, int age) {
+    /**
+     * Charge d'Ice Age : cercle de givre au sol qui montre en temps réel la portée qu'aura la vague (il s'élargit avec la charge),
+     * et un second cercle intérieur qui tourne en sens inverse.
+     */
+    public static void iceAgeChargeRing(ServerLevel level, Vec3 center, double radius, int age) {
+        int points = Math.min(160, 32 + (int) (radius * 2));
+        for (int i = 0; i < points; i++) {
+            double a = 2.0 * Math.PI * i / points + age * 0.03;
+            send(level, i % 4 == 0 ? ModParticles.SNOWFLAKE : ModParticles.FROST_GLOW,
+                    center.add(Math.cos(a) * radius, 0.15, Math.sin(a) * radius), 1, 0.05, 0.05, 0.05, 0.0);
+        }
+        double inner = radius * 0.5;
+        for (int i = 0; i < points / 2; i++) {
+            double a = 2.0 * Math.PI * i / (points / 2) - age * 0.05;
+            send(level, ModParticles.FROST_MIST, center.add(Math.cos(a) * inner, 0.15, Math.sin(a) * inner), 1, 0.1, 0.05, 0.1, 0.0);
+        }
+    }
+
+    /** Front de la vague d'Ice Age ; {@code ground} donne la hauteur du sol en (x, z) : le blizzard épouse le relief. */
+    public static void iceAgeFront(ServerLevel level, Vec3 center, double r, int age, java.util.function.DoubleBinaryOperator ground) {
         int points = Math.min(220, 24 + (int) (r * 7));
         RandomSource random = level.getRandom();
         for (int i = 0; i < points; i++) {
             double a = 2.0 * Math.PI * i / points + age * 0.02;
             double cos = Math.cos(a), sin = Math.sin(a);
-            Vec3 p = center.add(cos * r, 0.3 + random.nextDouble() * 2.5, sin * r);
+            double px = center.x + cos * r, pz = center.z + sin * r;
+            Vec3 base = new Vec3(px, ground.applyAsDouble(px, pz), pz);
+            Vec3 p = base.add(0.0, 0.3 + random.nextDouble() * 2.5, 0.0);
             send(level, ModParticles.SNOWFLAKE, p, 0, cos + (random.nextDouble() - 0.5), 0.1, sin + (random.nextDouble() - 0.5), 0.3);
             if (i % 2 == 0) {
-                send(level, ModParticles.FROST_MIST, center.add(cos * r, 0.4, sin * r), 0, cos, 0.02, sin, 0.25);
+                send(level, ModParticles.FROST_MIST, base.add(0.0, 0.4, 0.0), 0, cos, 0.02, sin, 0.25);
             }
             if (i % 5 == 0) {
-                send(level, ModParticles.ICE_SHARD, center.add(cos * r, 0.6, sin * r), 0, cos, 0.6, sin, 0.25);
+                send(level, ModParticles.ICE_SHARD, base.add(0.0, 0.6, 0.0), 0, cos, 0.6, sin, 0.25);
             }
         }
         // brouillard glacé qui reste à l'intérieur du cercle

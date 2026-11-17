@@ -22,10 +22,18 @@ import nolan.bloxpiece.ability.BuddhaTransformAbility;
 import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
+import nolan.bloxpiece.fruit.IceFrostWalk;
 import nolan.bloxpiece.fruit.LogiaIntangibility;
 import nolan.bloxpiece.fx.BuddhaEffects;
 import nolan.bloxpiece.fx.FireEffects;
+import nolan.bloxpiece.mob.ArmedPirate;
 import nolan.bloxpiece.mob.BloxMob;
+import nolan.bloxpiece.mob.Pirate;
+import nolan.bloxpiece.quest.QuestType;
+import nolan.bloxpiece.quest.Quests;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.minecraft.world.entity.monster.Enemy;
+import nolan.bloxpiece.progression.LevelScaling;
 
 public class ModEvents {
 
@@ -50,8 +58,13 @@ public class ModEvents {
             IceAgeAbility.tick(server);
             IceFreeze.tick(server);
             IceTerrain.tick();
+            // Quêtes journalières : nouveau jour = nouveau tirage ; distance parcourue
+            Quests.tick(server);
 
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                // PV maximum selon le niveau (tous les joueurs, avec ou sans fruit)
+                LevelScaling.applyHealth(player);
+
                 DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
                 if (fruit == null || !player.isAlive()) {
                     continue;
@@ -64,6 +77,11 @@ public class ModEvents {
 
                 // Faiblesse du fruit (ex : malédiction de l'eau). Aucun effet de potion, rien dans le HUD.
                 fruit.tickWeakness(player);
+
+                // Fruit de la Glace : Frost Walker permanent (l'eau gèle sous ses pas)
+                if (fruit == Fruits.ICE) {
+                    IceFrostWalk.tick(player);
+                }
             }
         });
 
@@ -103,15 +121,33 @@ public class ModEvents {
             if (entity instanceof BloxMob mob) {
                 mob.rewardKiller(source);
             }
+            // Quêtes journalières : pirates et monstres hostiles tués par un joueur
+            if (source.getEntity() instanceof ServerPlayer killer && entity != killer) {
+                if (entity instanceof ArmedPirate || entity instanceof Pirate) {
+                    Quests.progress(killer, QuestType.KILL_PIRATES, 1);
+                }
+                if (entity instanceof Enemy) {
+                    Quests.progress(killer, QuestType.KILL_HOSTILES, 1);
+                }
+            }
             // Un joueur qui meurt transformé en Bouddha redevient normal
             if (entity instanceof ServerPlayer player) {
                 BuddhaTransformAbility.reset(player);
             }
         });
 
+        // Quêtes journalières : blocs minés (pas les herbes ni les fleurs, cassées d'un coup)
+        PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
+            if (player instanceof ServerPlayer serverPlayer && state.getDestroySpeed(level, pos) >= 0.5F) {
+                Quests.progress(serverPlayer, QuestType.MINE_BLOCKS, 1);
+            }
+        });
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Quests.forget(handler.getPlayer().getUUID()));
+
         // Quand un joueur rejoint : on lui renvoie ses recharges encore en cours (affichage du HUD)
         ServerPlayConnectionEvents.JOIN.register((listener, sender, server) -> {
             AbilityManager.syncCooldowns(listener.getPlayer());
+            Quests.ensure(listener.getPlayer()); // quêtes du jour prêtes dès la connexion
             BuddhaTransformAbility.reset(listener.getPlayer()); // jamais de taille ou de modificateur resté d'une session précédente
         });
 
@@ -121,6 +157,7 @@ public class ModEvents {
         // Évite de garder des projectiles d'un ancien monde en mémoire
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             FireEffects.clear();
+            Quests.clear();
             DaiEnkaiEnteiAbility.clear();
             BuddhaTransformAbility.clear();
             BuddhaPalmAbility.clear();

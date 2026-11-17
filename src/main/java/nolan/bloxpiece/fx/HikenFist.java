@@ -178,6 +178,19 @@ public class HikenFist extends Projectile {
         return this.position().add(this.heading.scale(FRONT_OFFSET));
     }
 
+    /**
+     * Coup au corps-à-corps : le poing frappe IMMÉDIATEMENT {@code target} (ennemi collé devant le viseur), sans voler, pour qu'il
+     * ne puisse pas passer à côté à cause du départ décalé sur la droite. L'explosion part du point de la cible le plus proche du
+     * poing (même impact, mêmes dégâts qu'un coup normal).
+     */
+    public void strikeNow(Entity target) {
+        if (this.level() instanceof ServerLevel level) {
+            AABB box = target.getBoundingBox();
+            Vec3 point = closestPoint(box, this.front()).add(box.getCenter()).scale(0.5); // entre la surface et le centre de la cible
+            this.detonate(level, this.position(), point);
+        }
+    }
+
     /** Vrai si le poing a explosé (et pas s'il a simplement disparu : monde déchargé, /kill...). */
     public boolean hasImpacted() {
         return this.impacted;

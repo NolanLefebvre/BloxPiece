@@ -29,7 +29,7 @@ public final class CharacterInfoRows {
 
     private static final int COLOR_VALUE = 0xFFFFFFFF;
     private static final int COLOR_MUTED = 0xFF7C7C88;
-    private static final int COLOR_FRUIT = 0xFFFFA24A;
+    private static final int COLOR_FRUIT = 0xFFC060FF; // violet : couleur des noms de fruits du démon
     private static final int COLOR_GOLD = 0xFFFFD25A;
 
     // Un seul ItemStack par fruit (inutile d'en recréer un à chaque image)

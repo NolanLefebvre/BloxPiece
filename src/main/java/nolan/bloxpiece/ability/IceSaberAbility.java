@@ -14,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fx.IceEffects;
+import nolan.bloxpiece.item.IceSaberItem;
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModItems;
 
@@ -34,7 +35,8 @@ import nolan.bloxpiece.registry.ModItems;
  */
 public class IceSaberAbility implements Ability {
 
-    private static final float HIT_DAMAGE = 16.0F;
+    /** Dégâts de glace d'un coup : ceux affichés dans l'infobulle du trident. */
+    private static final float HIT_DAMAGE = IceSaberItem.DAMAGE;
     private static final int HIT_SLOW_TICKS = 80;
     private static final int HOTBAR_SIZE = 9;
 
@@ -149,7 +151,7 @@ public class IceSaberAbility implements Ability {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             boolean holding = isHeld(player);
             boolean lost = player.isInWater() || Fruits.get(player.getAttached(ModAttachments.FRUIT)) != Fruits.ICE;
-            if (lost && (holding || player.tickCount % 10 == 0) && remove(player)) {
+            if (lost && remove(player)) { // sans le fruit de la Glace (ou dans l'eau), le trident fond aussitôt
                 IceEffects.shatter((ServerLevel) player.level(), handOf(player), 1.0F);
                 continue;
             }

@@ -22,6 +22,7 @@ public record BloxMobStats(double maxHealth, double attackDamage, double movemen
                 .add(Attributes.MAX_HEALTH, maxHealth)
                 .add(Attributes.ATTACK_DAMAGE, attackDamage)
                 .add(Attributes.MOVEMENT_SPEED, movementSpeed)
-                .add(Attributes.FOLLOW_RANGE, followRange);
+                .add(Attributes.FOLLOW_RANGE, followRange)
+                .add(Attributes.STEP_HEIGHT, 1.0); // monte dalles, escaliers et rebords d'un bloc sans sauter
     }
 }

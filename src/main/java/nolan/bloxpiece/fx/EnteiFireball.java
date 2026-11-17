@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -27,8 +28,10 @@ import net.minecraft.world.phys.Vec3;
  * dégâts sont calculés avant que les blocs ne disparaissent), mais elle ne détruit plus aucun bloc elle-même : le cratère est creusé
  * ensuite, comme si une grosse boule avait été enfoncée dans le sol au point d'impact.
  * <ul>
- *   <li>Forme : une calotte sphérique (cuvette). Profondeur maximale au centre (le point d'impact), qui diminue progressivement
- *       jusqu'au bord : pente régulière et arrondie, ni cylindre ni cube, pas de paroi verticale.</li>
+ *   <li>Forme : une boule. En dessous du point d'impact, une calotte sphérique (cuvette) : profondeur maximale au centre, qui
+ *       diminue progressivement jusqu'au bord, sans paroi verticale. Au-dessus, la même forme en miroir (un dôme) : dans un endroit
+ *       rempli de blocs, l'explosion creuse un rond entier ; en terrain plat, elle rase les reliefs en dôme au lieu d'une limite
+ *       plate.</li>
  *   <li>Taille : le rayon du cratère est proportionnel à la puissance de l'explosion ({@link #RADIUS_PER_POWER}) et la profondeur
  *       à son rayon ({@link #DEPTH_RATIO}).</li>
  *   <li>Une seule forme pour tous les matériaux (terre, pierre, minerais...) : plus de marche entre la couche de terre et la roche.</li>
@@ -52,10 +55,32 @@ public class EnteiFireball extends LargeFireball {
     private static final float INDESTRUCTIBLE = 100.0F;
 
     private final int blastPower;
+    /** Rayon de contact (blocs) : le soleil touche une entité dès qu'elle est à cette distance de son centre (0 = vanilla). */
+    private double hitRadius;
 
     public EnteiFireball(Level level, LivingEntity owner, Vec3 movement, int power) {
         super(level, owner, movement, power);
         this.blastPower = power;
+    }
+
+    /** Hitbox agrandie à la taille du soleil (qui grossit avec la charge). */
+    public void setHitRadius(double hitRadius) {
+        this.hitRadius = hitRadius;
+    }
+
+    @Override
+    public void tick() {
+        if (!this.level().isClientSide() && this.isAlive() && this.hitRadius > 0.5) {
+            AABB area = this.getBoundingBox().inflate(this.hitRadius);
+            double maxSqr = this.hitRadius * this.hitRadius;
+            for (Entity entity : this.level().getEntities(this, area, e -> !(e instanceof EnteiSun) && this.canHitEntity(e))) {
+                if (entity.getBoundingBox().distanceToSqr(this.position()) <= maxSqr) {
+                    this.onHit(new EntityHitResult(entity));
+                    return;
+                }
+            }
+        }
+        super.tick();
     }
 
     @Override
@@ -88,7 +113,7 @@ public class EnteiFireball extends LargeFireball {
 
         int horizontal = (int) Math.ceil(radius) + 1;
         int below = (int) Math.ceil(depth) + 1;
-        int above = (int) Math.ceil(sphereRadius - depth) + 1; // la partie de la boule au-dessus du sol nettoie les bosses (pas de mur)
+        int above = below; // le dôme du dessus est le miroir de la cuvette : même hauteur que la profondeur
         BlockPos origin = BlockPos.containing(impact);
         BlockState air = Blocks.AIR.defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
@@ -100,7 +125,11 @@ public class EnteiFireball extends LargeFireball {
                     pos.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
                     // distance du centre du bloc au centre de la boule : la surface du cratère est une sphère exacte
                     double ex = pos.getX() + 0.5 - cx;
-                    double ey = pos.getY() + 0.5 - cy;
+                    double by = pos.getY() + 0.5;
+                    if (by > impact.y) {
+                        by = 2.0 * impact.y - by; // au-dessus de l'impact : symétrique de la cuvette (dôme)
+                    }
+                    double ey = by - cy;
                     double ez = pos.getZ() + 0.5 - cz;
                     if (ex * ex + ey * ey + ez * ez > sphereSqr) {
                         continue;

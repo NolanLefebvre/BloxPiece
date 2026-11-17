@@ -10,6 +10,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.fx.BuddhaPalm;
@@ -21,6 +22,10 @@ import nolan.bloxpiece.fx.IceStatue;
 import nolan.bloxpiece.fx.IceTrident;
 import nolan.bloxpiece.fx.HikenFist;
 import nolan.bloxpiece.mob.Pirate;
+import nolan.bloxpiece.mob.PirateCaptain;
+import nolan.bloxpiece.mob.PirateGunner;
+import nolan.bloxpiece.mob.PirateSwordsman;
+import nolan.bloxpiece.fx.PirateBullet;
 
 /**
  * Tous les types d'entités du mod. Une entité enregistrée ici est automatiquement utilisable
@@ -35,6 +40,44 @@ public class ModEntities {
             .sized(0.6F, 1.95F)       // même hitbox qu'un joueur / zombie
             .clientTrackingRange(8)
             .build(PIRATE_KEY);
+
+    // Pirates armés : ils remplacent l'ancien pirate (toujours enregistré pour les mondes existants, mais il n'apparaît plus)
+    public static final ResourceKey<EntityType<?>> PIRATE_SWORDSMAN_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_swordsman"));
+
+    public static final EntityType<PirateSwordsman> PIRATE_SWORDSMAN = EntityType.Builder.of(PirateSwordsman::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(PIRATE_SWORDSMAN_KEY);
+
+    public static final ResourceKey<EntityType<?>> PIRATE_GUNNER_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_gunner"));
+
+    public static final EntityType<PirateGunner> PIRATE_GUNNER = EntityType.Builder.of(PirateGunner::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(PIRATE_GUNNER_KEY);
+
+    // Capitaine pirate : seulement dans la cabine du navire pirate (pas d'apparition naturelle)
+    public static final ResourceKey<EntityType<?>> PIRATE_CAPTAIN_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_captain"));
+
+    public static final EntityType<PirateCaptain> PIRATE_CAPTAIN = EntityType.Builder.of(PirateCaptain::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(PIRATE_CAPTAIN_KEY);
+
+    // Balle de pistolet à silex (Pirate Tireur, joueur) : ni invocable à la main, ni sauvegardée
+    public static final ResourceKey<EntityType<?>> PIRATE_BULLET_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_bullet"));
+
+    public static final EntityType<PirateBullet> PIRATE_BULLET = EntityType.Builder.<PirateBullet>of(PirateBullet::new, MobCategory.MISC)
+            .sized(0.25F, 0.25F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(8)
+            .updateInterval(1)
+            .build(PIRATE_BULLET_KEY);
 
     // Le soleil de Dai Enkai: Entei (entité visuelle, voir EnteiSun) : ne s'invoque pas à la main
     public static final ResourceKey<EntityType<?>> ENTEI_SUN_KEY =
@@ -137,6 +180,11 @@ public class ModEntities {
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
         register(PIRATE_KEY, PIRATE, Pirate.STATS.toAttributes());
+        register(PIRATE_SWORDSMAN_KEY, PIRATE_SWORDSMAN, PirateSwordsman.STATS.toAttributes());
+        register(PIRATE_GUNNER_KEY, PIRATE_GUNNER, PirateGunner.STATS.toAttributes());
+        register(PIRATE_CAPTAIN_KEY, PIRATE_CAPTAIN, PirateCaptain.STATS.toAttributes()
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.6)); // difficile à repousser
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, PIRATE_BULLET_KEY, PIRATE_BULLET);
         register(ENTEI_SUN_KEY, ENTEI_SUN, Mob.createMobAttributes());
         // Le poing est un projectile (pas un être vivant) : pas d'attributs à enregistrer
         Registry.register(BuiltInRegistries.ENTITY_TYPE, HIKEN_FIST_KEY, HIKEN_FIST);

@@ -2,20 +2,27 @@ package nolan.bloxpiece.registry;
 
 import java.util.function.Function;
 
-import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.component.Consumables;
 
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.fruit.Fruits;
+import nolan.bloxpiece.item.BloxXpItem;
 import nolan.bloxpiece.item.DevilFruitItem;
+import nolan.bloxpiece.item.FlintlockItem;
+import nolan.bloxpiece.item.IceSaberItem;
+import nolan.bloxpiece.item.PirateSaberItem;
 
 public class ModItems {
 
@@ -37,35 +44,79 @@ public class ModItems {
     public static final Item FIRE_FRUIT = register(
             "fire_fruit",
             properties -> new DevilFruitItem(properties, Fruits.FIRE),
-            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
     public static final Item BUDDHA_FRUIT = register(
             "buddha_fruit",
             properties -> new DevilFruitItem(properties, Fruits.BUDDHA),
-            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
     public static final Item ICE_FRUIT = register(
             "ice_fruit",
             properties -> new DevilFruitItem(properties, Fruits.ICE),
-            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE)
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
     // Trident de glace (attaque 1 du fruit de la Glace) : créé par l'attaque, jamais obtenu autrement (absent des onglets créatifs).
     // Il fond s'il est jeté (ItemEntityMixin), lancé (Partisan) ou si l'attaque est relancée.
     public static final Item ICE_SABER = register(
             "ice_saber",
-            Item::new,
-            new Item.Properties().stacksTo(1)
+            IceSaberItem::new,
+            new Item.Properties().stacksTo(1).attributes(IceSaberItem.attributes()) // dégâts affichés comme une épée
     );
 
+    // Armes des pirates : utilisables par le joueur, lâchées parfois par les pirates (voir leurs tables de butin)
+    public static final Item PIRATE_SABER = register(
+            "pirate_saber",
+            PirateSaberItem::new,
+            new Item.Properties().stacksTo(1).durability(400).attributes(PirateSaberItem.attributes())
+    );
+
+    /** Grand sabre du Capitaine pirate : lent mais très lourd (12 dégâts, 1,3 coup par seconde). */
+    public static final Item CAPTAIN_SABER = register(
+            "captain_saber",
+            PirateSaberItem::new,
+            new Item.Properties().stacksTo(1).durability(900).attributes(PirateSaberItem.attributes(12.0, -2.7))
+    );
+
+    public static final Item FLINTLOCK = register(
+            "flintlock",
+            FlintlockItem::new,
+            new Item.Properties().stacksTo(1).durability(250)
+    );
+
+    // Cristaux d'XP BloxPiece : une seule famille, 4 paliers (rang pirate, couleur = rareté). XP du système de niveaux du mod,
+    // voir LevelCurve : niveau 1 -> 2 = 100 XP, niveau 10 -> 11 = 3 162 XP, niveau 50 -> 51 = 35 355 XP
+    public static final Item XP_CRYSTAL_CABIN_BOY = register("xp_crystal_cabin_boy",
+            properties -> new BloxXpItem(properties, 500), new Item.Properties().stacksTo(64).rarity(Rarity.COMMON));
+    public static final Item XP_CRYSTAL_PIRATE = register("xp_crystal_pirate",
+            properties -> new BloxXpItem(properties, 5_000), new Item.Properties().stacksTo(64).rarity(Rarity.UNCOMMON));
+    public static final Item XP_CRYSTAL_SUPERNOVA = register("xp_crystal_supernova",
+            properties -> new BloxXpItem(properties, 25_000), new Item.Properties().stacksTo(16).rarity(Rarity.RARE));
+    public static final Item XP_CRYSTAL_EMPEROR = register("xp_crystal_emperor",
+            properties -> new BloxXpItem(properties, 100_000), new Item.Properties().stacksTo(16).rarity(Rarity.EPIC));
+
+    /** Onglet créatif du mod : tous les objets BloxPiece, séparés des objets vanilla. */
+    public static final ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(Registries.CREATIVE_MODE_TAB, BloxPiece.id("bloxpiece"));
+
     public static void initialize() {
-        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS)
-                .register(tab -> {
-                    tab.accept(FIRE_FRUIT);
-                    tab.accept(BUDDHA_FRUIT);
-                    tab.accept(ICE_FRUIT);
-                });
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, TAB_KEY, FabricCreativeModeTab.builder()
+                .title(Component.translatable("itemGroup.bloxpiece"))
+                .icon(() -> new ItemStack(FIRE_FRUIT))
+                .displayItems((context, entries) -> {
+                    // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
+                    // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
+                    java.util.List<Item> first = java.util.List.of(FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT,
+                            PIRATE_SABER, CAPTAIN_SABER, FLINTLOCK,
+                            XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
+                    first.forEach(entries::accept);
+                    BuiltInRegistries.ITEM.stream()
+                            .filter(item -> BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(BloxPiece.MOD_ID))
+                            .filter(item -> !first.contains(item) && item != ICE_SABER)
+                            .forEach(entries::accept);
+                })
+                .build());
     }
 }

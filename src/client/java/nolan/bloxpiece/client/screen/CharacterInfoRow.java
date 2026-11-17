@@ -106,12 +106,21 @@ public final class CharacterInfoRow {
 
         int textY = y + (h - font.lineHeight) / 2 + 1;
         g.text(font, label, x + 26, textY, COLOR_LABEL, true);
+        int labelEnd = x + 26 + font.width(label);
         if (isClickable(player)) {
-            g.text(font, ">", x + 26 + font.width(label) + 4, textY,
-                    hovered ? COLOR_CLICK_HINT_HOVER : COLOR_CLICK_HINT, true);
+            g.text(font, ">", labelEnd + 4, textY, hovered ? COLOR_CLICK_HINT_HOVER : COLOR_CLICK_HINT, true);
+            labelEnd += 4 + font.width(">");
         }
 
+        // Valeur alignée à droite ; si elle est trop longue pour la place restante, elle est raccourcie ("...")
+        // au lieu de passer par-dessus le libellé
         Value current = value.apply(player);
-        g.text(font, current.text(), x + w - 7 - font.width(current.text()), textY, current.color(), true);
+        int available = x + w - 7 - (labelEnd + 8);
+        Component text = current.text();
+        if (font.width(text) > available) {
+            String ellipsis = "...";
+            text = Component.literal(font.plainSubstrByWidth(text.getString(), Math.max(0, available - font.width(ellipsis))) + ellipsis);
+        }
+        g.text(font, text, x + w - 7 - font.width(text), textY, current.color(), true);
     }
 }

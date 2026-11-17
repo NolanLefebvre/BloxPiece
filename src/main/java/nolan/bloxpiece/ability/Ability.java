@@ -55,6 +55,15 @@ public interface Ability {
     /** Exécuté côté serveur quand le joueur déclenche l'attaque. */
     void use(ServerPlayer player);
 
+    /**
+     * Attaque à charge (ultimes) : vrai = la recharge NE démarre PAS à l'appui, mais quand l'attaque part réellement
+     * (touche relâchée ou charge pleine) : l'attaque appelle elle-même {@link AbilityManager#startCooldown}. Une charge annulée
+     * (eau, mort...) ne consomme donc pas la recharge.
+     */
+    default boolean cooldownOnRelease() {
+        return false;
+    }
+
     /** Exécuté côté serveur quand le joueur relâche la touche de l'attaque (attaques à charge). Par défaut : rien. */
     default void release(ServerPlayer player) {
     }

@@ -63,6 +63,7 @@ public class BuddhaUltimateAbility implements Ability {
     private static final float CRATER_POWER = 9.0F;
 
     private static final class Charge {
+        Ability ability;
         int age;
         boolean released; // la touche a été relâchée : la Déflagration part dès la charge minimale atteinte
         BuddhaSeal seal;
@@ -100,11 +101,17 @@ public class BuddhaUltimateAbility implements Ability {
     public void use(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
         Charge charge = new Charge();
+        charge.ability = this;
         charge.seal = BuddhaSeal.spawn(level, ground(level, player));
         CHARGES.put(player.getUUID(), charge);
         player.setAttached(ModAttachments.BUDDHA_POSE, 2); // bras levés (chez tous les joueurs)
         level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 3.0F, 0.4F);
         level.playSound(null, player.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 2.0F, 0.5F);
+    }
+
+    @Override
+    public boolean cooldownOnRelease() {
+        return true;
     }
 
     @Override
@@ -150,6 +157,7 @@ public class BuddhaUltimateAbility implements Ability {
                 continue;
             }
             it.remove();
+            AbilityManager.startCooldown(player, charge.ability); // la recharge démarre quand la Déflagration part
             release(level, player, center, charge.seal, power);
         }
     }

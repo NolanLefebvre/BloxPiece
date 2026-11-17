@@ -26,10 +26,18 @@ import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Quatrième attaque (ultime) du fruit du feu : Dai Enkai: Entei.
- * Le joueur rassemble toutes ses flammes au-dessus de sa paume (charge d'environ 1,5 s : le soleil, modèle Blockbench
- * affiché par l'entité EnteiSun, grossit petit à petit et les flammes alentour sont aspirées), puis le propulse
- * vers l'endroit visé.
- * Il EXPLOSE à l'impact (énorme onde de choc, colonne de feu, dégâts de zone, voir FireEffects.Kind.ENTEI).
+ * Le joueur rassemble toutes ses flammes au-dessus de sa paume (le soleil, modèle Blockbench affiché par l'entité EnteiSun,
+ * grossit et les flammes alentour sont aspirées), puis le propulse vers l'endroit visé. Il EXPLOSE à l'impact (énorme onde de
+ * choc, colonne de feu, dégâts de zone, voir FireEffects.Kind.ENTEI).
+ *
+ * Charge, comme la Déflagration du Bouddha :
+ * <ul>
+ *   <li>appui court : le soleil se forme en {@link #MIN_CHARGE_TICKS} ticks et part à x{@link #MIN_POWER} de la taille d'origine ;</li>
+ *   <li>touche maintenue : le soleil continue de grossir en temps réel jusqu'à x{@link #MAX_POWER} ({@link #MAX_CHARGE_TICKS}
+ *       ticks), puis part tout seul. Taille du soleil, hitbox, dégâts, rayon de l'impact, mise à feu et particules sont
+ *       multipliés par la puissance atteinte ; le cratère aussi.</li>
+ * </ul>
+ * La recharge démarre au moment du tir (cooldownOnRelease). Les dégâts gardent le bonus de niveau (LivingEntityMixin).
  *
  * Tout est géré côté serveur : la charge est avancée à chaque tick (voir tick(), appelé par ModEvents) et
  * s'annule si le joueur meurt, quitte la dimension ou le serveur, perd son fruit ou repasse sous le niveau requis.
@@ -38,12 +46,15 @@ import nolan.bloxpiece.registry.ModParticles;
  */
 public class DaiEnkaiEnteiAbility implements Ability {
 
-    private static final int CHARGE_TICKS = 30;            // durée de la charge (20 ticks = 1 seconde)
+    private static final int MIN_CHARGE_TICKS = 10;        // appui court : le soleil se forme (0,5 s) puis part à taille normale
+    private static final int MAX_CHARGE_TICKS = 60;        // charge pleine (3 s) : tir automatique
+    private static final double MIN_POWER = 0.5;           // taille / puissance d'un appui court (x la taille d'origine)
+    private static final double MAX_POWER = 1.25;          // taille / puissance à pleine charge
     private static final double SPEED = 1.0;               // plus lent que les autres boules de feu : c'est un soleil
     private static final int EXPLOSION_POWER = 36;         // 4 = TNT, 3 = Grande boule de feu / météores, 18 = version précédente (x2 = 36 : cratère colossal ; BAISSE-LA si le serveur lague au moment de l'impact)
     private static final double MAX_AIM_RANGE = 64.0;      // distance maximale du point visé
     private static final double START_BALL_RADIUS = 0.1;   // taille de la boule au début de la charge (elle grossit jusqu'à MAX_BALL_RADIUS)
-    private static final double MAX_BALL_RADIUS = 5.4;     // rayon final du soleil rassemblé au-dessus du joueur (avant : 3.6, soit +50 %)
+    private static final double MAX_BALL_RADIUS = 5.4;     // rayon du soleil à charge normale (x1) rassemblé au-dessus du joueur (avant : 3.6, soit +50 %)
     private static final double BALL_HEIGHT = 3.0;         // hauteur du BAS de la boule au-dessus des pieds du joueur (avant : 2.0) : bien visible, sans chevaucher le personnage
     private static final double REQUIRED_HEADROOM = 11.0;  // hauteur libre nécessaire au-dessus du joueur (10.0 + 1.0 : la boule est montée d'un bloc)
 
@@ -56,12 +67,32 @@ public class DaiEnkaiEnteiAbility implements Ability {
         final ServerLevel level;
         final EnteiSun sun; // le soleil visible (modèle Blockbench) qui grossit pendant la charge
         int age;
+        boolean released; // touche relâchée : le soleil part dès qu'il est formé
 
         Charge(DaiEnkaiEnteiAbility ability, ServerPlayer player, ServerLevel level, EnteiSun sun) {
             this.ability = ability;
             this.player = player;
             this.level = level;
             this.sun = sun;
+        }
+
+        /** Puissance : MIN_POWER une fois le soleil formé, MAX_POWER à pleine charge. */
+        double power() {
+            double t = (double) (this.age - MIN_CHARGE_TICKS) / (MAX_CHARGE_TICKS - MIN_CHARGE_TICKS);
+            return MIN_POWER + (MAX_POWER - MIN_POWER) * Math.max(0.0, Math.min(1.0, t));
+        }
+
+        /** Avancement de la surcharge (0 = appui court, 1 = pleine charge). */
+        double overcharge() {
+            return (this.power() - MIN_POWER) / (MAX_POWER - MIN_POWER);
+        }
+
+        /** Rayon actuel du soleil : il se forme jusqu'à MAX_BALL_RADIUS, puis grossit avec la puissance. */
+        double radius() {
+            if (this.age < MIN_CHARGE_TICKS) {
+                return START_BALL_RADIUS + (MAX_BALL_RADIUS * MIN_POWER - START_BALL_RADIUS) * this.age / MIN_CHARGE_TICKS;
+            }
+            return MAX_BALL_RADIUS * this.power();
         }
     }
 
@@ -94,7 +125,20 @@ public class DaiEnkaiEnteiAbility implements Ability {
         return true;
     }
 
-    /** Démarre la charge ; le tir part tout seul à la fin (tick()). */
+    @Override
+    public boolean cooldownOnRelease() {
+        return true;
+    }
+
+    @Override
+    public void release(ServerPlayer player) {
+        Charge charge = CHARGES.get(player.getUUID());
+        if (charge != null) {
+            charge.released = true;
+        }
+    }
+
+    /** Démarre la charge ; le tir part au relâchement de la touche, ou tout seul à pleine charge (tick()). */
     @Override
     public void use(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
@@ -119,8 +163,9 @@ public class DaiEnkaiEnteiAbility implements Ability {
                 continue;
             }
             charge.age++;
-            if (charge.age >= CHARGE_TICKS) {
+            if (charge.age >= MIN_CHARGE_TICKS && (charge.released || charge.age >= MAX_CHARGE_TICKS)) {
                 lowerArm(charge.player); // avant le tir : le geste de lancer prend le relais
+                AbilityManager.startCooldown(charge.player, charge.ability); // la recharge démarre au tir
                 launch(charge);
                 it.remove();
             } else {
@@ -184,8 +229,11 @@ public class DaiEnkaiEnteiAbility implements Ability {
         ServerLevel level = charge.level;
         RandomSource random = level.getRandom();
 
-        double progress = (double) charge.age / CHARGE_TICKS;
-        double radius = START_BALL_RADIUS + (MAX_BALL_RADIUS - START_BALL_RADIUS) * progress;
+        double progress = Math.min(1.0, (double) charge.age / MIN_CHARGE_TICKS); // formation du soleil
+        double power = charge.power();                                           // puis surcharge (1 à MAX_POWER)
+        double radius = charge.radius();
+        double over = charge.overcharge();
+        int extra = (int) Math.round(6 * over);                         // plus de flammes aspirées en surcharge
         Vec3 center = ballCenter(player, radius);
         Vec3 hand = ballCenter(player, 0.0); // la paume levée, d'où naît la boule
 
@@ -194,9 +242,9 @@ public class DaiEnkaiEnteiAbility implements Ability {
         charge.sun.setRadius(radius);
 
         // 1. Les flammes des environs sont aspirées vers la boule (plus nombreuses, de plus loin à mesure qu'elle grossit)
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 6 + extra; i++) {
             double angle = random.nextDouble() * 2 * Math.PI;
-            double distance = 3.0 + radius + random.nextDouble() * 4.0;
+            double distance = 3.0 + radius + random.nextDouble() * 4.0 * power;
             double px = player.getX() + Math.cos(angle) * distance;
             double py = player.getY() + random.nextDouble() * 4.0;
             double pz = player.getZ() + Math.sin(angle) * distance;
@@ -207,10 +255,11 @@ public class DaiEnkaiEnteiAbility implements Ability {
 
         // 2. Deux anneaux de flammes inclinés qui tournent autour de la boule (juste à l'extérieur du modèle)
         double spin = charge.age * 0.35;
-        FireEffects.orbitRing(level, center, radius * 1.25 + 0.2, 28, spin, 0.0, 0.0);
-        FireEffects.orbitRing(level, center, radius * 1.25 + 0.2, 28, -spin, Math.PI / 3.0, 0.0);
+        int ringPoints = (int) (28 * power);
+        FireEffects.orbitRing(level, center, radius * 1.25 + 0.2, ringPoints, spin, 0.0, 0.0);
+        FireEffects.orbitRing(level, center, radius * 1.25 + 0.2, ringPoints, -spin, Math.PI / 3.0, 0.0);
         if (progress > 0.4) {
-            FireEffects.orbitRing(level, center, radius * 1.4 + 0.3, 32, spin * 0.7, -Math.PI / 3.0, Math.PI / 4.0);
+            FireEffects.orbitRing(level, center, radius * 1.4 + 0.3, ringPoints + 4, spin * 0.7, -Math.PI / 3.0, Math.PI / 4.0);
         }
 
         // 3. Double spirale de feu qui monte le long du corps et du bras levé
@@ -247,7 +296,13 @@ public class DaiEnkaiEnteiAbility implements Ability {
 
         if (charge.age % 8 == 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS,
-                    1.5f, (float) (0.5 + 0.5 * progress));
+                    1.5f, (float) (0.5 + 0.5 * progress + 0.3 * over));
+        }
+        if (over > 0.0 && charge.age % 10 == 0) {
+            // Surcharge : la chaleur fait trembler la caméra, de plus en plus fort
+            BuddhaHits.shake(level, center, 30.0 * power, 0.4F + 0.8F * (float) over, 10);
+            level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_AMBIENT, SoundSource.PLAYERS, 2.0f,
+                    (float) (0.5 + 0.5 * over));
         }
     }
 
@@ -257,7 +312,9 @@ public class DaiEnkaiEnteiAbility implements Ability {
         ServerPlayer player = charge.player;
         ServerLevel level = charge.level;
 
-        Vec3 center = ballCenter(player, MAX_BALL_RADIUS);
+        double power = charge.power();
+        double radius = charge.radius();
+        Vec3 center = ballCenter(player, radius);
         Vec3 look = player.getLookAngle();
 
         // Le soleil part de la paume vers le point visé (recalculé ici, côté serveur) ; rien visé = droit devant
@@ -269,16 +326,19 @@ public class DaiEnkaiEnteiAbility implements Ability {
         Vec3 direction = toAim.lengthSqr() < 4.0 ? look : toAim.normalize();
 
         // Le projectile (invisible sous le soleil) porte les dégâts et l'explosion ; le soleil le suit jusqu'à l'impact
-        EnteiFireball projectile = new EnteiFireball(level, player, direction, EXPLOSION_POWER);
+        int blast = (int) Math.round(EXPLOSION_POWER * power);
+        EnteiFireball projectile = new EnteiFireball(level, player, direction, blast);
+        projectile.setHitRadius(radius * 0.8); // touche ce que le soleil touche, pas seulement son centre
         projectile.setPos(center.x, center.y, center.z);
         projectile.setDeltaMovement(direction.scale(SPEED));
         level.addFreshEntity(projectile);
 
         charge.sun.setPos(center.x, center.y, center.z);
-        charge.sun.setRadius(MAX_BALL_RADIUS);
+        charge.sun.setRadius(radius);
 
-        // Traînée + énorme impact (dégâts, onde de choc, colonne de feu) ; le soleil disparaît dans l'explosion
-        FireEffects.track(projectile, player, FireEffects.Kind.ENTEI, charge.sun);
+        // Traînée + énorme impact (dégâts, onde de choc, colonne de feu) ; le soleil disparaît dans l'explosion.
+        // Tout est multiplié par la puissance de charge.
+        FireEffects.track(projectile, player, FireEffects.Kind.ENTEI, charge.sun, power);
 
         // Le joueur fait un geste de lancer avec le bras qui était levé (le bras droit : c'est de ce côté qu'est la boule)
         InteractionHand throwingHand = player.getMainArm() == HumanoidArm.RIGHT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;

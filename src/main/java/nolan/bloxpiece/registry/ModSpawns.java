@@ -12,8 +12,9 @@ import nolan.bloxpiece.spawn.GroupSpawner;
 public class ModSpawns {
 
     public static void initialize() {
-        // PIRATES : groupes de 2 à 8, entre 40 et 100 blocs du joueur
-        GroupSpawner.register(new GroupSpawnRule(ModEntities.PIRATE)
+        // PIRATES : groupes de 2 à 8, entre 40 et 100 blocs du joueur. Un mélange de Sabreurs (65 %) et de Tireurs (35 %)
+        GroupSpawner.register(new GroupSpawnRule(ModEntities.PIRATE_SWORDSMAN)
+                .mixWith(ModEntities.PIRATE_GUNNER, 0.35)
                 .groupSize(2, 8)
                 .groupSpread(6)
                 .distance(40, 100)

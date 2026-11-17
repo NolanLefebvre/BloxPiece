@@ -7,11 +7,17 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
+import nolan.bloxpiece.fx.EnteiSun;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.fx.HikenFist;
 import nolan.bloxpiece.registry.ModParticles;
@@ -32,8 +38,8 @@ public class HikenAbility implements Ability {
     private static final double SPEED = 1.8;           // rapide : un bras propulsé (l'ancienne Grande boule de feu : 1.3)
     private static final double START_DISTANCE = 2.5;  // distance entre les yeux du joueur et le devant du poing au départ
     private static final double SIDE_OFFSET = 6.0;     // décalage du point d'apparition vers la DROITE du joueur (blocs) : le poing (~7 blocs de large) sort du champ de vision
-    private static final double MAX_AIM_RANGE = 64.0;  // distance maximale du point visé
-    private static final boolean AIM_AT_CROSSHAIR = true; // true : le poing part de la droite mais file vers le point visé ; false : même direction que le regard (trajet parallèle)
+    private static final double MAX_AIM_RANGE = 60.0;  // portée du raycast qui cherche le point visé (entités + blocs)
+    private static final double MELEE_RANGE = 2.0;     // ennemi visé à moins de 2 blocs des yeux : touché immédiatement
 
     @Override
     public String id() {
@@ -72,22 +78,32 @@ public class HikenAbility implements Ability {
         }
         Vec3 start = base.add(right.scale(side));
 
-        // Direction : celle du regard. Depuis la droite, un trajet strictement parallèle passerait à côté de la cible visée (le poing fait 7 blocs
-        // de large mais est décalé de 6) : il file donc vers le point visé par le curseur (comme Dai Enkai: Entei), ou loin devant si rien n'est visé.
-        Vec3 direction = look;
-        if (AIM_AT_CROSSHAIR) {
-            Vec3 aim = AimHelper.findTarget(player, MAX_AIM_RANGE);
-            if (aim == null) {
-                aim = player.getEyePosition().add(look.scale(MAX_AIM_RANGE));
-            }
-            Vec3 toAim = aim.subtract(start);
-            direction = toAim.lengthSqr() < 4.0 ? look : toAim.normalize();
-        }
+        // Direction : le poing part TOUJOURS de la droite (start), mais converge vers le point exact visé par le viseur, même de très
+        // près. Le point visé : raycast depuis les yeux sur MAX_AIM_RANGE blocs, entités ET blocs (le premier touché).
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(look.scale(MAX_AIM_RANGE));
+        BlockHitResult block = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        Vec3 blockPoint = block.getType() == HitResult.Type.MISS ? end : block.getLocation();
+        AABB searchBox = player.getBoundingBox().expandTowards(look.scale(MAX_AIM_RANGE)).inflate(1.0);
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(player, eye, blockPoint, searchBox,
+                e -> e.isAlive() && e.isPickable() && !e.isSpectator() && !(e instanceof Projectile) && !(e instanceof EnteiSun),
+                eye.distanceToSqr(blockPoint));
+        Entity aimed = entityHit != null ? entityHit.getEntity() : null;
+        // Sur une entité : on vise le centre de son corps (pas le bord effleuré par le rayon)
+        Vec3 targetPoint = aimed != null ? aimed.getBoundingBox().getCenter() : blockPoint;
+        Vec3 toTarget = targetPoint.subtract(start);
+        Vec3 direction = toTarget.lengthSqr() < 0.25 ? look : toTarget.normalize();
 
-        // Le poing de feu est le projectile lui-même : le devant de ses phalanges part de `start` et fonce vers le regard du joueur.
+        // Le poing de feu est le projectile lui-même : le devant de ses phalanges part de `start` et fonce vers le point visé.
         // FireEffects suit cette entité (traînée de particules) et déclenche l'effet d'impact quand elle disparaît.
         HikenFist fist = HikenFist.spawn(level, player, start, direction, SPEED);
         FireEffects.track(fist, player, FireEffects.Kind.HIKEN);
+
+        // Corps-à-corps : ennemi collé devant le viseur (moins de MELEE_RANGE blocs) -> touché immédiatement, sans risque que le poing,
+        // parti de la droite, passe à côté ou derrière lui
+        if (aimed != null && entityHit.getLocation().distanceTo(eye) < MELEE_RANGE) {
+            fist.strikeNow(aimed);
+        }
 
         // Le joueur envoie son coup avec son bras principal
         InteractionHand punchingHand = player.getMainArm() == HumanoidArm.RIGHT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;

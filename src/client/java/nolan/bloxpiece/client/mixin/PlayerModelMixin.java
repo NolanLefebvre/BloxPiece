@@ -61,8 +61,8 @@ public class PlayerModelMixin {
     }
 
     /**
-     * Ice Saber (fruit de la Glace), trident de glace en main principale : il se tient comme une lance, et chaque coup est un ESTOC au lieu du coup de poing.
-     * Repos : bras droit un peu relevé vers l'avant, trident pointé devant. Coup (progression de l'attaque vanilla, 0 à 1) :
+     * Ice Saber (fruit de la Glace), trident de glace en main principale : chaque coup est un ESTOC au lieu du coup de poing.
+     * Hors frappe, rien n'est modifié (pose normale de Minecraft). Coup (progression de l'attaque vanilla, 0 à 1) :
      * <ol>
      *   <li>0 - 0,3 : armé, le bras recule et l'épaule droite pivote en arrière ;</li>
      *   <li>0,3 - 0,55 : estoc, le bras se tend d'un coup droit devant, dans l'axe du regard, épaule projetée en avant ;</li>
@@ -77,12 +77,13 @@ public class PlayerModelMixin {
         float partial = state.ageInTicks - player.tickCount;
         float since = strike == null ? Float.MAX_VALUE : (int) level.getGameTime() - strike + partial;
         float p = since >= 0.0F && since < STRIKE_TICKS ? since / STRIKE_TICKS : 0.0F;
+        if (p <= 0.0F) {
+            return; // pas de coup en cours : la pose normale de Minecraft (le trident se tient comme une épée)
+        }
         float guardX = -0.55F;
         float thrustX = -1.55F + model.head.xRot;
         float x, z, twist;
-        if (p <= 0.0F) {
-            x = guardX; z = 0.0F; twist = 0.0F;
-        } else if (p < 0.3F) {
+        if (p < 0.3F) {
             float k = bloxpiece$smooth(p / 0.3F);
             x = guardX + (-1.05F - guardX) * k; z = 3.0F * k; twist = 0.35F * k;
         } else if (p < 0.55F) {
@@ -96,8 +97,7 @@ public class PlayerModelMixin {
         model.rightArm.yRot = -0.1F + model.head.yRot * 0.5F;
         model.rightArm.zRot = 0.0F;
         model.rightArm.z += z;      // le bras recule puis se projette vers l'avant
-        model.body.yRot = twist;    // rotation des épaules
-        model.leftArm.xRot = -0.4F - twist * 0.6F; // le bras gauche équilibre le mouvement
+        model.body.yRot = twist;    // rotation des épaules (le bras gauche garde sa pose normale)
     }
 
     /** Durée d'un estoc (ticks). */

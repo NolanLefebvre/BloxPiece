@@ -9,6 +9,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.progression.PlayerProgress;
+import nolan.bloxpiece.quest.QuestData;
 
 public class ModAttachments {
 
@@ -22,6 +23,16 @@ public class ModAttachments {
             BloxPiece.id("fruit"),
             builder -> builder.persistent(Codec.STRING).copyOnDeath()
                     .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /**
+     * Les quêtes du joueur (journalières pour l'instant, voir Quests). Sauvegardées, conservées à la mort, synchronisées avec
+     * le client du joueur (affichage du menu Quêtes). Pas de valeur = pas encore tirées (elles le sont à la connexion).
+     */
+    public static final AttachmentType<QuestData> QUESTS = AttachmentRegistry.create(
+            BloxPiece.id("quests"),
+            builder -> builder.persistent(QuestData.CODEC).copyOnDeath()
+                    .syncWith(QuestData.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
     );
 
     /**

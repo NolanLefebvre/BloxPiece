@@ -1,5 +1,6 @@
 package nolan.bloxpiece.ability;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -9,14 +10,13 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.phys.Vec3;
 
-import nolan.bloxpiece.fx.IceEffects;
 import nolan.bloxpiece.fx.IceTrident;
 
 /**
  * Deuxième attaque du fruit de la Glace : Partisan, le lancer du trident de glace.
  *
- * Si le joueur a déjà le trident (attaque 1), il le lance (l'item disparaît de son inventaire) ; sinon, un trident se forme et part
- * aussitôt. Le projectile 3D (IceTrident) file à grande vitesse vers le regard, laisse une traînée de neige et d'éclats, et à
+ * Il faut tenir le trident de glace (attaque 1) en main : il est lancé et disparaît de l'inventaire. Sans trident en main,
+ * l'attaque ne part pas (message dans la barre d'action). Le projectile 3D (IceTrident) file à grande vitesse vers le regard, laisse une traînée de neige et d'éclats, et à
  * l'impact gèle sa cible sur place et fait jaillir des pics de glace autour du point touché (voir IceTrident).
  */
 public class IceTridentThrowAbility implements Ability {
@@ -38,18 +38,25 @@ public class IceTridentThrowAbility implements Ability {
         return 3;
     }
 
+    /** Il faut tenir le trident de glace (attaque 1) en main principale : sinon rien ne part et la recharge n'est pas consommée. */
+    @Override
+    public boolean canUse(ServerPlayer player) {
+        if (IceSaberAbility.isHeld(player)) {
+            return true;
+        }
+        player.sendSystemMessage(Component.translatable("message.bloxpiece.ice_partisan_no_saber"), true);
+        return false;
+    }
+
     @Override
     public void use(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
-        boolean fromHand = IceSaberAbility.remove(player); // le trident de l'inventaire part (il disparaît de la barre)
+        IceSaberAbility.remove(player); // le trident tenu part : il disparaît de l'inventaire
         Vec3 look = player.getLookAngle();
         double size = player.getScale();
         double yaw = Math.toRadians(player.getYRot());
         Vec3 right = new Vec3(-Math.cos(yaw), 0.0, -Math.sin(yaw));
         Vec3 start = player.getEyePosition().add(look.scale(1.0 * size)).add(right.scale(0.3 * size)).add(0.0, -0.15 * size, 0.0);
-        if (!fromHand) {
-            IceEffects.saberForm(level, start); // le trident se forme d'abord dans la main
-        }
         IceTrident.spawn(level, player, start, look, SPEED);
 
         InteractionHand hand = player.getMainArm() == HumanoidArm.RIGHT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;

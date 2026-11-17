@@ -24,7 +24,7 @@ import net.minecraft.util.Mth;
 public abstract class BloxPanelScreen extends Screen {
 
     // ---- Mise en page (pixels GUI, repère du panneau)
-    protected static final int PANEL_W = 300;
+    protected static final int PANEL_W = 340; // assez large pour que libellés et valeurs ne se chevauchent pas
     protected static final int PANEL_H = 176;
     protected static final int PAD = 12;
 
