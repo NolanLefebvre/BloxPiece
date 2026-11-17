@@ -25,6 +25,8 @@ import nolan.bloxpiece.client.entity.EnteiSunRenderer;
 import nolan.bloxpiece.client.entity.HikenFistModel;
 import nolan.bloxpiece.client.entity.HikenFistRenderer;
 import nolan.bloxpiece.client.entity.ArmedPirateRenderer;
+import nolan.bloxpiece.client.entity.GuraModels;
+import nolan.bloxpiece.client.entity.QuakeFxRenderer;
 import nolan.bloxpiece.client.entity.PirateGearModels;
 import nolan.bloxpiece.client.entity.PirateBulletRenderer;
 import nolan.bloxpiece.client.entity.PirateRenderer;
@@ -132,6 +134,13 @@ public class BloxPieceClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ICE_EAGLE, IceRenderers.Eagle::new);
         EntityRendererRegistry.register(ModEntities.ICE_SPIKE, IceRenderers.Spike::new);
         EntityRendererRegistry.register(ModEntities.ICE_STATUE, IceRenderers.Statue::new);
+        // Gura Gura no Mi : fissures, sphères et ondes de choc sismiques 3D
+        ModelLayerRegistry.registerModelLayer(GuraModels.CrackDiscModel.LAYER, GuraModels.CrackDiscModel::createLayer);
+        ModelLayerRegistry.registerModelLayer(GuraModels.CrackOrbModel.LAYER, GuraModels.CrackOrbModel::createLayer);
+        ModelLayerRegistry.registerModelLayer(GuraModels.CrackOrbModel.SHELL_LAYER, GuraModels.CrackOrbModel::createShellLayer);
+        ModelLayerRegistry.registerModelLayer(GuraModels.GroundCrackModel.LAYER, GuraModels.GroundCrackModel::createLayer);
+        ModelLayerRegistry.registerModelLayer(GuraModels.TsunamiModel.LAYER, GuraModels.TsunamiModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.QUAKE_FX, QuakeFxRenderer::new);
 
         // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();

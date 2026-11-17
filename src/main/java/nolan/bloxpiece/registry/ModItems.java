@@ -53,6 +53,12 @@ public class ModItems {
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
+    public static final Item GURA_FRUIT = register(
+            "gura_fruit",
+            properties -> new DevilFruitItem(properties, Fruits.GURA),
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
+    );
+
     public static final Item ICE_FRUIT = register(
             "ice_fruit",
             properties -> new DevilFruitItem(properties, Fruits.ICE),
@@ -108,7 +114,7 @@ public class ModItems {
                 .displayItems((context, entries) -> {
                     // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
                     // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
-                    java.util.List<Item> first = java.util.List.of(FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT,
+                    java.util.List<Item> first = java.util.List.of(FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT,
                             PIRATE_SABER, CAPTAIN_SABER, FLINTLOCK,
                             XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
                     first.forEach(entries::accept);

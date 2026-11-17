@@ -13,6 +13,10 @@ import nolan.bloxpiece.ability.AbilityManager;
 import nolan.bloxpiece.ability.BuddhaPalmAbility;
 import nolan.bloxpiece.ability.BuddhaShockwaveAbility;
 import nolan.bloxpiece.ability.BuddhaUltimateAbility;
+import nolan.bloxpiece.ability.GuraGekishinAbility;
+import nolan.bloxpiece.ability.GuraKabutowariAbility;
+import nolan.bloxpiece.ability.GuraShimaYurashiAbility;
+import nolan.bloxpiece.ability.GuraTerrain;
 import nolan.bloxpiece.ability.IceAgeAbility;
 import nolan.bloxpiece.ability.IceEagleAbility;
 import nolan.bloxpiece.ability.IceFreeze;
@@ -58,6 +62,11 @@ public class ModEvents {
             IceAgeAbility.tick(server);
             IceFreeze.tick(server);
             IceTerrain.tick();
+            // Gura Gura no Mi : dash de Gekishin, charge de Shima Yurashi
+            GuraGekishinAbility.tick(server);
+            GuraShimaYurashiAbility.tick(server);
+            GuraKabutowariAbility.tick(server);
+            GuraTerrain.tick(); // fissures du sol qui se propagent
             // Quêtes journalières : nouveau jour = nouveau tirage ; distance parcourue
             Quests.tick(server);
 
@@ -157,6 +166,10 @@ public class ModEvents {
         // Évite de garder des projectiles d'un ancien monde en mémoire
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             FireEffects.clear();
+            GuraGekishinAbility.clear();
+            GuraShimaYurashiAbility.clear();
+            GuraKabutowariAbility.clear();
+            GuraTerrain.clear();
             Quests.clear();
             DaiEnkaiEnteiAbility.clear();
             BuddhaTransformAbility.clear();

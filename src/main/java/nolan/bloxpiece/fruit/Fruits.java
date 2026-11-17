@@ -10,6 +10,10 @@ import nolan.bloxpiece.ability.BuddhaTransformAbility;
 import nolan.bloxpiece.ability.BuddhaUltimateAbility;
 import nolan.bloxpiece.ability.DaiEnkaiEnteiAbility;
 import nolan.bloxpiece.ability.FireAbility;
+import nolan.bloxpiece.ability.GuraGekishinAbility;
+import nolan.bloxpiece.ability.GuraKabutowariAbility;
+import nolan.bloxpiece.ability.GuraKaishinAbility;
+import nolan.bloxpiece.ability.GuraShimaYurashiAbility;
 import nolan.bloxpiece.ability.HikenAbility;
 import nolan.bloxpiece.ability.IceAgeAbility;
 import nolan.bloxpiece.ability.IceEagleAbility;
@@ -54,6 +58,18 @@ public class Fruits {
                     new IceTridentThrowAbility(), // touche 2 : Partisan (lancer du trident)
                     new IceEagleAbility(),        // touche 3 : Pheasant Peck (aigle de glace)
                     new IceAgeAbility()           // touche 4 : Ice Age (ultime)
+            )));
+
+    // Fruit du Tremblement (Gura Gura no Mi) : 4 attaques sismiques. Malédiction de l'eau, pas d'immunité.
+    public static final DevilFruit GURA = register(new DevilFruit(
+            "gura",
+            new WaterCurse(),
+            false,
+            List.of(
+                    new GuraKaishinAbility(),       // touche 1 : Kaishin (fissure sismique en cône)
+                    new GuraGekishinAbility(),      // touche 2 : Gekishin (dash et coup sismique)
+                    new GuraKabutowariAbility(),    // touche 3 : Kabutowari (séisme localisé)
+                    new GuraShimaYurashiAbility()   // touche 4 : Shima Yurashi (ultime, à charger)
             )));
 
     private static DevilFruit register(DevilFruit fruit) {

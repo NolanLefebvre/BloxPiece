@@ -26,6 +26,7 @@ import nolan.bloxpiece.mob.PirateCaptain;
 import nolan.bloxpiece.mob.PirateGunner;
 import nolan.bloxpiece.mob.PirateSwordsman;
 import nolan.bloxpiece.fx.PirateBullet;
+import nolan.bloxpiece.fx.QuakeFx;
 
 /**
  * Tous les types d'entités du mod. Une entité enregistrée ici est automatiquement utilisable
@@ -177,6 +178,18 @@ public class ModEntities {
             .updateInterval(1)
             .build(ICE_STATUE_KEY);
 
+    // Gura Gura no Mi : fissures, sphères et ondes de choc 3D (visuel). Ni invocable à la main, ni sauvegardé.
+    public static final ResourceKey<EntityType<?>> QUAKE_FX_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("quake_fx"));
+
+    public static final EntityType<QuakeFx> QUAKE_FX = EntityType.Builder.<QuakeFx>of(QuakeFx::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(10)
+            .updateInterval(1)
+            .build(QUAKE_FX_KEY);
+
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
         register(PIRATE_KEY, PIRATE, Pirate.STATS.toAttributes());
@@ -194,6 +207,7 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_EAGLE_KEY, ICE_EAGLE);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_SPIKE_KEY, ICE_SPIKE);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_STATUE_KEY, ICE_STATUE);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, QUAKE_FX_KEY, QUAKE_FX);
     }
 
     private static <T extends LivingEntity> void register(

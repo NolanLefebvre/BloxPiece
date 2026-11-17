@@ -6,7 +6,9 @@
 		"AvatarRendererHandMixin",
 		"ExampleClientMixin",
 		"LivingEntityRendererMixin",
-		"PlayerModelMixin"
+		"PlayerModelMixin",
+		"HideHandItemMixin",
+		"HideFirstPersonHandMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

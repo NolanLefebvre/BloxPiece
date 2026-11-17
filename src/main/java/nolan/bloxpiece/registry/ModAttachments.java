@@ -66,6 +66,16 @@ public class ModAttachments {
     );
 
     /**
+     * Vrai pendant une attaque du Gura Gura no Mi qui porte une boule sismique dans la main (Gekishin, charge de Shima Yurashi) :
+     * l'objet tenu en main n'est pas dessiné (ni en troisième personne, ni en première) pour ne pas traverser la boule. Pas
+     * sauvegardé, synchronisé avec tous les joueurs.
+     */
+    public static final AttachmentType<Boolean> HIDE_HAND_ITEM = AttachmentRegistry.create(
+            BloxPiece.id("hide_hand_item"),
+            builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
+    /**
      * Pose des bras pendant une attaque du fruit du Bouddha (1 = bras tendu vers l'avant, paume ouverte ; 2 = bras levés et
      * écartés). Pas sauvegardé, synchronisé avec TOUS les joueurs qui le voient (pose appliquée par PlayerModelMixin).
      */

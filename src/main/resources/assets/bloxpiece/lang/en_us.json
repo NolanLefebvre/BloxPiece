@@ -121,5 +121,14 @@
   "quest.bloxpiece.travel.title": "Grand voyageur",
   "quest.bloxpiece.travel.objective": "Parcours %s blocs",
   "quest.bloxpiece.mine_blocks.title": "Mineur assidu",
-  "quest.bloxpiece.mine_blocks.objective": "Mine %s blocs"
+  "quest.bloxpiece.mine_blocks.objective": "Mine %s blocs",
+  "item.bloxpiece.gura_fruit": "Gura Gura no Mi",
+  "ability.bloxpiece.gura_kaishin.name": "Kaishin",
+  "ability.bloxpiece.gura_kaishin.description": "Tu frappes l'air devant toi : l'air se fissure et une onde de choc en cône blesse, repousse violemment et creuse le terrain jusqu'à 20 blocs.",
+  "ability.bloxpiece.gura_gekishin.name": "Gekishin",
+  "ability.bloxpiece.gura_gekishin.description": "Tu t'élances, le poing enveloppé d'une bulle sismique : au contact du premier ennemi ou d'un mur, elle éclate, creuse un cratère et projette tout autour.",
+  "ability.bloxpiece.gura_kabutowari.name": "Kabutowari",
+  "ability.bloxpiece.gura_kabutowari.description": "Tu frappes le sol : un séisme fend le terrain sur 10 blocs, ouvre des cratères, projette les ennemis et les blocs en l'air.",
+  "ability.bloxpiece.gura_shima_yurashi.name": "Shima Yurashi",
+  "ability.bloxpiece.gura_shima_yurashi.description": "Maintiens la touche : des bulles sismiques grossissent sur tes poings. Au relâchement, une secousse de 12 à 28 blocs ravage le terrain, blesse lourdement, repousse et étourdit tous les ennemis."
 }

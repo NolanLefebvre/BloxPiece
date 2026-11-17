@@ -134,12 +134,22 @@ public class PlayerModelMixin {
     /**
      * Poses des attaques du Bouddha (attachment BUDDHA_POSE) : 1 = Onde de choc, bras droit tendu droit devant, paume vers
      * l'avant ; 100 à 200 = incantation de l'Onde de choc, bras qui se lève (100 + pourcentage) ; 2 = Déflagration, les deux bras
-     * levés et écartés, qui tremblent sous l'énergie.
+     * levés et écartés, qui tremblent sous l'énergie ; 4 puis 5 = Kabutowari (Gura Gura no Mi), poing levé puis abattu vers le sol.
      */
     private void bloxpiece$buddhaPose(int pose, AvatarRenderState state) {
         PlayerModel model = (PlayerModel) (Object) this;
         float shiver = (float) Math.sin(state.ageInTicks * 1.3F) * 0.04F;
-        if (pose == 1) {
+        if (pose >= 600 && pose <= 700) {
+            // Shima Yurashi (Gura Gura no Mi), fin de charge : les bras levés s'écartent jusqu'à la T-pose
+            float t = (pose - 600) / 100.0F;
+            float e = t * t * (3.0F - 2.0F * t);
+            model.rightArm.xRot = -2.6F * (1.0F - e) + shiver * (1.0F - e);
+            model.rightArm.yRot = 0.0F;
+            model.rightArm.zRot = 0.55F + (1.5708F - 0.55F) * e;
+            model.leftArm.xRot = -2.6F * (1.0F - e) - shiver * (1.0F - e);
+            model.leftArm.yRot = 0.0F;
+            model.leftArm.zRot = -0.55F - (1.5708F - 0.55F) * e;
+        } else if (pose == 1) {
             model.rightArm.xRot = -1.55F + model.head.xRot; // tendu devant, suit la direction du regard
             model.rightArm.yRot = -0.1F + model.head.yRot;
             model.rightArm.zRot = 0.0F;
@@ -156,6 +166,19 @@ public class PlayerModelMixin {
             model.rightArm.yRot = 0.0F;
             model.rightArm.zRot = 0.15F;
             model.head.xRot = 0.6F;
+        } else if (pose == 4) {
+            // Kabutowari, armé : poing droit levé haut au-dessus de la tête, tête relevée
+            model.rightArm.xRot = -2.9F + shiver;
+            model.rightArm.yRot = 0.0F;
+            model.rightArm.zRot = 0.35F;
+            model.head.xRot = -0.2F;
+        } else if (pose == 5) {
+            // Kabutowari, frappe : le poing s'abat violemment vers le sol, tête baissée vers l'impact
+            model.rightArm.xRot = -0.35F;
+            model.rightArm.yRot = 0.0F;
+            model.rightArm.zRot = 0.1F;
+            model.leftArm.xRot = 0.4F;
+            model.head.xRot = 0.7F;
         } else if (pose == 2) {
             model.rightArm.xRot = -2.6F + shiver;
             model.rightArm.yRot = 0.0F;
