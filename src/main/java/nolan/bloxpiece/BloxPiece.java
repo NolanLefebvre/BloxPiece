@@ -17,6 +17,7 @@ import nolan.bloxpiece.registry.ModNetworking;
 import nolan.bloxpiece.registry.ModParticles;
 import nolan.bloxpiece.registry.ModSpawns;
 import nolan.bloxpiece.registry.ModWorldgen;
+import nolan.bloxpiece.village.StarterVillage;
 
 public class BloxPiece implements ModInitializer {
     public static final String MOD_ID = "bloxpiece";
@@ -35,6 +36,7 @@ public class BloxPiece implements ModInitializer {
         ModEntities.initialize();
         ModSpawns.initialize();
         ModWorldgen.initialize(); // minerai de Granite Marin au fond des océans
+        StarterVillage.initialize(); // village pirate de départ, au spawn d'un monde neuf
         ModNetworking.initialize();
         ModCommands.initialize();
         ModEvents.initialize();

@@ -121,6 +121,27 @@ public class ModAttachments {
             builder -> builder.persistent(Codec.BOOL).syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
     );
 
+    /**
+     * Village de départ : présent (true) sur l'Overworld une fois la question réglée pour ce monde (village construit, ou monde
+     * existant ignoré). Sauvegardé avec le monde : le village n'est jamais reconstruit. Voir StarterVillage.
+     */
+    public static final AttachmentType<Boolean> STARTER_VILLAGE = AttachmentRegistry.create(
+            BloxPiece.id("starter_village"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
+    /** Village de départ : centre de la place (Overworld), sauvegardé avec le monde. La Boussole du Village pointe dessus. */
+    public static final AttachmentType<net.minecraft.core.BlockPos> VILLAGE_CENTER = AttachmentRegistry.create(
+            BloxPiece.id("village_center"),
+            builder -> builder.persistent(net.minecraft.core.BlockPos.CODEC)
+    );
+
+    /** Le joueur a déjà reçu sa Boussole du Village (première connexion). Sauvegardé, gardé à la mort. */
+    public static final AttachmentType<Boolean> VILLAGE_COMPASS_GIVEN = AttachmentRegistry.create(
+            BloxPiece.id("village_compass_given"),
+            builder -> builder.persistent(Codec.BOOL).copyOnDeath()
+    );
+
     public static void initialize() {
     }
 }

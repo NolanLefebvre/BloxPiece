@@ -169,5 +169,7 @@
   "message.bloxpiece.handcuffs.too_strong": "La cible est trop résistante pour être menottée ! (10 % de PV ou moins)",
   "message.bloxpiece.handcuffs.not_behind": "Placez-vous dans le dos de la cible pour la menotter !",
   "message.bloxpiece.seastone.no_powers": "Le Granite Marin que vous portez bloque vos pouvoirs !",
-  "message.bloxpiece.handcuffs.no_arms": "Impossible : cette créature n'a pas de bras !"
+  "message.bloxpiece.handcuffs.no_arms": "Impossible : cette créature n'a pas de bras !",
+  "item.bloxpiece.village_compass": "Boussole du Village",
+  "message.bloxpiece.village_compass.given": "Vous avez reçu la Boussole du Village : son aiguille indique toujours le village de départ."
 }
