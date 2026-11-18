@@ -144,7 +144,7 @@ public final class LogiaClient {
      * comme ModelPart), pivot, passage du repère du modèle (24 px = pieds, axes X et Y inversés) au repère du corps, rotation du
      * corps, taille du joueur, position.
      */
-    private static Vec3 toWorld(LivingEntity entity, float[] pose, double lx, double ly, double lz) {
+    public static Vec3 toWorld(LivingEntity entity, float[] pose, double lx, double ly, double lz) {
         // rotations du membre : X, puis Y, puis Z
         double cx = Math.cos(pose[3]), sx = Math.sin(pose[3]);
         double y1 = ly * cx - lz * sx, z1 = ly * sx + lz * cx, x1 = lx;

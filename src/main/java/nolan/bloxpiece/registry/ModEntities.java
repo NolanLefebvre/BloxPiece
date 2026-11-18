@@ -206,6 +206,19 @@ public class ModEntities {
             .updateInterval(1)
             .build(QUAKE_FX_KEY);
 
+    // Haki des Rois : éclairs 3D rouge et noir (visuel). Ni invocable à la main, ni sauvegardé.
+    public static final ResourceKey<EntityType<?>> HAKI_BOLT_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("haki_bolt"));
+
+    public static final EntityType<nolan.bloxpiece.fx.HakiBolt> HAKI_BOLT =
+            EntityType.Builder.<nolan.bloxpiece.fx.HakiBolt>of(nolan.bloxpiece.fx.HakiBolt::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(10)
+            .updateInterval(1)
+            .build(HAKI_BOLT_KEY);
+
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
         register(TAVERN_KEEPER_KEY, TAVERN_KEEPER, nolan.bloxpiece.mob.TavernKeeper.attributes());
@@ -225,6 +238,7 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_SPIKE_KEY, ICE_SPIKE);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_STATUE_KEY, ICE_STATUE);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, QUAKE_FX_KEY, QUAKE_FX);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, HAKI_BOLT_KEY, HAKI_BOLT);
     }
 
     private static <T extends LivingEntity> void register(

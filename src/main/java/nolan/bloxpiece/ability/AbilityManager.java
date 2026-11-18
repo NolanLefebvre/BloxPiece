@@ -50,6 +50,11 @@ public class AbilityManager {
             return;
         }
 
+        // Évanoui (Haki des Rois) : rien ne part
+        if (nolan.bloxpiece.haki.Unconscious.is(player)) {
+            return;
+        }
+
         // Granite Marin : aucun pouvoir (transformation comprise) si le joueur est menotté ou a un objet en Granite Marin sur lui
         if (Handcuffs.isCuffed(player)) {
             player.sendSystemMessage(Component.translatable("message.bloxpiece.handcuffs.no_powers"), true);

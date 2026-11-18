@@ -159,4 +159,58 @@ public class ModAttachments {
 
     public static void initialize() {
     }
+
+    // ------------------------------------------------------------------ Haki
+
+    /**
+     * Hakis débloqués (bits : 1 Armement, 2 Observation, 4 Rois ; voir HakiType). Sauvegardé, conservé à la mort, envoyé au
+     * joueur (HUD). Pas de valeur = jamais réglé : tout est débloqué à la connexion (première version : les 3 dès le départ).
+     */
+    public static final AttachmentType<Integer> HAKI_UNLOCKED = AttachmentRegistry.create(
+            BloxPiece.id("haki_unlocked"),
+            builder -> builder.persistent(Codec.INT).copyOnDeath()
+                    .syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /** Haki de l'Armement actif : 1 = bras, 2 = corps entier. Synchronisé avec tous les joueurs (revêtement noir visible). */
+    public static final AttachmentType<Integer> HAKI_ARMAMENT = AttachmentRegistry.create(
+            BloxPiece.id("haki_armament"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /** Haki de l'Observation actif. Synchronisé avec tous les joueurs. */
+    public static final AttachmentType<Boolean> HAKI_OBSERVATION = AttachmentRegistry.create(
+            BloxPiece.id("haki_observation"),
+            builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
+    /** Haki des Rois en cours de libération. Envoyé au joueur (HUD). */
+    public static final AttachmentType<Boolean> HAKI_CONQUEROR = AttachmentRegistry.create(
+            BloxPiece.id("haki_conqueror"),
+            builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Esquive de l'Observation : compteur (x 2) + côté (0 = gauche, 1 = droite). Chaque nouvelle valeur déclenche l'animation
+     * d'esquive chez tous les joueurs qui le voient (PlayerModelMixin).
+     */
+    public static final AttachmentType<Integer> HAKI_DODGE = AttachmentRegistry.create(
+            BloxPiece.id("haki_dodge"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /** Jauge de Haki (0 à HakiEnergy.MAX), gardée à la déconnexion ; envoyée seulement au joueur concerné (son HUD). */
+    public static final AttachmentType<Integer> HAKI_ENERGY = AttachmentRegistry.create(
+            BloxPiece.id("haki_energy"),
+            builder -> builder.persistent(Codec.INT).syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /**
+     * Évanoui par le Haki des Rois jusqu'à ce tick de jeu (joueurs et mobs). Sauvegardé, synchronisé avec tous (rendu allongé,
+     * paralysie côté client).
+     */
+    public static final AttachmentType<Long> UNCONSCIOUS_UNTIL = AttachmentRegistry.create(
+            BloxPiece.id("unconscious_until"),
+            builder -> builder.persistent(Codec.LONG).syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
 }

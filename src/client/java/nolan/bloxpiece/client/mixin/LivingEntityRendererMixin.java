@@ -60,6 +60,13 @@ public abstract class LivingEntityRendererMixin {
             // Menottes en Granite Marin : bracelets aux poignets et chaîne (ne dessine rien si le joueur n'est pas menotté)
             RenderLayer<AvatarRenderState, PlayerModel> cuffs = new HandcuffsLayer(parent, context.bakeLayer(HandcuffsLayer.LAYER));
             this.layers.add(cuffs);
+            // Haki de l'Armement : revêtement noir métallique (ne dessine rien sans Haki actif)
+            RenderLayer<AvatarRenderState, PlayerModel> armament = new nolan.bloxpiece.client.haki.HakiArmamentLayer(parent);
+            this.layers.add(armament);
+            // Haki de l'Observation : ruban rouge des yeux pendant une esquive (ne dessine rien sinon)
+            RenderLayer<AvatarRenderState, PlayerModel> eyeTrail = new nolan.bloxpiece.client.haki.HakiEyeTrailLayer(parent,
+                    context.bakeLayer(nolan.bloxpiece.client.haki.HakiEyeTrailLayer.LAYER));
+            this.layers.add(eyeTrail);
         } else if (model instanceof HumanoidModel) {
             // Mobs humanoïdes (zombies, squelettes, piglins, pirates...) : menottes aux poignets s'ils sont menottés
             this.layers.add(new MobHandcuffsLayer((RenderLayerParent) (Object) this, context.bakeLayer(HandcuffsLayer.LAYER)));
@@ -70,5 +77,7 @@ public abstract class LivingEntityRendererMixin {
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;F)V", at = @At("TAIL"))
     private void bloxpiece$extractCuffed(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo info) {
         ((CuffedRenderState) state).bloxpiece$setCuffed(Handcuffs.isCuffed(entity));
+        ((nolan.bloxpiece.client.haki.UnconsciousRenderState) state).bloxpiece$setUnconscious(
+                nolan.bloxpiece.haki.Unconscious.is(entity));
     }
 }

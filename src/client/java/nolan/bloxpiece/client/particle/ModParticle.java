@@ -40,7 +40,11 @@ public class ModParticle extends SingleQuadParticle {
         ICE_SHARD   (14, 24, 0.12F, 0.60F, 0.94F, 0.50F,   0xF0FCFF, 0x7EC8F0, 1.00F, true),
         SNOWFLAKE   (30, 50, 0.09F, 0.80F, 0.96F, 0.05F,   0xFFFFFF, 0xC8E8FF, 1.00F, true),
         FROST_MIST  (30, 50, 0.60F, 2.40F, 0.92F, -0.02F,  0xE0F4FF, 0xA8D4F0, 0.45F, true),
-        FROST_GLOW  (10, 16, 0.30F, 0.40F, 0.90F, 0.0F,    0xF0FCFF, 0x8CD8FF, 0.85F, false);
+        FROST_GLOW  (10, 16, 0.30F, 0.40F, 0.90F, 0.0F,    0xF0FCFF, 0x8CD8FF, 0.85F, false),
+        // Haki de l'Observation : traînée des yeux, immobile, rouge vif au coeur presque blanc qui s'amincit en virant au rouge sombre
+        // coeur fin presque blanc-rose qui vire au rouge et s'amincit (queue effilée) ; halo rouge plus large et plus doux
+        HAKI_EYE    (9,  12, 0.028F, 0.15F, 1.00F, 0.0F,   0xFFE4E0, 0xFF1830, 1.00F, false),
+        HAKI_EYE_GLOW (5, 8, 0.085F, 0.30F, 1.00F, 0.0F,   0xFF3A48, 0xB00818, 0.55F, false);
 
         final int minLife, maxLife;
         final float size, endSize, friction, gravity, alpha;

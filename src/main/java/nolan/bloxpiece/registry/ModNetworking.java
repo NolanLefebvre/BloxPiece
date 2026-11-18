@@ -20,6 +20,8 @@ public class ModNetworking {
     public static void initialize() {
         // Client -> Serveur
         PayloadTypeRegistry.serverboundPlay().register(UseAbilityPayload.TYPE, UseAbilityPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.UseHakiPayload.TYPE,
+                nolan.bloxpiece.network.UseHakiPayload.CODEC); // touches des Hakis
         PayloadTypeRegistry.serverboundPlay().register(SaberStrikePayload.TYPE, SaberStrikePayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SaberStrikePayload.TYPE, (payload, context) ->
                 IceSaberAbility.strike(context.player()));
@@ -44,9 +46,18 @@ public class ModNetworking {
         PayloadTypeRegistry.clientboundPlay().register(ShakePayload.TYPE, ShakePayload.CODEC);
         // Serveur -> Client (ouverture d'un Coffre au Trésor : roulette des fruits du démon)
         PayloadTypeRegistry.clientboundPlay().register(OpenRoulettePayload.TYPE, OpenRoulettePayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(nolan.bloxpiece.network.HakiDodgePayload.TYPE,
+                nolan.bloxpiece.network.HakiDodgePayload.CODEC); // esquive du Haki de l'Observation (animation)
         PayloadTypeRegistry.clientboundPlay().register(nolan.bloxpiece.network.OpenDialoguePayload.TYPE,
                 nolan.bloxpiece.network.OpenDialoguePayload.CODEC); // dialogue des PNJ (Tavernier)
 
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.UseHakiPayload.TYPE, (payload, context) -> {
+            switch (payload.action()) {
+                case nolan.bloxpiece.network.UseHakiPayload.PRESS -> nolan.bloxpiece.haki.HakiManager.press(context.player(), payload.slot());
+                case nolan.bloxpiece.network.UseHakiPayload.HOLD -> nolan.bloxpiece.haki.HakiManager.hold(context.player(), payload.slot());
+                default -> nolan.bloxpiece.haki.HakiManager.release(context.player(), payload.slot());
+            }
+        });
         ServerPlayNetworking.registerGlobalReceiver(UseAbilityPayload.TYPE, (payload, context) -> {
             if (payload.pressed()) {
                 AbilityManager.tryUse(context.player(), payload.slot());

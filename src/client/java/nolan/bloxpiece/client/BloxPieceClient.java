@@ -70,6 +70,57 @@ public class BloxPieceClient implements ClientModInitializer {
     /** Touche d'attaque enfoncée au tick précédent (pour détecter un nouveau coup avec le trident de glace). */
     private static boolean attackWasDown;
 
+    // Hakis : Armement, Observation, Rois (modifiables dans Options > Contrôles)
+    private static final KeyMapping[] HAKI_KEYS = {
+            registerKey("key.bloxpiece.haki_armament", SDLScancode.SDL_SCANCODE_B),
+            registerKey("key.bloxpiece.haki_observation", SDLScancode.SDL_SCANCODE_N),
+            registerKey("key.bloxpiece.haki_conqueror", SDLScancode.SDL_SCANCODE_M)
+    };
+    private static final boolean[] HAKI_WAS_DOWN = new boolean[HAKI_KEYS.length];
+    /** Ticks depuis l'enfoncement de chaque touche de Haki, et l'état au moment de l'appui (maintien de l'Armement). */
+    private static final int[] HAKI_HELD = new int[HAKI_KEYS.length];
+    private static final boolean[] HAKI_HOLD_SENT = new boolean[HAKI_KEYS.length];
+    private static boolean armamentWasOn;
+
+    private static void sendHaki(int slot, int action) {
+        ClientPlayNetworking.send(new nolan.bloxpiece.network.UseHakiPayload(slot, action));
+    }
+
+    /**
+     * Touche de l'Armement : appui court = bras (activé tout de suite à l'appui, ou retiré au relâchement s'il était déjà actif) ;
+     * maintenue {@link nolan.bloxpiece.haki.ArmamentHaki#HOLD_TICKS} ticks (0,6 s) = HOLD, le revêtement gagne tout le corps.
+     */
+    private static void tickArmamentKey(Minecraft client, boolean down, boolean was, boolean clicked) {
+        int press = nolan.bloxpiece.network.UseHakiPayload.PRESS;
+        if (down && !was) {
+            HAKI_HELD[0] = 0;
+            HAKI_HOLD_SENT[0] = false;
+            armamentWasOn = client.player != null && nolan.bloxpiece.haki.ArmamentHaki.mode(client.player) != 0;
+            if (!armamentWasOn) {
+                sendHaki(0, press); // le bras se couvre dès l'appui (début de la fusion)
+            }
+        } else if (down) {
+            HAKI_HELD[0]++;
+            if (!HAKI_HOLD_SENT[0] && HAKI_HELD[0] >= nolan.bloxpiece.haki.ArmamentHaki.HOLD_TICKS) {
+                HAKI_HOLD_SENT[0] = true;
+                sendHaki(0, nolan.bloxpiece.network.UseHakiPayload.HOLD);
+            }
+        } else if (was) {
+            if (!HAKI_HOLD_SENT[0] && armamentWasOn) {
+                sendHaki(0, press); // appui court sur un Haki déjà actif : on le retire
+            }
+            sendHaki(0, nolan.bloxpiece.network.UseHakiPayload.RELEASE);
+        } else if (clicked) {
+            sendHaki(0, press); // appui et relâchement dans le même tick : bascule simple
+            sendHaki(0, nolan.bloxpiece.network.UseHakiPayload.RELEASE);
+        }
+    }
+
+    /** Touche du Haki de cette case (le HUD des Hakis en affiche le nom). */
+    public static KeyMapping hakiKey(int slot) {
+        return slot >= 0 && slot < HAKI_KEYS.length ? HAKI_KEYS[slot] : null;
+    }
+
     // Menu du personnage (modifiable dans Options > Contrôles)
     private static final KeyMapping CHARACTER_KEY = registerKey("key.bloxpiece.character", SDLScancode.SDL_SCANCODE_G);
 
@@ -140,6 +191,8 @@ public class BloxPieceClient implements ClientModInitializer {
         particles.register(ModParticles.SNOWFLAKE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.SNOWFLAKE));
         particles.register(ModParticles.FROST_MIST, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FROST_MIST));
         particles.register(ModParticles.FROST_GLOW, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FROST_GLOW));
+        particles.register(ModParticles.HAKI_EYE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_EYE));
+        particles.register(ModParticles.HAKI_EYE_GLOW, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_EYE_GLOW));
 
         // Entités du fruit de la Glace (calques des modèles d'abord, renderers ensuite)
         ModelLayerRegistry.registerModelLayer(IceModels.TridentModel.LAYER, IceModels.TridentModel::createLayer);
@@ -160,11 +213,18 @@ public class BloxPieceClient implements ClientModInitializer {
 
         // Menottes en Granite Marin : modèle des bracelets portés, cadenas sur la hotbar, inventaire verrouillé
         ModelLayerRegistry.registerModelLayer(HandcuffsLayer.LAYER, HandcuffsLayer::createLayer);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiEyeTrailLayer.LAYER,
+                nolan.bloxpiece.client.haki.HakiEyeTrailLayer::createLayer);
         HandcuffsClient.register();
         ClientTickEvents.START_CLIENT_TICK.register(HandcuffsClient::tick);
 
         // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();
+        // HUD des 3 Hakis à gauche de la hotbar, éclairs du Haki des Rois
+        nolan.bloxpiece.client.haki.HakiHud.register();
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER,
+                nolan.bloxpiece.client.haki.HakiBoltRenderer.BoltModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.HAKI_BOLT, nolan.bloxpiece.client.haki.HakiBoltRenderer::new);
         // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
         HealthHud.register();
 
@@ -176,6 +236,13 @@ public class BloxPieceClient implements ClientModInitializer {
             }
         });
         // Tremblement de caméra demandé par le serveur (attaques du Bouddha)
+        // Haki de l'Observation : animation d'esquive (le joueur concerné et ceux qui le voient), petit à-coup de caméra chez lui
+        ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.HakiDodgePayload.TYPE, (payload, context) -> {
+            nolan.bloxpiece.client.haki.HakiClientState.startDodge(payload.entityId(), payload.variant(), payload.right());
+            if (context.client().player != null && context.client().player.getId() == payload.entityId()) {
+                CameraShake.start(1.2F, 5);
+            }
+        });
         ClientPlayNetworking.registerGlobalReceiver(ShakePayload.TYPE,
                 (payload, context) -> CameraShake.start(payload.strength(), payload.ticks()));
         // Coffre au Trésor : ouverture de la roulette, puis fruit tiré par le serveur au clic sur OUVRIR (il le donne lui-même)
@@ -196,7 +263,12 @@ public class BloxPieceClient implements ClientModInitializer {
                 }
             }
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> ClientCooldowns.clear());
+        ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> {
+            ClientCooldowns.clear();
+            nolan.bloxpiece.client.haki.HakiClientState.clear();
+            nolan.bloxpiece.client.haki.HakiHud.reset();
+            nolan.bloxpiece.client.haki.HakiEyeTrail.clear();
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             CameraShake.tick(client);
@@ -217,6 +289,30 @@ public class BloxPieceClient implements ClientModInitializer {
                 if (client.gui.screen() == null) {
                     client.gui.setScreen(new CharacterScreen(CHARACTER_KEY));
                 }
+            }
+
+            // Hakis : appui et relâchement (l'Armement distingue l'appui simple du maintien)
+            // On suit l'état enfoncé de la touche (et non les « clics », que la répétition du clavier multiplie pendant un
+            // maintien : c'est ce qui empêchait le corps entier de se déclencher).
+            for (int slot = 0; slot < HAKI_KEYS.length; slot++) {
+                boolean clicked = false;
+                while (HAKI_KEYS[slot].consumeClick()) {
+                    clicked = true;
+                }
+                boolean down = HAKI_KEYS[slot].isDown() && client.gui.screen() == null;
+                boolean was = HAKI_WAS_DOWN[slot];
+                if (slot == 0) {
+                    tickArmamentKey(client, down, was, clicked);
+                } else if (down && !was) {
+                    sendHaki(slot, nolan.bloxpiece.network.UseHakiPayload.PRESS);
+                } else if (!down && was) {
+                    sendHaki(slot, nolan.bloxpiece.network.UseHakiPayload.RELEASE);
+                } else if (!down && clicked) {
+                    // appui et relâchement dans le même tick
+                    sendHaki(slot, nolan.bloxpiece.network.UseHakiPayload.PRESS);
+                    sendHaki(slot, nolan.bloxpiece.network.UseHakiPayload.RELEASE);
+                }
+                HAKI_WAS_DOWN[slot] = down;
             }
 
             for (int slot = 0; slot < ABILITY_KEYS.length; slot++) {

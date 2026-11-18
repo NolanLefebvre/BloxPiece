@@ -38,5 +38,12 @@ public abstract class AvatarRendererHandMixin {
         BuddhaGoldLayer.submitHand(pose, collector, arm, skin, player.getScale(), player.tickCount + partialTick);
         // Corail à Bulles : la bulle d'air recouvre aussi la main
         BubbleCoralLayer.submitHand(pose, collector, arm, player, partialTick);
+        // Haki de l'Armement : la main se couvre aussi de Haki à la première personne
+        net.minecraft.client.model.player.PlayerModel model =
+                (net.minecraft.client.model.player.PlayerModel) ((net.minecraft.client.renderer.entity.LivingEntityRenderer<?, ?, ?>) (Object) this).getModel();
+        boolean rightArm = arm == model.rightArm;
+        boolean mainArm = rightArm == (player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
+        nolan.bloxpiece.client.haki.HakiArmamentLayer.submitHand(pose, collector, arm, skin, player, mainArm,
+                player.tickCount + partialTick);
     }
 }

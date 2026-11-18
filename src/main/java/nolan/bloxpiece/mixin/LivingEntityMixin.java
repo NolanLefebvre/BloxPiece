@@ -21,6 +21,8 @@ public abstract class LivingEntityMixin {
 
     @ModifyVariable(method = "hurtServer", at = @At("HEAD"), argsOnly = true)
     private float bloxpiece$scaleFruitDamage(float amount, @Local(argsOnly = true) DamageSource source) {
+        // Haki de l'Armement sur tout le corps : dégâts subis réduits
+        amount *= nolan.bloxpiece.haki.HakiManager.incomingDamageMultiplier((LivingEntity) (Object) this, source);
         Player attacker = LevelScaling.fruitAttacker(source);
         if (attacker == null || attacker == (Object) this) {
             return amount;

@@ -44,6 +44,7 @@ public class PlayerModelMixin {
             return;
         }
         bloxpiece$logiaParts(player);
+        bloxpiece$hakiDodge(player, state);
         if (Handcuffs.isCuffed(player)) {
             bloxpiece$cuffedPose();
             return; // menotté : aucune autre pose (pas de pouvoirs)
@@ -244,5 +245,106 @@ public class PlayerModelMixin {
             model.leftArm.yRot = 0.0F;
             model.leftArm.zRot = -0.55F;
         }
+    }
+
+    /**
+     * Haki de l'Observation : à chaque attaque esquivée, une esquive parmi six (choisie par le serveur, jamais la même deux fois
+     * de suite, côté au hasard), très rapide puis retour en place (HakiClientState.dodge). Chez tous les joueurs qui le voient.
+     * Les hanches et les jambes restent en place : seuls le buste, la tête et les bras bougent.
+     * <ol start="0">
+     *   <li>latérale ample : le buste plonge d'un côté en pivotant sur les hanches ;</li>
+     *   <li>recul : le buste part en arrière, menton relevé, bras qui s'écartent ;</li>
+     *   <li>torsion : rotation sèche des épaules, la tête suit plus loin ;</li>
+     *   <li>pivot de tête : seule la tête s'écarte et s'incline (balle qui frôle la joue) ;</li>
+     *   <li>plongeon : le haut du corps s'abaisse et se penche en avant, bras en garde ;</li>
+     *   <li>matrice : recul profond combiné à une torsion, bras ouverts.</li>
+     * </ol>
+     */
+    private void bloxpiece$hakiDodge(Entity player, AvatarRenderState state) {
+        nolan.bloxpiece.client.haki.HakiClientState.DodgePose dodge =
+                nolan.bloxpiece.client.haki.HakiClientState.dodge(player, state.ageInTicks - player.tickCount);
+        if (dodge == null) {
+            return;
+        }
+        PlayerModel model = (PlayerModel) (Object) this;
+        float k = dodge.amount();
+        float side = dodge.side();
+        // buste et bras
+        switch (dodge.variant()) {
+            case 1 -> bloxpiece$leanBack(model, k * 0.55F, side * k * 0.12F);
+            case 2 -> bloxpiece$twist(model, side * k * 0.85F);
+            case 3 -> model.body.zRot += 0.08F * side * k; // la tête seule s'écarte, le corps bouge à peine
+            case 4 -> {
+                // angle négatif = buste penché en AVANT (le haut du corps plonge sous le coup), pivot aux hanches
+                bloxpiece$leanBack(model, -0.55F * k, side * 0.15F * k);
+                // bras levés en garde devant le visage
+                model.rightArm.xRot += (-1.3F - model.rightArm.xRot) * k;
+                model.leftArm.xRot += (-1.3F - model.leftArm.xRot) * k;
+                model.rightArm.yRot += -0.35F * k;
+                model.leftArm.yRot += 0.35F * k;
+            }
+            case 5 -> {
+                bloxpiece$leanBack(model, k * 0.8F, 0.0F);
+                bloxpiece$twist(model, side * k * 0.5F);
+                model.rightArm.zRot += 0.9F * k;
+                model.leftArm.zRot -= 0.9F * k;
+            }
+            default -> {
+                float a = side * k * 0.42F;
+                float shift = 12.0F * (float) Math.sin(a);   // le haut du buste se déplace, les hanches restent en place
+                model.body.zRot += a;
+                model.body.x += shift;
+                model.rightArm.x += shift * 0.85F;
+                model.leftArm.x += shift * 0.85F;
+                model.rightArm.zRot += a;
+                model.leftArm.zRot += a;
+            }
+        }
+        // tête : même calcul que la traînée des yeux (HakiClientState.headDelta)
+        float[] h = nolan.bloxpiece.client.haki.HakiClientState.headDelta(dodge);
+        model.head.x += h[0];
+        model.head.y += h[1];
+        model.head.z += h[2];
+        model.head.xRot += h[3];
+        model.head.yRot += h[4];
+        model.head.zRot += h[5];
+        // pose finale de la tête relevée pour la traînée rouge des yeux
+        // pose finale de la tête relevée pour le ruban rouge des yeux (HakiEyeTrailLayer), sauf pour le bras à la 1re personne
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (player != mc.player || !mc.options.getCameraType().isFirstPerson()) {
+            nolan.bloxpiece.client.haki.HakiEyeTrail.record(player, model.head, state.ageInTicks - (float) Math.floor(state.ageInTicks));
+        }
+    }
+
+    /** Buste penché en arrière (angle > 0) ou en avant (angle < 0), pivot aux hanches ; {@code roll} : inclinaison latérale. */
+    private static void bloxpiece$leanBack(PlayerModel model, float angle, float roll) {
+        float back = 12.0F * (float) Math.sin(angle);          // le haut du buste recule
+        float down = 12.0F * (1.0F - (float) Math.cos(angle)); // et s'abaisse un peu
+        model.body.xRot -= angle;
+        model.body.z += back;
+        model.body.y += down;
+        model.rightArm.z += back * 0.85F;
+        model.leftArm.z += back * 0.85F;
+        model.rightArm.y += down;
+        model.leftArm.y += down;
+        model.rightArm.xRot -= angle * 0.5F;
+        model.leftArm.xRot -= angle * 0.5F;
+        model.rightArm.zRot += 0.35F * angle;
+        model.leftArm.zRot -= 0.35F * angle;
+        model.body.zRot += roll;
+    }
+
+    /** Torsion des épaules (radians, autour de la verticale) : les bras suivent leur épaule (la tête : headDelta). */
+    private static void bloxpiece$twist(PlayerModel model, float yaw) {
+        float sin = (float) Math.sin(yaw);
+        float cos = (float) Math.cos(yaw);
+        model.body.yRot += yaw;
+        // épaules à 5 px du centre : elles tournent avec le buste
+        model.rightArm.x += -5.0F * cos + 5.0F;
+        model.rightArm.z += 5.0F * sin;
+        model.leftArm.x += 5.0F * cos - 5.0F;
+        model.leftArm.z += -5.0F * sin;
+        model.rightArm.yRot += yaw;
+        model.leftArm.yRot += yaw;
     }
 }

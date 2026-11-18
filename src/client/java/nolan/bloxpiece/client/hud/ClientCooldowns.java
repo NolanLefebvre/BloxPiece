@@ -13,6 +13,8 @@ public final class ClientCooldowns {
 
     // "fruit:attaque" (même clé que le serveur) -> tick de jeu où l'attaque redevient utilisable
     private static final Map<String, Long> READY_AT = new HashMap<>();
+    // durée totale de la dernière recharge reçue (pour le voile qui descend, ex : Hakis aux recharges variables)
+    private static final Map<String, Integer> TOTAL = new HashMap<>();
 
     private ClientCooldowns() {
     }
@@ -23,6 +25,7 @@ public final class ClientCooldowns {
             READY_AT.remove(key);
         } else {
             READY_AT.put(key, gameTime + ticks);
+            TOTAL.put(key, ticks);
         }
     }
 
@@ -40,7 +43,13 @@ public final class ClientCooldowns {
         return (int) remaining;
     }
 
+    /** Durée totale de la recharge en cours (ou 1). */
+    public static int totalTicks(String key) {
+        return Math.max(1, TOTAL.getOrDefault(key, 1));
+    }
+
     public static void clear() {
         READY_AT.clear();
+        TOTAL.clear();
     }
 }

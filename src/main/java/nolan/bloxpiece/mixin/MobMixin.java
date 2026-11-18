@@ -20,7 +20,7 @@ public abstract class MobMixin {
 
     @Inject(method = "setTarget", at = @At("HEAD"), cancellable = true)
     private void bloxpiece$noTargetWhenCuffed(LivingEntity target, CallbackInfo info) {
-        if (target != null && Handcuffs.isCuffed((Mob) (Object) this)) {
+        if (target != null && (Handcuffs.isCuffed((Mob) (Object) this) || nolan.bloxpiece.haki.Unconscious.is((Mob) (Object) this))) {
             info.cancel();
         }
     }

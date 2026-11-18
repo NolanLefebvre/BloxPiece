@@ -36,7 +36,7 @@ public class ModCommands {
 
             // /bloxpiece addxp <joueur> <quantité>  -> commande de test du système de niveaux
             //   quantité > 0 : ajoute de l'XP ; quantité < 0 : en retire (le niveau peut baisser) ; 0 : ne change rien
-            // /bloxpiece resetcooldowns [joueur]  -> remet à zéro les recharges des attaques du fruit
+            // /bloxpiece resetcooldowns [joueur]  -> remet à zéro les recharges des attaques du fruit et des trois Hakis
             // Les sous-commandes héritent de la permission de "bloxpiece" (opérateurs / game masters).
             dispatcher.register(
                     Commands.literal("bloxpiece")
@@ -104,7 +104,8 @@ public class ModCommands {
 
     private static int resetCooldowns(CommandSourceStack source, ServerPlayer target) {
         // Efface les recharges côté serveur (là où elles comptent vraiment) ET prévient le HUD du joueur
-        int reset = AbilityManager.clearCooldowns(target);
+        // attaques du fruit ET les trois Hakis (Armement, Observation, Rois)
+        int reset = AbilityManager.clearCooldowns(target) + nolan.bloxpiece.haki.HakiManager.clearCooldowns(target);
         if (reset == 0) {
             source.sendFailure(Component.translatable("message.bloxpiece.resetcooldowns.none", target.getDisplayName()));
             return 0;

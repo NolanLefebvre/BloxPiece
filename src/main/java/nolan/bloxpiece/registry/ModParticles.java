@@ -48,6 +48,11 @@ public class ModParticles {
     /** Fruit de la Glace : lueur froide (blanc-cyan). */
     public static final SimpleParticleType FROST_GLOW = register("frost_glow");
 
+    /** Haki de l'Observation : point lumineux rouge de la traînée qui suit les yeux pendant une esquive (émis côté client). */
+    public static final SimpleParticleType HAKI_EYE = register("haki_eye");
+    /** Halo rouge autour de la traînée des yeux, et pupille incandescente. */
+    public static final SimpleParticleType HAKI_EYE_GLOW = register("haki_eye_glow");
+
     private static SimpleParticleType register(String name) {
         return Registry.register(BuiltInRegistries.PARTICLE_TYPE, BloxPiece.id(name), FabricParticleTypes.simple());
     }

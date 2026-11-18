@@ -3,7 +3,8 @@
 	"package": "nolan.bloxpiece.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"CuffedMobModelMixin"
+		"CuffedMobModelMixin",
+		"UnconsciousPoseMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

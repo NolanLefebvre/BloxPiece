@@ -15,6 +15,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
@@ -67,6 +68,9 @@ public class AbilityHud implements HudElement {
     private static final int COLOR_BORDER_EMPTY = 0xFF4A4A4A;
     private static final int COLOR_COOLDOWN_VEIL = 0xA0000000;
     private static final int COLOR_TEXT = 0xFFFFFFFF;
+    /** Titre (nom du fruit) : ivoire chaud, traits dorés discrets. */
+    private static final int COLOR_LABEL = 0xFFF3E6C4;
+    private static final int COLOR_LABEL_ACCENT = 0xB0D9A441;
 
     // Transparence de l'icône (0-255) : l'icône sert de fond, le chiffre reste lisible par-dessus
     private static final int ICON_ALPHA_READY = 0xB4;
@@ -105,24 +109,41 @@ public class AbilityHud implements HudElement {
         }
 
         DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
+        if (fruit == null) {
+            return; // pas de fruit : aucune case, aucun titre
+        }
+        // autant de cases que d'attaques du fruit (les touches restent celles de leur emplacement)
+        int count = 0;
+        while (count < DevilFruit.MAX_ABILITIES && fruit.getAbility(count) != null) {
+            count++;
+        }
+        if (count == 0) {
+            return;
+        }
         long now = level.getGameTime();
 
         // Disposition : une seule rangée si elle tient à droite de la hotbar, sinon plusieurs rangées vers le haut
         int guiWidth = graphics.guiWidth();
         int idealX = firstSlotX(mc, player, guiWidth);
-        int fit = Mth.clamp((guiWidth - idealX - SCREEN_MARGIN + GAP) / (SLOT_SIZE + GAP), 1, DevilFruit.MAX_ABILITIES);
-        int rows = (DevilFruit.MAX_ABILITIES + fit - 1) / fit;
-        int columns = (DevilFruit.MAX_ABILITIES + rows - 1) / rows;   // répartit équitablement (4 -> 2 x 2 plutôt que 3 + 1)
+        int fit = Mth.clamp((guiWidth - idealX - SCREEN_MARGIN + GAP) / (SLOT_SIZE + GAP), 1, count);
+        int rows = (count + fit - 1) / fit;
+        int columns = (count + rows - 1) / rows;   // répartit équitablement (4 -> 2 x 2 plutôt que 3 + 1)
         int totalWidth = columns * SLOT_SIZE + (columns - 1) * GAP;
         int x0 = Math.min(idealX, guiWidth - totalWidth - SCREEN_MARGIN);
         int bottomY = graphics.guiHeight() - 20; // centré verticalement sur la hotbar (22 px de haut)
 
-        for (int slot = 0; slot < DevilFruit.MAX_ABILITIES; slot++) {
-            Ability ability = fruit == null ? null : fruit.getAbility(slot);
+        for (int slot = 0; slot < count; slot++) {
+            Ability ability = fruit.getAbility(slot);
             int x = x0 + (slot % columns) * (SLOT_SIZE + GAP);
             int y = bottomY - (slot / columns) * (SLOT_SIZE + GAP);
             drawSlot(graphics, mc.font, player, x, y, fruit, ability, now, keyLabel(mc.font, slot));
         }
+
+        // nom du fruit au-dessus des cases, sans jamais déborder sur la hotbar (ni ses barres) ni hors de l'écran
+        int slotsTop = bottomY - (rows - 1) * (SLOT_SIZE + GAP);
+        String name = Component.translatable(fruit.translationKey()).getString();
+        HudLabel.draw(graphics, mc.font, name, x0, totalWidth, slotsTop, Math.min(idealX, x0), guiWidth - SCREEN_MARGIN,
+                COLOR_LABEL, COLOR_LABEL_ACCENT);
     }
 
     /** Nom de la touche de l'attaque de ce slot (ex : "Z"), raccourci pour tenir dans la case. */
