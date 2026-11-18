@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.BuddhaEffects;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Troisième attaque du fruit du Bouddha : l'Onde de choc (la frappe paume ouverte de Sengoku, droit devant).
@@ -129,7 +130,7 @@ public class BuddhaShockwaveAbility implements Ability {
     public static void tick(MinecraftServer server) {
         for (int i = 0; i < WAVES.size(); i++) {
             Wave wave = WAVES.get(i);
-            if (wave.owner.isRemoved() || (wave.windup < WINDUP_TICKS && (!wave.owner.isAlive() || wave.owner.isInWater()))) {
+            if (wave.owner.isRemoved() || (wave.windup < WINDUP_TICKS && (!wave.owner.isAlive() || WaterCurse.touchesWater(wave.owner)))) {
                 wave.owner.removeAttached(ModAttachments.BUDDHA_POSE);
                 WAVES.remove(i--);
                 continue;

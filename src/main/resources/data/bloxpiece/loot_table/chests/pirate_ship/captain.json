@@ -199,23 +199,8 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "bloxpiece:fire_fruit",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "bloxpiece:buddha_fruit",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "bloxpiece:ice_fruit",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "bloxpiece:gura_fruit",
-          "weight": 1
+          "name": "bloxpiece:treasure_chest",
+          "weight": 4
         },
         {
           "type": "minecraft:empty",

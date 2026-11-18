@@ -32,7 +32,9 @@ public class FireEffects {
         // et explosion de blocs ont la même taille. Dégâts et mise à feu : 0 ici, c'est HikenFist qui les applique (une seule fois, avec décroissance).
         // Pas d'EXPLOSION_EMITTER (emitters = 0) : l'explosion vanilla en émet déjà un, deux se superposeraient en une explosion qui semble double.
         HIKEN (1.10, 2,  0, HikenFist.BLAST_RADIUS, 0.0f, 0, 220, 0, 56, 0.6, 6,  0.0),
-        METEOR(0.90, 12, 4, 7.5, 10.0f, 8, 160, 3, 56, 0.65, 8, 0.0),
+        // Météore : le projectile est affiché avec le modèle 3D MeteorModel (voir Meteor). Peu de flammes au coeur (3, avant 12) pour ne pas
+        // cacher le modèle ; la traînée dense de flammes et de fumée est dessinée DERRIÈRE lui (voir meteorTrail). Impact inchangé.
+        METEOR(0.90, 3, 4, 7.5, 10.0f, 8, 160, 3, 56, 0.65, 8, 0.0),
         // Dai Enkai: Entei : un petit soleil. Dégâts et rayon au-dessus du météore, mais un seul projectile.
         // (sa boule visible est le modèle Blockbench de EnteiSun : pas de sphère de particules)
         // Traînée +50 % (4.5) pour suivre la taille de la boule. Impact COLOSSAL, taille DOUBLÉE par rapport à la version précédente :
@@ -274,6 +276,11 @@ public class FireEffects {
             enteiAura(t, dir, u, v);
         }
 
+        // Météore : longue traînée de flammes et de fumée derrière le modèle 3D
+        if (k == Kind.METEOR) {
+            meteorTrail(t, dir);
+        }
+
         // Hiken : étincelles et braises autour de la masse de flammes (le poing et sa masse de flammes sont le modèle 3D)
         if (k == Kind.HIKEN) {
             hikenSparks(t, dir);
@@ -325,6 +332,30 @@ public class FireEffects {
             level.sendParticles(ModParticles.FIRE_EMBER, t.x - dir.x * 2.0, t.y - dir.y * 2.0, t.z - dir.z * 2.0,
                     3, 2.0, 2.0, 2.0, 0.0);
         }
+    }
+
+    /**
+     * Météore : traînée dense derrière le modèle (qui fait ~1,8 bloc de rayon) : flammes qui s'élargissent en s'éloignant, puis
+     * une colonne de fumée noire plus longue, et des braises qui se détachent.
+     */
+    private static void meteorTrail(Tracked t, Vec3 dir) {
+        ServerLevel level = t.level;
+        for (int i = 0; i < 6; i++) {
+            double back = 1.5 + level.getRandom().nextDouble() * 5.0;
+            double spread = 0.35 + back * 0.12;
+            level.sendParticles(ModParticles.FIRE_FLAME,
+                    t.x - dir.x * back, t.y + 0.5 - dir.y * back, t.z - dir.z * back,
+                    1, spread, spread, spread, 0.02);
+        }
+        for (int i = 0; i < 3; i++) {
+            double back = 4.0 + level.getRandom().nextDouble() * 8.0;
+            double spread = 0.4 + back * 0.08;
+            level.sendParticles(ModParticles.FIRE_SMOKE,
+                    t.x - dir.x * back, t.y + 0.5 - dir.y * back, t.z - dir.z * back,
+                    1, spread, spread, spread, 0.01);
+        }
+        level.sendParticles(ModParticles.FIRE_EMBER, t.x - dir.x * 2.0, t.y + 0.5 - dir.y * 2.0, t.z - dir.z * 2.0,
+                2, 1.0, 1.0, 1.0, 0.03);
     }
 
     /** Hiken : quelques braises irrégulières qui se détachent de la masse de flammes, derrière le poing (le poing lui-même est le modèle 3D). */

@@ -14,6 +14,9 @@ import nolan.bloxpiece.network.CooldownPayload;
 import nolan.bloxpiece.quest.QuestType;
 import nolan.bloxpiece.quest.Quests;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
+import nolan.bloxpiece.handcuffs.Handcuffs;
+import nolan.bloxpiece.handcuffs.Seastone;
 
 /**
  * Toute la logique côté serveur : quel fruit a le joueur, quelle attaque correspond à la touche,
@@ -47,8 +50,18 @@ public class AbilityManager {
             return;
         }
 
+        // Granite Marin : aucun pouvoir (transformation comprise) si le joueur est menotté ou a un objet en Granite Marin sur lui
+        if (Handcuffs.isCuffed(player)) {
+            player.sendSystemMessage(Component.translatable("message.bloxpiece.handcuffs.no_powers"), true);
+            return;
+        }
+        if (Seastone.carries(player)) {
+            player.sendSystemMessage(Component.translatable("message.bloxpiece.seastone.no_powers"), true);
+            return;
+        }
+
         // Faiblesse à l'eau : les pieds dans l'eau suffisent à bloquer tous les pouvoirs (transformation comprise)
-        if (player.isInWater()) {
+        if (WaterCurse.touchesWater(player)) {
             player.sendSystemMessage(Component.translatable("message.bloxpiece.water_weakness"), true);
             return;
         }

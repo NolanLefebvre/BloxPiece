@@ -1,23 +1,23 @@
 package nolan.bloxpiece.ability;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.projectile.hurtingprojectile.LargeFireball;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.FireEffects;
+import nolan.bloxpiece.fx.Meteor;
 import nolan.bloxpiece.registry.ModParticles;
 
 /**
  * Troisième attaque du fruit du feu : une pluie de météores enflammés
  * qui s'abat sur l'endroit visé par le curseur du joueur.
  * La zone est marquée par des cercles de feu, puis les météores tombent à la verticale
- * (avec une traînée en spirale) et explosent à l'impact.
+ * (avec une traînée en spirale) et explosent à l'impact. Chaque météore est une entité Meteor (boule de feu vanilla affichée avec
+ * le modèle 3D MeteorModel côté client).
  */
 public class MeteorRainAbility implements Ability {
 
@@ -71,21 +71,10 @@ public class MeteorRainAbility implements Ability {
         }
         double clearance = AimHelper.clearanceAbove(level, target, MAX_SKY_HEIGHT);
 
-        // Lancement : triple onde de choc, double tornade de feu autour du joueur
-        FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.35);
-        FireEffects.shockwave(level, ModParticles.FIRE_FLAME, player.getX(), player.getY() + 0.2, player.getZ(), 64, 0.6);
-        FireEffects.shockwave(level, ModParticles.FIRE_SMOKE, player.getX(), player.getY() + 0.3, player.getZ(), 48, 0.45);
-        FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.8, 5.0, 3);
-        FireEffects.fireTornado(level, player.getX(), player.getY(), player.getZ(), 1.2, 5.0, -3);
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY() + 1.0, player.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
-
-        // Zone visée : cercles de feu au sol + faisceau de flammes montant vers le ciel
+        // Aucun effet autour du joueur (il cacherait la vue en première personne) : seulement des cercles de feu au sol sur la zone visée
         FireEffects.groundRing(level, target.x, target.y, target.z, SPREAD, 72);
         FireEffects.groundRing(level, target.x, target.y, target.z, SPREAD * 0.6, 48);
         FireEffects.groundRing(level, target.x, target.y, target.z, SPREAD * 0.3, 24);
-        for (int h = 0; h < Math.min(40, (int) clearance); h++) {
-            level.sendParticles(ModParticles.FIRE_FLAME, target.x, target.y + h, target.z, 3, 0.3, 0.3, 0.3, 0.02);
-        }
 
         // Les météores apparaissent au-dessus de la zone, sous le plafond s'il y en a un (grotte, bâtiment, Nether)
         double maxHeight = Math.min(45.0, clearance - 1.0);
@@ -108,10 +97,7 @@ public class MeteorRainAbility implements Ability {
 
             // Chute à la verticale : un météore tombe exactement sur la colonne où il est apparu
             Vec3 fall = new Vec3(0.0, -1.0, 0.0);
-            LargeFireball meteor = new LargeFireball(level, player, fall, EXPLOSION_POWER);
-            meteor.setPos(x, y, z);
-            meteor.setDeltaMovement(fall.scale(1.4));
-            level.addFreshEntity(meteor);
+            Meteor meteor = Meteor.spawn(level, player, new Vec3(x, y, z), fall.scale(1.4), EXPLOSION_POWER);
 
             FireEffects.track(meteor, player, FireEffects.Kind.METEOR);
 

@@ -27,6 +27,10 @@
 		{
 			"config": "bloxpiece.client.mixins.json",
 			"environment": "client"
+		},
+		{
+			"config": "bloxpiece.client.optional.mixins.json",
+			"environment": "client"
 		}
 	],
 	"depends": {

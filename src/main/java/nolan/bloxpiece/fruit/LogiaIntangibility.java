@@ -24,11 +24,14 @@ import nolan.bloxpiece.fx.BuddhaSeal;
 import nolan.bloxpiece.fx.EnteiSun;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.fx.HikenFist;
+import nolan.bloxpiece.fx.ModFxEntity;
+import nolan.bloxpiece.fx.PirateBullet;
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModParticles;
+import nolan.bloxpiece.handcuffs.Seastone;
 
 /**
- * Passif Logia du fruit du Feu : intangibilité élémentaire.
+ * Passif Logia des fruits du Feu et de la Glace : intangibilité élémentaire (membre dispersé en flammes ou en éclats de glace).
  *
  * <ul>
  *   <li>Les dégâts physiques classiques (mêlée, flèches, tridents et autres projectiles, chutes, cactus, enclumes...) sont annulés.
@@ -45,6 +48,8 @@ public final class LogiaIntangibility {
 
     // Parties du corps (bits de l'attachment LOGIA_PARTS, lus aussi par PlayerModelMixin)
     public static final int HEAD = 1, BODY = 2, RIGHT_ARM = 4, LEFT_ARM = 8, RIGHT_LEG = 16, LEFT_LEG = 32;
+    /** Bit "élément glace" de LOGIA_PARTS : les membres se dispersent en éclats de glace au lieu de flammes (LogiaClient). */
+    public static final int ICE = 64;
     private static final int PARTS = 6;
 
     /** Durée de la dispersion en flammes d'un membre (ticks) : 1,5 s. */
@@ -63,9 +68,22 @@ public final class LogiaIntangibility {
     private LogiaIntangibility() {
     }
 
-    /** Le joueur a-t-il le passif Logia du feu ? L'eau l'annule : pieds dans l'eau, le corps redevient tangible. */
+    /**
+     * Le joueur a-t-il le passif Logia ? Fruits Logia : Feu (Mera Mera no Mi) et Glace (Hie Hie no Mi). L'eau l'annule (pieds dans
+     * l'eau, le corps redevient tangible), le Granite Marin aussi (menotté ou objet en Granite Marin sur soi).
+     */
     public static boolean isLogia(ServerPlayer player) {
-        return Fruits.get(player.getAttached(ModAttachments.FRUIT)) == Fruits.FIRE && !player.isInWater();
+        return isLogiaFruit(Fruits.get(player.getAttached(ModAttachments.FRUIT))) && !WaterCurse.touchesWater(player)
+                && !Seastone.suppresses(player);
+    }
+
+    /** Les fruits Logia du mod : leur porteur a le passif d'intangibilité. */
+    public static boolean isLogiaFruit(DevilFruit fruit) {
+        return fruit == Fruits.FIRE || fruit == Fruits.ICE;
+    }
+
+    private static boolean isIce(ServerPlayer player) {
+        return Fruits.get(player.getAttached(ModAttachments.FRUIT)) == Fruits.ICE;
     }
 
     /**
@@ -122,6 +140,7 @@ public final class LogiaIntangibility {
 
     private static boolean isDevilFruitEntity(Entity entity) {
         return entity instanceof HikenFist || entity instanceof BuddhaPalm || entity instanceof BuddhaSeal
+                || (entity instanceof ModFxEntity && !(entity instanceof PirateBullet)) // attaques de la Glace (pas les balles de pistolet)
                 || entity instanceof EnteiSun || (entity != null && FireEffects.isTracked(entity));
     }
 
@@ -172,9 +191,16 @@ public final class LogiaIntangibility {
             }
         }
         ServerLevel level = (ServerLevel) player.level();
-        level.sendParticles(ModParticles.FIRE_FLAME, point.x, point.y, point.z, 14, 0.15, 0.15, 0.15, 0.08);
-        level.sendParticles(ModParticles.FIRE_EMBER, point.x, point.y, point.z, 6, 0.1, 0.1, 0.1, 0.05);
-        level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.6F, 1.6F);
+        if (isIce(player)) {
+            // Glace : le membre éclate en éclats de glace et en givre
+            level.sendParticles(ModParticles.ICE_SHARD, point.x, point.y, point.z, 14, 0.15, 0.15, 0.15, 0.08);
+            level.sendParticles(ModParticles.SNOWFLAKE, point.x, point.y, point.z, 8, 0.15, 0.15, 0.15, 0.03);
+            level.playSound(null, player.blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 0.6F, 1.7F);
+        } else {
+            level.sendParticles(ModParticles.FIRE_FLAME, point.x, point.y, point.z, 14, 0.15, 0.15, 0.15, 0.08);
+            level.sendParticles(ModParticles.FIRE_EMBER, point.x, point.y, point.z, 6, 0.1, 0.1, 0.1, 0.05);
+            level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.6F, 1.6F);
+        }
         updateMask(player, state);
     }
 
@@ -211,12 +237,13 @@ public final class LogiaIntangibility {
                 mask |= 1 << i;
             }
         }
-        if (mask != state.lastMask) {
-            state.lastMask = mask;
-            if (mask == 0) {
+        int synced = mask == 0 ? 0 : mask | (isIce(player) ? ICE : 0); // + l'élément, pour l'affichage chez tous les joueurs
+        if (synced != state.lastMask) {
+            state.lastMask = synced;
+            if (synced == 0) {
                 player.removeAttached(ModAttachments.LOGIA_PARTS);
             } else {
-                player.setAttached(ModAttachments.LOGIA_PARTS, mask);
+                player.setAttached(ModAttachments.LOGIA_PARTS, synced);
             }
         }
         return mask;

@@ -3,6 +3,7 @@ package nolan.bloxpiece.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 
+import nolan.bloxpiece.fruit.BubbleCoral;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fruit.WaterCurse;
 import nolan.bloxpiece.registry.ModAttachments;
@@ -23,7 +24,8 @@ public final class ClientWaterCurse {
     public static void tick(Minecraft client) {
         LocalPlayer player = client.player;
         if (player == null || !player.isUnderWater() || player.isSpectator() || player.getAbilities().flying
-                || Fruits.get(player.getAttached(ModAttachments.FRUIT)) == null) {
+                || Fruits.get(player.getAttached(ModAttachments.FRUIT)) == null
+                || BubbleCoral.isActive(player)) { // la bulle du Corail à Bulles isole de l'eau : il nage normalement
             return;
         }
         player.setDeltaMovement(WaterCurse.sinkingVelocity(player.getDeltaMovement()));

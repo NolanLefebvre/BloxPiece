@@ -17,7 +17,7 @@ public class ArmedPirateModel extends HumanoidModel<ArmedPirateRenderState> {
     @Override
     public void setupAnim(ArmedPirateRenderState state) {
         super.setupAnim(state);
-        if (state.aiming) {
+        if (state.aiming && !(state instanceof CuffedRenderState cuffed && cuffed.bloxpiece$isCuffed())) { // menotté : bras dans le dos
             this.rightArm.xRot = -Mth.HALF_PI + this.head.xRot;
             this.rightArm.yRot = -0.1F + this.head.yRot;
             this.rightArm.zRot = 0.0F;

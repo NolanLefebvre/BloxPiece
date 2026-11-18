@@ -10,6 +10,7 @@ import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.PirateBullet;
+import nolan.bloxpiece.handcuffs.Handcuffs;
 import nolan.bloxpiece.mob.ArmedPirate;
 
 /**
@@ -50,6 +51,9 @@ public class GunnerAttackGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (Handcuffs.isCuffed(this.mob)) {
+            return false; // menotté : ni visée ni tir
+        }
         LivingEntity target = this.mob.getTarget();
         return target != null && target.isAlive();
     }

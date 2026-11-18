@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "I",
+    "N",
+    "N"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "N": "bloxpiece:seastone_nugget"
+  },
+  "result": {
+    "id": "bloxpiece:handcuff_key"
+  }
+}

@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fx.QuakeFx;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Quatrième attaque (ultime) du Gura Gura no Mi : Shima Yurashi (Secousse insulaire), à charger comme Ice Age et Dai Enkai.
@@ -58,6 +59,8 @@ public class GuraShimaYurashiAbility implements Ability {
     /** Puissance du cratère central (4 = TNT), de l'appui court à la pleine charge. */
     private static final float MIN_CRATER = 6.0F;
     private static final float MAX_CRATER = 11.0F;
+    /** Hauteur de la zone pulvérisée par le choc, en fraction de la hauteur des vagues (1 = jusqu'à leur crête). */
+    private static final double BLAST_HEIGHT_RATIO = 1.0;
 
     private static final class Charge {
         final ServerPlayer player;
@@ -151,7 +154,7 @@ public class GuraShimaYurashiAbility implements Ability {
         while (it.hasNext()) {
             Charge c = it.next();
             ServerPlayer player = c.player;
-            if (player.isRemoved() || !player.isAlive() || player.isInWater()
+            if (player.isRemoved() || !player.isAlive() || WaterCurse.touchesWater(player)
                     || Fruits.get(player.getAttached(ModAttachments.FRUIT)) != Fruits.GURA) {
                 c.discardAll();
                 player.removeAttached(ModAttachments.BUDDHA_POSE);
@@ -463,10 +466,23 @@ public class GuraShimaYurashiAbility implements Ability {
         RandomSource rnd = level.getRandom();
         GuraTerrain.blast(level, player, c, MIN_CRATER + (MAX_CRATER - MIN_CRATER) * (float) w.over);
         int craters = 6 + (int) (6 * w.over);
+        double blastTop = w.waveHeight() * BLAST_HEIGHT_RATIO; // hauteur jusqu'où le choc pulvérise les blocs
         for (int i = 0; i < craters; i++) {
             double a = rnd.nextDouble() * Math.PI * 2;
             double r = radius * (0.2 + rnd.nextDouble() * 0.6);
-            GuraTerrain.blast(level, player, c.add(Math.cos(a) * r, rnd.nextDouble() * 2.0 - 1.0, Math.sin(a) * r), 3.5F + rnd.nextFloat() * 3.5F);
+            // Hauteurs variées, du sol jusqu'en haut des vagues (avant : seulement au ras du sol)
+            GuraTerrain.blast(level, player, c.add(Math.cos(a) * r, rnd.nextDouble() * blastTop, Math.sin(a) * r), 3.5F + rnd.nextFloat() * 3.5F);
+        }
+        // Colonne de destruction : le choc des deux vagues souffle aussi tout ce qui est en hauteur (arbres, falaises, bâtiments),
+        // par paliers d'explosions qui montent jusqu'en haut des vagues, avec quelques explosions décalées autour de chaque palier
+        float columnPower = (MIN_CRATER + (MAX_CRATER - MIN_CRATER) * (float) w.over) * 0.8F;
+        for (double h = columnPower; h <= blastTop; h += columnPower * 1.2) {
+            GuraTerrain.blast(level, player, c.add(0.0, h, 0.0), columnPower);
+            for (int k = 0; k < 3; k++) {
+                double a = rnd.nextDouble() * Math.PI * 2;
+                double r = radius * (0.25 + rnd.nextDouble() * 0.45);
+                GuraTerrain.blast(level, player, c.add(Math.cos(a) * r, h, Math.sin(a) * r), columnPower * 0.75F);
+            }
         }
         GuraTerrain.debris(level, c, radius * 1.1, 80 + (int) (100 * w.over), 1.3 + 0.6 * w.over);
 

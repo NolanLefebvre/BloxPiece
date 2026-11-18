@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import nolan.bloxpiece.fx.IceEffects;
 import nolan.bloxpiece.fx.IceSpike;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Quatrième attaque (ultime) du fruit de la Glace : Ice Age, l'Ère glaciaire.
@@ -157,7 +158,7 @@ public class IceAgeAbility implements Ability {
             Wave w = it.next();
             ServerPlayer player = w.owner;
             if (!w.started) {
-                if (player.isRemoved() || !player.isAlive() || player.isInWater() || player.level() != w.level) {
+                if (player.isRemoved() || !player.isAlive() || WaterCurse.touchesWater(player) || player.level() != w.level) {
                     player.removeAttached(ModAttachments.BUDDHA_POSE); // charge annulée : pas de recharge consommée
                     it.remove();
                     continue;

@@ -21,6 +21,7 @@ import nolan.bloxpiece.fx.IceSpike;
 import nolan.bloxpiece.fx.IceStatue;
 import nolan.bloxpiece.fx.IceTrident;
 import nolan.bloxpiece.fx.HikenFist;
+import nolan.bloxpiece.fx.Meteor;
 import nolan.bloxpiece.mob.Pirate;
 import nolan.bloxpiece.mob.PirateCaptain;
 import nolan.bloxpiece.mob.PirateGunner;
@@ -103,6 +104,20 @@ public class ModEntities {
             .clientTrackingRange(10)  // la masse de flammes s'étend à ~30 blocs derrière le poing : 10 chunks de suivi suffisent largement
             .updateInterval(1)        // position et orientation envoyées à chaque tick : le poing avance sans saccade chez tous les clients
             .build(HIKEN_FIST_KEY);
+
+    // Un météore de la Pluie de météores : boule de feu vanilla avec son propre type (modèle 3D côté client, voir Meteor).
+    // Même hitbox que la boule de feu vanilla (1x1). Ni invocable à la main, ni sauvegardé.
+    public static final ResourceKey<EntityType<?>> METEOR_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("meteor"));
+
+    public static final EntityType<Meteor> METEOR = EntityType.Builder.<Meteor>of(Meteor::new, MobCategory.MISC)
+            .sized(1.0F, 1.0F)
+            .fireImmune()             // pas de flammes vanilla dessinées par-dessus le modèle
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(10)  // les météores tombent de ~45 blocs : on les voit de loin
+            .updateInterval(1)        // position envoyée à chaque tick : chute fluide chez tous les clients
+            .build(METEOR_KEY);
 
     // La Paume du Bouddha : le PROJECTILE de la deuxième attaque du fruit du Bouddha (voir BuddhaPalm). Ni invocable à la main, ni sauvegardée.
     public static final ResourceKey<EntityType<?>> BUDDHA_PALM_KEY =
@@ -201,6 +216,7 @@ public class ModEntities {
         register(ENTEI_SUN_KEY, ENTEI_SUN, Mob.createMobAttributes());
         // Le poing est un projectile (pas un être vivant) : pas d'attributs à enregistrer
         Registry.register(BuiltInRegistries.ENTITY_TYPE, HIKEN_FIST_KEY, HIKEN_FIST);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, METEOR_KEY, METEOR);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, BUDDHA_PALM_KEY, BUDDHA_PALM);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, BUDDHA_SEAL_KEY, BUDDHA_SEAL);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_TRIDENT_KEY, ICE_TRIDENT);

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "bloxpiece:seastone_ingot"
+  ],
+  "result": {
+    "id": "bloxpiece:seastone_nugget",
+    "count": 9
+  }
+}

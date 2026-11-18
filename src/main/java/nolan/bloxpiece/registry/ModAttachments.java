@@ -102,6 +102,25 @@ public class ModAttachments {
             builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
     );
 
+    /**
+     * Corail à Bulles : instant (temps de jeu) où la bulle d'air s'est formée autour du joueur ; absent = pas de bulle. Sauvegardé
+     * (la bulle survit à une déconnexion) mais perdu à la mort, synchronisé avec TOUS les joueurs : chacun dessine la bulle et son
+     * animation de formation à partir de cet instant (voir BubbleCoralLayer). Logique : BubbleCoral.
+     */
+    public static final AttachmentType<Integer> BUBBLE_CORAL = AttachmentRegistry.create(
+            BloxPiece.id("bubble_coral"),
+            builder -> builder.persistent(Codec.INT).syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Menottes en Granite Marin : présent (true) tant que le joueur est menotté. Sauvegardé (il le reste après une déconnexion),
+     * perdu à la mort, synchronisé avec TOUS les joueurs (mains dans le dos, menottes aux poignets, cadenas). Logique : Handcuffs.
+     */
+    public static final AttachmentType<Boolean> HANDCUFFED = AttachmentRegistry.create(
+            BloxPiece.id("handcuffed"),
+            builder -> builder.persistent(Codec.BOOL).syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
     public static void initialize() {
     }
 }

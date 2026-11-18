@@ -9,6 +9,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Item;
@@ -19,10 +20,14 @@ import net.minecraft.world.item.component.Consumables;
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.item.BloxXpItem;
+import nolan.bloxpiece.item.BubbleCoralItem;
+import nolan.bloxpiece.handcuffs.HandcuffKeyItem;
+import nolan.bloxpiece.handcuffs.SeastoneHandcuffsItem;
 import nolan.bloxpiece.item.DevilFruitItem;
 import nolan.bloxpiece.item.FlintlockItem;
 import nolan.bloxpiece.item.IceSaberItem;
 import nolan.bloxpiece.item.PirateSaberItem;
+import nolan.bloxpiece.treasure.TreasureChestItem;
 
 public class ModItems {
 
@@ -104,6 +109,30 @@ public class ModItems {
     public static final Item XP_CRYSTAL_EMPEROR = register("xp_crystal_emperor",
             properties -> new BloxXpItem(properties, 100_000), new Item.Properties().stacksTo(16).rarity(Rarity.EPIC));
 
+    // Coffre au Trésor : la seule façon d'obtenir un fruit du démon (coffres du capitaine pirate). Clic droit dans le vide = roulette
+    // des fruits (voir TreasureChests) ; clic droit sur un bloc = le poser, puis clic droit sur le coffre posé pour l'ouvrir.
+    public static final Item TREASURE_CHEST = register("treasure_chest",
+            properties -> new TreasureChestItem(ModBlocks.TREASURE_CHEST, properties),
+            new Item.Properties().stacksTo(16).rarity(Rarity.RARE));
+
+    // Corail à Bulles : écrasé dans la main (clic droit), il entoure le joueur d'une bulle d'air qui lui permet de respirer sous
+    // l'eau et isole un porteur de fruit du démon de l'eau ; elle éclate au moindre dégât (voir BubbleCoral)
+    // 5 utilisations (barre d'usure), puis il est épuisé
+    public static final Item BUBBLE_CORAL = register("bubble_coral", BubbleCoralItem::new,
+            new Item.Properties().durability(BubbleCoralItem.USES).rarity(Rarity.UNCOMMON));
+
+    // Granite Marin (Seastone) : minerai des fonds océaniques, fragment brut, lingot (cuisson), pépites, menottes (pas encore d'effet)
+    public static final Item SEASTONE_ORE = register("seastone_ore",
+            properties -> new BlockItem(ModBlocks.SEASTONE_ORE, properties), new Item.Properties());
+    public static final Item RAW_SEASTONE = register("raw_seastone", Item::new, new Item.Properties());
+    public static final Item SEASTONE_INGOT = register("seastone_ingot", Item::new, new Item.Properties());
+    public static final Item SEASTONE_NUGGET = register("seastone_nugget", Item::new, new Item.Properties());
+    // Menottes : clic droit sur un joueur pour le menotter ; la clé le libère (ou se libère soi-même). Voir Handcuffs.
+    public static final Item SEASTONE_HANDCUFFS = register("seastone_handcuffs", SeastoneHandcuffsItem::new,
+            new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
+    public static final Item HANDCUFF_KEY = register("handcuff_key", HandcuffKeyItem::new,
+            new Item.Properties().stacksTo(1));
+
     /** Onglet créatif du mod : tous les objets BloxPiece, séparés des objets vanilla. */
     public static final ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(Registries.CREATIVE_MODE_TAB, BloxPiece.id("bloxpiece"));
 
@@ -114,7 +143,7 @@ public class ModItems {
                 .displayItems((context, entries) -> {
                     // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
                     // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
-                    java.util.List<Item> first = java.util.List.of(FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT,
+                    java.util.List<Item> first = java.util.List.of(TREASURE_CHEST, FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT,
                             PIRATE_SABER, CAPTAIN_SABER, FLINTLOCK,
                             XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
                     first.forEach(entries::accept);

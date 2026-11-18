@@ -17,7 +17,9 @@ import nolan.bloxpiece.fx.QuakeFx;
  * Première attaque du Gura Gura no Mi : Kaishin (Fissure sismique). Le joueur frappe l'air devant lui : l'air se fissure (panneau
  * de fissures 3D qui s'agrandit en 0,5 s, un peu décalé pour ne pas boucher la vue) et une onde de choc rapide part en cône sur
  * {@link #RANGE} blocs : chaque entité du cône est blessée (plus fort près du joueur) et violemment repoussée. L'onde creuse le
- * terrain sur son passage (cratères en chapelet, blocs arrachés et projetés) si la règle mobGriefing est active.
+ * terrain sur son passage si la règle mobGriefing est active : un tunnel d'explosions qui part de la fissure d'air (et non plus à
+ * 5 blocs) et s'élargit avec le cône, assez puissant pour éventrer une montagne ou un mur juste devant le joueur, puis des blocs
+ * arrachés et projetés.
  */
 public class GuraKaishinAbility implements Ability {
 
@@ -28,6 +30,14 @@ public class GuraKaishinAbility implements Ability {
     private static final float FAR_DAMAGE = 14.0F;
     private static final double PUSH = 3.6;
     private static final double LIFT = 0.6;
+
+    /** Destruction : première explosion juste derrière la fissure d'air, puis une tous les {@link #TUNNEL_STEP} blocs. */
+    private static final double TUNNEL_START = 3.0;
+    private static final double TUNNEL_STEP = 2.5;
+    private static final float BLAST_NEAR = 3.6F;  // puissance près du joueur (4 = TNT)
+    private static final float BLAST_FAR = 4.6F;   // puissance au bout du cône
+    /** Explosions latérales (élargissent le tunnel comme le cône) : puissance relative à l'explosion centrale. */
+    private static final float SIDE_POWER = 0.7F;
 
     @Override
     public String id() {
@@ -74,11 +84,23 @@ public class GuraKaishinAbility implements Ability {
                 level.sendParticles(ParticleTypes.EXPLOSION, p.x, p.y, p.z, 1, spread * 0.5, 0.2, spread * 0.5, 0.0);
             }
         }
-        // Destruction : cratères en chapelet dans l'axe de l'onde, blocs arrachés autour
-        for (double d = 5.0; d <= RANGE; d += 5.0) {
+        // Destruction : tunnel d'explosions qui part de la fissure d'air et suit l'onde (montagne, mur... juste devant compris).
+        // Les explosions se suivent : chacune creuse plus loin dans le trou laissé par la précédente.
+        Vec3 right = look.cross(new Vec3(0.0, 1.0, 0.0));
+        right = right.lengthSqr() < 1.0E-4 ? Vec3.ZERO : right.normalize(); // regard vertical : pas d'explosions latérales
+        double coneTan = Math.tan(Math.toRadians(35.0));
+        for (double d = TUNNEL_START; d <= RANGE; d += TUNNEL_STEP) {
             Vec3 p = eye.add(look.scale(d));
-            GuraTerrain.blast(level, player, p, 2.5F + (float) d * 0.12F);
-            GuraTerrain.debris(level, p, 3.0, 4, 0.7);
+            float power = BLAST_NEAR + (BLAST_FAR - BLAST_NEAR) * (float) (d / RANGE);
+            GuraTerrain.blast(level, player, p, power);
+            double spread = d * coneTan * 0.5; // les côtés du tunnel s'écartent comme le cône
+            if (spread > 2.0 && right != Vec3.ZERO) {
+                GuraTerrain.blast(level, player, p.add(right.scale(spread)), power * SIDE_POWER);
+                GuraTerrain.blast(level, player, p.add(right.scale(-spread)), power * SIDE_POWER);
+            }
+            if (((int) d) % 5 == 0) {
+                GuraTerrain.debris(level, p, 3.0, 4, 0.7);
+            }
         }
         level.playSound(null, panel.x, panel.y, panel.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.4F, 0.7F);
         level.playSound(null, panel.x, panel.y, panel.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.6F, 0.6F);

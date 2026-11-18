@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.resources.Identifier;
 
+import nolan.bloxpiece.client.entity.BubbleCoralLayer;
 import nolan.bloxpiece.client.entity.BuddhaGoldLayer;
 
 /**
@@ -35,5 +36,7 @@ public abstract class AvatarRendererHandMixin {
         }
         float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         BuddhaGoldLayer.submitHand(pose, collector, arm, skin, player.getScale(), player.tickCount + partialTick);
+        // Corail à Bulles : la bulle d'air recouvre aussi la main
+        BubbleCoralLayer.submitHand(pose, collector, arm, player, partialTick);
     }
 }

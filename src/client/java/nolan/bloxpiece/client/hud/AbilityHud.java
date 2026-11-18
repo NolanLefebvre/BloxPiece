@@ -26,6 +26,8 @@ import nolan.bloxpiece.client.BloxPieceClient;
 import nolan.bloxpiece.fruit.DevilFruit;
 import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
+import nolan.bloxpiece.handcuffs.Seastone;
 
 /**
  * HUD des attaques : 4 cases à droite de la hotbar (Z, X, C, V par défaut).
@@ -78,6 +80,10 @@ public class AbilityHud implements HudElement {
 
     /** Cadenas des attaques verrouillées (aussi utilisé par la page des attaques du menu personnage). */
     public static final Identifier LOCK_ICON = BloxPiece.id("textures/gui/lock.png");
+    /** Cadenas du Granite Marin (attaques bloquées par les menottes ou par un objet en Granite Marin porté). */
+    public static final Identifier SEASTONE_LOCK_ICON = BloxPiece.id("textures/gui/seastone_lock.png");
+    private static final int COLOR_SEASTONE_VEIL = 0x6618484C;
+    private static final int COLOR_BORDER_SEASTONE = 0xFF2E9C96;
 
     private static final Map<String, Identifier> ICONS = new HashMap<>();
 
@@ -153,6 +159,18 @@ public class AbilityHud implements HudElement {
 
         String key = AbilityManager.cooldownKey(fruit, ability);
 
+        // Granite Marin (menotté, ou objet en Granite Marin sur soi) : toutes les attaques sont bloquées. Cadenas turquoise enchaîné,
+        // distinct du cadenas gris des attaques pas encore débloquées par le niveau.
+        if (Seastone.suppresses(player)) {
+            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+                    0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
+            g.fill(x + 1, y + 1, x + 1 + ICON_SIZE, y + 1 + ICON_SIZE, COLOR_SEASTONE_VEIL);
+            g.blit(RenderPipelines.GUI_TEXTURED, SEASTONE_LOCK_ICON, x + 1, y + 1,
+                    0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
+            g.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_SEASTONE);
+            return;
+        }
+
         // Attaque verrouillée : icône très atténuée en fond, cadenas par-dessus (comme dans la page des attaques).
         // Le serveur refuse de toute façon de la lancer.
         if (!ability.isUnlockedFor(player)) {
@@ -165,7 +183,7 @@ public class AbilityHud implements HudElement {
         }
 
         // Dans l'eau (pieds compris) : tous les pouvoirs sont bloqués par le serveur. Icône atténuée, voile bleu, goutte barrée.
-        if (player.isInWater()) {
+        if (WaterCurse.touchesWater(player)) { // une bulle du Corail à Bulles isole de l'eau
             g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
                     0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
             g.fill(x + 1, y + 1, x + 1 + ICON_SIZE, y + 1 + ICON_SIZE, COLOR_WATER_VEIL);

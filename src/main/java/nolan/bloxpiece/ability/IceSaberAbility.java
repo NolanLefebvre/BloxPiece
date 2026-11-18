@@ -17,6 +17,7 @@ import nolan.bloxpiece.fx.IceEffects;
 import nolan.bloxpiece.item.IceSaberItem;
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModItems;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Première attaque du fruit de la Glace : Ice Saber, le trident de glace.
@@ -150,7 +151,7 @@ public class IceSaberAbility implements Ability {
     public static void tick(MinecraftServer server) {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             boolean holding = isHeld(player);
-            boolean lost = player.isInWater() || Fruits.get(player.getAttached(ModAttachments.FRUIT)) != Fruits.ICE;
+            boolean lost = WaterCurse.touchesWater(player) || Fruits.get(player.getAttached(ModAttachments.FRUIT)) != Fruits.ICE;
             if (lost && remove(player)) { // sans le fruit de la Glace (ou dans l'eau), le trident fond aussitôt
                 IceEffects.shatter((ServerLevel) player.level(), handOf(player), 1.0F);
                 continue;

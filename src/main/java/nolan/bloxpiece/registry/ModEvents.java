@@ -39,10 +39,22 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.world.entity.monster.Enemy;
 import nolan.bloxpiece.progression.LevelScaling;
 
+import nolan.bloxpiece.treasure.TreasureChests;
+import nolan.bloxpiece.fruit.BubbleCoral;
+import nolan.bloxpiece.handcuffs.Handcuffs;
+
 public class ModEvents {
 
     public static void initialize() {
+        // Menottes : mains liées (aucune action possible sauf la clé), menottes rendues à la mort
+        Handcuffs.initialize();
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            // Coffres au Trésor : fruit donné à la fin de la roulette
+            TreasureChests.tick(server);
+            // Corail à Bulles : barre d'air pleine dans la bulle
+            BubbleCoral.tick(server);
+            // Menottes en Granite Marin : ralentissement des porteurs de fruit, transformation impossible
+            Handcuffs.tick(server);
             // Traînées et impacts des projectiles de feu : à chaque tick
             FireEffects.tick();
             // Charge de Dai Enkai: Entei (les flammes se rassemblent, puis le soleil part)
@@ -112,6 +124,10 @@ public class ModEvents {
                 if (fruit != null && fruit.isImmuneTo(source)) {
                     return false; // dégâts annulés
                 }
+                // Corail à Bulles : la bulle éclate au moindre dégât subi (les dégâts eux-mêmes s'appliquent normalement)
+                if (amount > 0.0F) {
+                    BubbleCoral.pop(player);
+                }
             }
             return true;
         });
@@ -151,7 +167,10 @@ public class ModEvents {
                 Quests.progress(serverPlayer, QuestType.MINE_BLOCKS, 1);
             }
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Quests.forget(handler.getPlayer().getUUID()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            Quests.forget(handler.getPlayer().getUUID());
+            TreasureChests.onDisconnect(handler.getPlayer()); // roulette pas finie : le fruit est donné tout de suite
+        });
 
         // Quand un joueur rejoint : on lui renvoie ses recharges encore en cours (affichage du HUD)
         ServerPlayConnectionEvents.JOIN.register((listener, sender, server) -> {
@@ -161,7 +180,15 @@ public class ModEvents {
         });
 
         // Réapparition (mort, retour de l'End...) : toujours à taille normale
-        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> BuddhaTransformAbility.reset(newPlayer));
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            BuddhaTransformAbility.reset(newPlayer);
+            // Après une mort, le nouveau joueur repart avec 20 PV de base : on lui remet tout de suite ses PV bonus de niveau
+            // (LevelScaling) et TOUTE sa vie (toutes les barres de cœurs pleines)
+            if (!alive) {
+                LevelScaling.applyHealth(newPlayer);
+                newPlayer.setHealth(newPlayer.getMaxHealth());
+            }
+        });
 
         // Évite de garder des projectiles d'un ancien monde en mémoire
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {

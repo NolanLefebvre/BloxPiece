@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "bloxpiece:block/treasure_chest"
+    },
+    "facing=east": {
+      "model": "bloxpiece:block/treasure_chest",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "bloxpiece:block/treasure_chest",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "bloxpiece:block/treasure_chest",
+      "y": 270
+    }
+  }
+}

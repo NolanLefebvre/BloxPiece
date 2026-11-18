@@ -1,6 +1,7 @@
 package nolan.bloxpiece.fruit;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.ability.BuddhaTransformAbility;
@@ -15,6 +16,7 @@ import nolan.bloxpiece.ability.BuddhaTransformAbility;
  *       vers le haut est annulée et il coule à pic, comme une enclume (côté client, voir ClientWaterCurse).</li>
  * </ul>
  * Aucun effet de potion, aucun dégât : la noyade normale de Minecraft (barre d'air) s'applique comme pour tout joueur.
+ * Une bulle d'air du Corail à Bulles (BubbleCoral) isole complètement de l'eau : voir {@link #touchesWater}.
  */
 public class WaterCurse implements Weakness {
 
@@ -23,9 +25,18 @@ public class WaterCurse implements Weakness {
     /** Les déplacements horizontaux sont presque impossibles : le corps est lourd et sans force. */
     private static final double HORIZONTAL_DRAG = 0.35;
 
+    /**
+     * L'eau touche-t-elle cette entité ? Pieds dans l'eau, SAUF si une bulle du Corail à Bulles l'en isole. C'est CE test (et non
+     * isInWater) que tout le mod utilise pour la faiblesse à l'eau des fruits du démon : pouvoirs bloqués, détransformation,
+     * passif Logia annulé, attaques interrompues. Valable côté serveur et côté client.
+     */
+    public static boolean touchesWater(Entity entity) {
+        return entity.isInWater() && !BubbleCoral.isActive(entity);
+    }
+
     @Override
     public void tick(ServerPlayer player) {
-        if (!player.isInWater() || player.isSpectator() || player.getAbilities().flying) {
+        if (!touchesWater(player) || player.isSpectator() || player.getAbilities().flying) {
             return;
         }
         // Contact avec l'eau : détransformation immédiate (la taille revient tout de suite à la normale)

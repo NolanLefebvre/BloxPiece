@@ -23,6 +23,7 @@ import nolan.bloxpiece.fx.BuddhaEffects;
 import nolan.bloxpiece.fx.BuddhaPalm;
 import nolan.bloxpiece.fx.BuddhaSeal;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Deuxième attaque du fruit du Bouddha : la Paume du Bouddha (l'onde de choc de Sengoku, frappée paume ouverte).
@@ -97,7 +98,7 @@ public class BuddhaPalmAbility implements Ability {
             Map.Entry<UUID, Charge> entry = it.next();
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             // Déconnecté, mort ou fruit retiré pendant la charge : l'attaque est annulée
-            if (player == null || !player.isAlive() || player.isInWater()
+            if (player == null || !player.isAlive() || WaterCurse.touchesWater(player)
                     || Fruits.get(player.getAttached(ModAttachments.FRUIT)) != Fruits.BUDDHA) {
                 entry.getValue().seal.discard();
                 it.remove();

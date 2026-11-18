@@ -12,6 +12,10 @@ import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.world.item.Item;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 
 import nolan.bloxpiece.client.entity.BuddhaPalmModel;
@@ -23,7 +27,11 @@ import nolan.bloxpiece.client.entity.IceModels;
 import nolan.bloxpiece.client.entity.IceRenderers;
 import nolan.bloxpiece.client.entity.EnteiSunRenderer;
 import nolan.bloxpiece.client.entity.HikenFistModel;
+import nolan.bloxpiece.client.entity.HandcuffsLayer;
+import nolan.bloxpiece.client.handcuffs.HandcuffsClient;
 import nolan.bloxpiece.client.entity.HikenFistRenderer;
+import nolan.bloxpiece.client.entity.MeteorModel;
+import nolan.bloxpiece.client.entity.MeteorRenderer;
 import nolan.bloxpiece.client.entity.ArmedPirateRenderer;
 import nolan.bloxpiece.client.entity.GuraModels;
 import nolan.bloxpiece.client.entity.QuakeFxRenderer;
@@ -35,9 +43,11 @@ import nolan.bloxpiece.client.particle.ModParticle;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
 import nolan.bloxpiece.client.hud.HealthHud;
 import nolan.bloxpiece.client.screen.CharacterScreen;
+import nolan.bloxpiece.client.screen.RouletteScreen;
 import nolan.bloxpiece.network.CooldownPayload;
 import nolan.bloxpiece.ability.IceSaberAbility;
 import nolan.bloxpiece.network.SaberStrikePayload;
+import nolan.bloxpiece.network.OpenRoulettePayload;
 import nolan.bloxpiece.network.ShakePayload;
 import nolan.bloxpiece.network.UseAbilityPayload;
 import nolan.bloxpiece.registry.ModAttachments;
@@ -98,6 +108,10 @@ public class BloxPieceClient implements ClientModInitializer {
         // Le poing de feu de Hiken (même principe : calque du modèle d'abord, renderer ensuite)
         ModelLayerRegistry.registerModelLayer(HikenFistModel.LAYER, HikenFistModel::createBodyLayer);
         EntityRendererRegistry.register(ModEntities.HIKEN_FIST, HikenFistRenderer::new);
+        // Les météores de la Pluie de météores (deux calques : noyau rocheux opaque + flammes translucides)
+        ModelLayerRegistry.registerModelLayer(MeteorModel.CORE, MeteorModel::createCoreLayer);
+        ModelLayerRegistry.registerModelLayer(MeteorModel.FLAMES, MeteorModel::createFlameLayer);
+        EntityRendererRegistry.register(ModEntities.METEOR, MeteorRenderer::new);
         // La Paume du Bouddha (même principe)
         ModelLayerRegistry.registerModelLayer(BuddhaPalmModel.LAYER, BuddhaPalmModel::createBodyLayer);
         EntityRendererRegistry.register(ModEntities.BUDDHA_PALM, BuddhaPalmRenderer::new);
@@ -142,6 +156,11 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(GuraModels.TsunamiModel.LAYER, GuraModels.TsunamiModel::createLayer);
         EntityRendererRegistry.register(ModEntities.QUAKE_FX, QuakeFxRenderer::new);
 
+        // Menottes en Granite Marin : modèle des bracelets portés, cadenas sur la hotbar, inventaire verrouillé
+        ModelLayerRegistry.registerModelLayer(HandcuffsLayer.LAYER, HandcuffsLayer::createLayer);
+        HandcuffsClient.register();
+        ClientTickEvents.START_CLIENT_TICK.register(HandcuffsClient::tick);
+
         // HUD des 4 attaques à côté de la hotbar
         AbilityHud.register();
         // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
@@ -157,6 +176,21 @@ public class BloxPieceClient implements ClientModInitializer {
         // Tremblement de caméra demandé par le serveur (attaques du Bouddha)
         ClientPlayNetworking.registerGlobalReceiver(ShakePayload.TYPE,
                 (payload, context) -> CameraShake.start(payload.strength(), payload.ticks()));
+        // Coffre au Trésor : ouverture de la roulette, puis fruit tiré par le serveur au clic sur OUVRIR (il le donne lui-même)
+        ClientPlayNetworking.registerGlobalReceiver(OpenRoulettePayload.TYPE, (payload, context) -> {
+            Minecraft mc = Minecraft.getInstance();
+            String id = payload.fruitItemId();
+            if (OpenRoulettePayload.OPEN.equals(id)) {
+                mc.gui.setScreen(new RouletteScreen()); // fenêtre ouverte, rien de consommé
+            } else if (mc.gui.screen() instanceof RouletteScreen roulette) {
+                if (OpenRoulettePayload.FAILED.equals(id)) {
+                    roulette.fail(); // coffre introuvable
+                } else {
+                    Item fruit = BuiltInRegistries.ITEM.getValue(Identifier.parse(id));
+                    roulette.setWinner(fruit); // réponse au clic sur OUVRIR
+                }
+            }
+        });
         ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> ClientCooldowns.clear());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

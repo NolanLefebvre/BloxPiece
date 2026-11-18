@@ -22,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.QuakeFx;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Deuxième attaque du Gura Gura no Mi : Gekishin (Coup sismique). Le joueur fonce loin vers l'avant (dash entretenu : la vitesse
@@ -129,7 +130,7 @@ public class GuraGekishinAbility implements Ability {
         while (it.hasNext()) {
             Dash d = it.next();
             ServerPlayer player = d.player;
-            if (player.isRemoved() || !player.isAlive() || player.isInWater()) {
+            if (player.isRemoved() || !player.isAlive() || WaterCurse.touchesWater(player)) {
                 d.orb.discard();
                 player.removeAttached(ModAttachments.BUDDHA_POSE);
                 player.removeAttached(ModAttachments.HIDE_HAND_ITEM);

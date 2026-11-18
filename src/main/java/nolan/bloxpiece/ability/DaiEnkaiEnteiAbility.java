@@ -23,6 +23,7 @@ import nolan.bloxpiece.fx.EnteiSun;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModParticles;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Quatrième attaque (ultime) du fruit du feu : Dai Enkai: Entei.
@@ -194,7 +195,7 @@ public class DaiEnkaiEnteiAbility implements Ability {
      */
     private static boolean isStillValid(Charge charge) {
         ServerPlayer player = charge.player;
-        if (player.isRemoved() || !player.isAlive() || player.level() != charge.level || player.isInWater()) {
+        if (player.isRemoved() || !player.isAlive() || player.level() != charge.level || WaterCurse.touchesWater(player)) {
             return false;
         }
         DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));

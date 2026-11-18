@@ -14,6 +14,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import nolan.bloxpiece.ability.IceSaberAbility;
+import nolan.bloxpiece.fruit.BubbleCoral;
+import nolan.bloxpiece.handcuffs.Handcuffs;
 import nolan.bloxpiece.fruit.LogiaIntangibility;
 import nolan.bloxpiece.registry.ModAttachments;
 
@@ -42,9 +44,14 @@ public class PlayerModelMixin {
             return;
         }
         bloxpiece$logiaParts(player);
+        if (Handcuffs.isCuffed(player)) {
+            bloxpiece$cuffedPose();
+            return; // menotté : aucune autre pose (pas de pouvoirs)
+        }
         if (player instanceof LivingEntity living && IceSaberAbility.isHeld(living)) {
             bloxpiece$saberStrike(player, level, state);
         }
+        bloxpiece$blowBubble(player, level, state);
         Integer buddhaPose = player.getAttached(ModAttachments.BUDDHA_POSE);
         if (buddhaPose != null) {
             bloxpiece$buddhaPose(buddhaPose, state);
@@ -98,6 +105,56 @@ public class PlayerModelMixin {
         model.rightArm.zRot = 0.0F;
         model.rightArm.z += z;      // le bras recule puis se projette vers l'avant
         model.body.yRot = twist;    // rotation des épaules (le bras gauche garde sa pose normale)
+    }
+
+    /**
+     * Corail à Bulles : pendant la formation de la bulle, le joueur porte la main droite (le corail écrasé) devant sa bouche et
+     * souffle dedans. La main monte en {@link #BLOW_RAISE_TICKS} ticks, reste devant la bouche pendant toute la formation (léger
+     * mouvement à chaque souffle), puis redescend en {@link #BLOW_LOWER_TICKS} ticks. Tête légèrement baissée vers la main.
+     */
+    private void bloxpiece$blowBubble(Entity player, ClientLevel level, AvatarRenderState state) {
+        Integer formedAt = player.getAttached(ModAttachments.BUBBLE_CORAL);
+        if (formedAt == null) {
+            return;
+        }
+        float partial = state.ageInTicks - player.tickCount;
+        float age = (float) (level.getGameTime() - formedAt) + partial;
+        float total = BubbleCoral.FORM_TICKS;
+        float w;
+        if (age < 0.0F || age >= total + BLOW_LOWER_TICKS) {
+            return;
+        } else if (age < BLOW_RAISE_TICKS) {
+            w = bloxpiece$smooth(age / BLOW_RAISE_TICKS);
+        } else if (age < total) {
+            w = 1.0F;
+        } else {
+            w = 1.0F - bloxpiece$smooth((age - total) / BLOW_LOWER_TICKS);
+        }
+        PlayerModel model = (PlayerModel) (Object) this;
+        float puff = (float) Math.sin(age * 0.8F) * 0.04F; // petit mouvement à chaque souffle
+        float targetX = model.head.xRot - 1.75F + puff;    // bras plié vers le visage (comme la longue-vue, un peu plus bas)
+        float targetY = model.head.yRot - 0.45F;           // main ramenée devant la bouche
+        model.rightArm.xRot += (targetX - model.rightArm.xRot) * w;
+        model.rightArm.yRot += (targetY - model.rightArm.yRot) * w;
+        model.rightArm.zRot *= 1.0F - w;
+        model.head.xRot += 0.12F * w;                      // tête légèrement penchée vers la main
+    }
+
+    private static final float BLOW_RAISE_TICKS = 6.0F;
+    private static final float BLOW_LOWER_TICKS = 8.0F;
+
+    /**
+     * Menottes en Granite Marin : les deux bras ramenés dans le dos, poignets rapprochés (les bracelets et la chaîne sont dessinés
+     * par HandcuffsLayer, dans le repère des bras). Bras droit vers l'intérieur = zRot négatif, bras gauche = zRot positif.
+     */
+    private void bloxpiece$cuffedPose() {
+        PlayerModel model = (PlayerModel) (Object) this;
+        model.rightArm.xRot = 0.62F;
+        model.rightArm.yRot = 0.0F;
+        model.rightArm.zRot = -0.36F;
+        model.leftArm.xRot = 0.62F;
+        model.leftArm.yRot = 0.0F;
+        model.leftArm.zRot = 0.36F;
     }
 
     /** Durée d'un estoc (ticks). */

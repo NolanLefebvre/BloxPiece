@@ -27,6 +27,7 @@ import nolan.bloxpiece.fruit.Fruits;
 import nolan.bloxpiece.fx.BuddhaEffects;
 import nolan.bloxpiece.fx.BuddhaSeal;
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Quatrième attaque (ultime) du fruit du Bouddha : la Déflagration du Bouddha.
@@ -129,7 +130,7 @@ public class BuddhaUltimateAbility implements Ability {
             Map.Entry<UUID, Charge> entry = it.next();
             Charge charge = entry.getValue();
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
-            if (player == null || !player.isAlive() || player.isInWater() || player.level() != charge.seal.level()
+            if (player == null || !player.isAlive() || WaterCurse.touchesWater(player) || player.level() != charge.seal.level()
                     || Fruits.get(player.getAttached(ModAttachments.FRUIT)) != Fruits.BUDDHA) {
                 charge.seal.discard();
                 if (player != null) {

@@ -12,6 +12,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.registry.ModAttachments;
+import nolan.bloxpiece.fruit.LogiaIntangibility;
 import nolan.bloxpiece.registry.ModParticles;
 
 /**
@@ -94,6 +95,8 @@ public final class LogiaClient {
                 return parts == null;
             }
             Vec3 velocity = living.getDeltaMovement();
+            // Élément : flammes (Feu) ou éclats de glace (Glace, bit ICE envoyé par le serveur)
+            var particle = (parts & LogiaIntangibility.ICE) != 0 ? ModParticles.ICE_SHARD : ModParticles.FIRE_LIMB;
             // Soi-même à la première personne : pas de flammes de tête collées à la caméra (elles cacheraient toute la vue)
             boolean ownView = living == client.player && client.options.getCameraType().isFirstPerson();
             for (int i = 0; i < 6; i++) {
@@ -106,7 +109,7 @@ public final class LogiaClient {
                     double[] local = pointIn(b, random, random.nextDouble() < SURFACE_SHARE);
                     Vec3 p = toWorld(living, entry.getValue()[i], local[0], local[1], local[2]);
                     // Aucune vitesse propre : la flamme reste à sa place sur le membre, elle suit seulement le joueur
-                    level.addParticle(ModParticles.FIRE_LIMB, p.x, p.y, p.z, velocity.x, velocity.y, velocity.z);
+                    level.addParticle(particle, p.x, p.y, p.z, velocity.x, velocity.y, velocity.z);
                 }
             }
             return false;

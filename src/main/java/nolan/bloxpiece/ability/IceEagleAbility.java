@@ -13,6 +13,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.IceEagle;
 import nolan.bloxpiece.fx.IceEffects;
+import nolan.bloxpiece.fruit.WaterCurse;
 
 /**
  * Troisième attaque du fruit de la Glace : Pheasant Peck, l'aigle de glace.
@@ -80,7 +81,7 @@ public class IceEagleAbility implements Ability {
         while (it.hasNext()) {
             Forming f = it.next();
             ServerPlayer player = f.owner;
-            if (player.isRemoved() || !player.isAlive() || player.isInWater()) {
+            if (player.isRemoved() || !player.isAlive() || WaterCurse.touchesWater(player)) {
                 it.remove();
                 continue;
             }

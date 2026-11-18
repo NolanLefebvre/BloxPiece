@@ -3,6 +3,9 @@
 	"package": "nolan.bloxpiece.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"HumanoidModelMixin",
+		"LivingEntityRenderStateMixin",
+		"AbstractContainerScreenMixin",
 		"AvatarRendererHandMixin",
 		"ExampleClientMixin",
 		"LivingEntityRendererMixin",

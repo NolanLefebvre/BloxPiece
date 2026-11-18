@@ -57,6 +57,16 @@ public abstract class ArmedPirate extends BloxMob {
         }
     }
 
+    /**
+     * Les pirates armés sont toujours droitiers. Minecraft rend gaucher ~5 % des mobs au hasard : l'arme passait alors dans la main
+     * gauche, alors que la pose de visée (ArmedPirateModel) lève le bras droit et que la balle part du côté droit (GunnerAttackGoal).
+     * Forcé ici (et non à l'apparition) pour corriger aussi les pirates gauchers déjà présents dans les mondes existants.
+     */
+    @Override
+    public boolean isLeftHanded() {
+        return false;
+    }
+
     /** L'arme de cette variante (sabre, pistolet). */
     protected abstract ItemStack weapon();
 
