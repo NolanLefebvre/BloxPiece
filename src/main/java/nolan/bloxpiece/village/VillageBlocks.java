@@ -15,6 +15,11 @@ import nolan.bloxpiece.BloxPiece;
 public final class VillageBlocks {
 
     public static final Block AIR = get("air");
+    public static final Block PODZOL = get("podzol");
+    public static final Block COARSE_DIRT = get("coarse_dirt");
+    public static final Block SAND = get("sand");
+    public static final Block SNOW = get("snow");
+    public static final Block MYCELIUM = get("mycelium");
     public static final Block STONE_BRICK_WALL = get("stone_brick_wall");
     public static final Block POLISHED_ANDESITE = get("polished_andesite");
     public static final Block YELLOW_WOOL = get("yellow_wool");
@@ -27,6 +32,7 @@ public final class VillageBlocks {
     public static final Block CAKE = get("cake");
     public static final Block STRIPPED_SPRUCE_WOOD = get("stripped_spruce_wood");
     public static final Block CALCITE = get("calcite");
+    public static final Block CHISELED_STONE_BRICKS = get("chiseled_stone_bricks");
     public static final Block STONE_BRICK_SLAB = get("stone_brick_slab");
     public static final Block CRACKED_STONE_BRICKS = get("cracked_stone_bricks");
     public static final Block POLISHED_GRANITE_STAIRS = get("polished_granite_stairs");

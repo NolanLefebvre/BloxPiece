@@ -46,26 +46,28 @@ public class ModItems {
             .alwaysEdible()
             .build();
 
+    // Identifiants = vrais noms des fruits (ceux de /give et de l'auto-complétion). Anciens identifiants gardés en alias
+    // (voir registerAliases) : les fruits déjà présents dans un monde existant ne disparaissent pas.
     public static final Item FIRE_FRUIT = register(
-            "fire_fruit",
+            "mera_mera_no_mi",
             properties -> new DevilFruitItem(properties, Fruits.FIRE),
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
     public static final Item BUDDHA_FRUIT = register(
-            "buddha_fruit",
+            "hito_hito_no_mi_model_daibutsu",
             properties -> new DevilFruitItem(properties, Fruits.BUDDHA),
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
     public static final Item GURA_FRUIT = register(
-            "gura_fruit",
+            "gura_gura_no_mi",
             properties -> new DevilFruitItem(properties, Fruits.GURA),
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
     public static final Item ICE_FRUIT = register(
-            "ice_fruit",
+            "hie_hie_no_mi",
             properties -> new DevilFruitItem(properties, Fruits.ICE),
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
@@ -136,7 +138,44 @@ public class ModItems {
     /** Onglet créatif du mod : tous les objets BloxPiece, séparés des objets vanilla. */
     public static final ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(Registries.CREATIVE_MODE_TAB, BloxPiece.id("bloxpiece"));
 
+    /** Anciens identifiants des fruits (avant leurs vrais noms) -> nouveaux, pour les mondes déjà existants. */
+    private static final String[][] OLD_IDS = {{"fire_fruit", "mera_mera_no_mi"}, {"buddha_fruit", "hito_hito_no_mi_model_daibutsu"},
+            {"ice_fruit", "hie_hie_no_mi"}, {"gura_fruit", "gura_gura_no_mi"}};
+
+    /**
+     * Alias de registre : un objet enregistré sous un ancien identifiant (coffre, inventaire d'un monde existant) est lu comme le
+     * nouveau. La méthode du registre change selon les versions : essais sans risque (sinon les anciens objets seraient perdus,
+     * jamais de plantage).
+     */
+    private static void registerAliases() {
+        for (String[] pair : OLD_IDS) {
+            net.minecraft.resources.Identifier from = BloxPiece.id(pair[0]), to = BloxPiece.id(pair[1]);
+            Object[][] attempts = {{from, to}, {ResourceKey.create(Registries.ITEM, from), ResourceKey.create(Registries.ITEM, to)}};
+            boolean done = false;
+            for (java.lang.reflect.Method m : BuiltInRegistries.ITEM.getClass().getMethods()) {
+                if (done || !m.getName().equals("addAlias") || m.getParameterCount() != 2) {
+                    continue;
+                }
+                for (Object[] args : attempts) {
+                    try {
+                        if (m.getParameterTypes()[0].isInstance(args[0]) && m.getParameterTypes()[1].isInstance(args[1])) {
+                            m.invoke(BuiltInRegistries.ITEM, args);
+                            done = true;
+                            break;
+                        }
+                    } catch (ReflectiveOperationException | RuntimeException ignored) {
+                        // essai suivant
+                    }
+                }
+            }
+            if (!done) {
+                BloxPiece.LOGGER.warn("[BloxPiece] Alias d'objet impossible : {} -> {}", from, to);
+            }
+        }
+    }
+
     public static void initialize() {
+        registerAliases();
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, TAB_KEY, FabricCreativeModeTab.builder()
                 .title(Component.translatable("itemGroup.bloxpiece"))
                 .icon(() -> new ItemStack(FIRE_FRUIT))

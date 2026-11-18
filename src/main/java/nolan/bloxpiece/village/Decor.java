@@ -25,7 +25,7 @@ public final class Decor {
     /**
      * Puits couvert au centre de la place (emprise 7 x 7) : socle en marches de pierre, margelle en pierre taillée (murets sur
      * deux côtés, rebord en dalles côté accès), quatre piliers en bois, traverse avec corde (clôture) qui descend vers l'eau,
-     * toit en croupe à trois rangs d'escaliers, lanternes sous l'avant-toit, pots de fleurs, chaudron et tonneaux autour.
+     * toit en croupe à trois rangs d'escaliers, seau (chaudron) suspendu à la corde, lanternes, pots de fleurs et tonneau autour.
      */
     public static void well(Frame f) {
         // fût et eau
@@ -77,8 +77,9 @@ public final class Decor {
         for (int x = -1; x <= 1; x++) {
             f.log(x, 3, 0, STRIPPED_SPRUCE_LOG, Direction.Axis.X);   // treuil
         }
-        f.fill(0, 1, 0, 0, 2, 0, SPRUCE_FENCE);                     // corde vers l'eau
-        f.set(0, 0, 0, SPRUCE_FENCE);
+        f.set(0, 2, 0, SPRUCE_FENCE);                               // corde sous le treuil
+        f.set(0, 1, 0, CAULDRON);                                   // seau suspendu au bout de la corde
+        f.set(0, 0, 0, AIR);
         // toit en croupe : trois rangs d'escaliers + faîte
         for (int r = 3; r >= 1; r--) {
             int y = 4 + (3 - r);
@@ -100,9 +101,66 @@ public final class Decor {
         // abords : pots, chaudron, tonneaux
         f.set(-4, 0, -2, POTTED_RED_TULIP);
         f.set(-4, 0, 2, POTTED_AZALEA_BUSH);
-        f.set(4, 0, -2, CAULDRON);
+        f.set(4, 0, -2, POTTED_FERN);
         f.barrel(4, 0, 2, Direction.UP);
         f.set(4, 0, 1, POTTED_DANDELION);
+    }
+
+    /**
+     * Fontaine au centre de la place (emprise ronde de rayon 5,6) : marche circulaire en escaliers de pierre taillée, margelle
+     * en pierre taillée et pierre sculptée avec rebord en dalles, bassin d'eau, colonne centrale sculptée (pierre sculptée,
+     * murets) coiffée d'une vasque d'où l'eau jaillit et retombe en cascade dans le bassin, quatre lanternes sur des bornes,
+     * azalées en pot sur la margelle.
+     */
+    public static void fountain(Frame f) {
+        // fond et dégagement
+        for (int x = -6; x <= 6; x++) {
+            for (int z = -6; z <= 6; z++) {
+                double d = Math.sqrt(x * x + z * z);
+                if (d > 5.6) {
+                    continue;
+                }
+                f.air(x, 0, z, x, 6, z);
+                if (d <= 3.6) {
+                    f.set(x, -2, z, STONE_BRICKS);
+                    f.set(x, -1, z, WATER);
+                    f.set(x, 0, z, WATER);
+                } else if (d <= 4.6) {
+                    f.set(x, -2, z, STONE_BRICKS);
+                    f.set(x, -1, z, STONE_BRICKS);
+                    f.set(x, 0, z, (Block) ((x + z) % 3 == 0 ? CHISELED_STONE_BRICKS : STONE_BRICKS));
+                    f.slab(x, 1, z, STONE_BRICK_SLAB, false);                   // rebord pour s'asseoir
+                } else {
+                    // marche tout autour, tournée vers le centre
+                    Direction toward = Math.abs(x) >= Math.abs(z) ? (x > 0 ? Direction.WEST : Direction.EAST)
+                            : (z > 0 ? Direction.NORTH : Direction.SOUTH);
+                    f.stairs(x, 0, z, STONE_BRICK_STAIRS, toward, false);
+                }
+            }
+        }
+        // colonne centrale sculptée
+        f.set(0, -1, 0, STONE_BRICKS);
+        f.set(0, 0, 0, CHISELED_STONE_BRICKS);
+        f.set(0, 1, 0, STONE_BRICK_WALL);
+        f.set(0, 2, 0, STONE_BRICK_WALL);
+        f.set(0, 3, 0, CHISELED_STONE_BRICKS);
+        // vasque : escaliers renversés autour du sommet
+        f.stairs(1, 3, 0, STONE_BRICK_STAIRS, Direction.WEST, true);
+        f.stairs(-1, 3, 0, STONE_BRICK_STAIRS, Direction.EAST, true);
+        f.stairs(0, 3, 1, STONE_BRICK_STAIRS, Direction.NORTH, true);
+        f.stairs(0, 3, -1, STONE_BRICK_STAIRS, Direction.SOUTH, true);
+        f.slab(0, 4, 0, STONE_BRICK_SLAB, false);
+        // l'eau jaillit au sommet et retombe en cascade aux quatre coins de la vasque (posée « vivante » pour couler tout de suite)
+        f.live(0, 5, 0, WATER);
+        // bornes à lanterne sur la margelle (diagonales) et azalées en pot (points cardinaux)
+        for (int[] c : new int[][] {{3, 3}, {-3, 3}, {3, -3}, {-3, -3}}) {
+            f.set(c[0], 1, c[1], STONE_BRICK_WALL);
+            f.lantern(c[0], 2, c[1], false);
+        }
+        f.set(4, 1, 0, POTTED_AZALEA_BUSH);
+        f.set(-4, 1, 0, POTTED_AZALEA_BUSH);
+        f.set(0, 1, 4, POTTED_RED_TULIP);
+        f.set(0, 1, -4, POTTED_RED_TULIP);
     }
 
     /** Lampadaire en bois : poteau sur socle de pierre, bras et lanterne suspendue (bras vers +x local). */
@@ -234,6 +292,34 @@ public final class Decor {
      * un peu de gravier et de pavés, sur 3 blocs de large. Il remplace le bloc d'herbe du dessus du terrain.
      */
     public static void path(VillageBuilder b, BlockPos from, BlockPos to) {
+        path(b, from, to, true);
+    }
+
+    /** Matière d'une case de chemin : terre battue surtout, gravier et quelques pavés. */
+    public static BlockState pathBlock(RandomSource random) {
+        float r = random.nextFloat();
+        return r < 0.65F ? DIRT_PATH.defaultBlockState() : r < 0.85F ? GRAVEL.defaultBlockState() : COBBLESTONE.defaultBlockState();
+    }
+
+    /** Une construction (bâtiment, puits, étal) à moins d'un bloc de la colonne (x, z), au niveau du sol ? */
+    public static boolean nearStructure(VillageBuilder b, int x, int y0, int z, int r) {
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    if (b.isStructure(new BlockPos(x + dx, y0 + dy, z + dz))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Chemin sinueux de 3 de large. {@code keepAway} : jamais collé à un mur, une plinthe ou une porte (une bande d'herbe d'un
+     * bloc reste entre le chemin et la construction : deux blocs d'herbe).
+     */
+    public static void path(VillageBuilder b, BlockPos from, BlockPos to, boolean keepAway) {
         RandomSource random = b.random();
         double dx = to.getX() - from.getX();
         double dz = to.getZ() - from.getZ();
@@ -252,6 +338,9 @@ public final class Decor {
                     int z = Mth.floor(cz) + oz;
                     if (b.isOccupied(x, z) && !b.get(new BlockPos(x, y, z)).is(GRASS_BLOCK)) {
                         continue; // ne pas abîmer une fondation
+                    }
+                    if (keepAway && nearStructure(b, x, y + 1, z, 2)) {
+                        continue; // de l'air (de l'herbe) entre le chemin et les murs
                     }
                     float r = random.nextFloat();
                     BlockState material = r < 0.65F ? DIRT_PATH.defaultBlockState()

@@ -66,9 +66,16 @@ public final class StarterVillage {
 
     public static void initialize() {
         ServerLifecycleEvents.SERVER_STARTED.register(StarterVillage::onServerStarted);
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> giveCompassOnFirstJoin(handler.getPlayer()));
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayer player = handler.getPlayer();
+            if (!Boolean.TRUE.equals(player.getAttached(ModAttachments.VILLAGE_COMPASS_GIVEN))) {
+                secureSpawn(player, true); // toute première connexion : apparition au point de spawn du monde
+            }
+            giveCompassOnFirstJoin(player);
+        });
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
             if (!alive) {
+                secureSpawn(newPlayer, false);
                 giveCompassIfMissing(newPlayer);
             }
         });
@@ -91,10 +98,13 @@ public final class StarterVillage {
         level.setAttached(ModAttachments.VILLAGE_CENTER, center);
         boolean atSpawn = horizontalDistance(center, worldSpawn) <= AT_SPAWN_DISTANCE;
         if (atSpawn) {
-            BlockPos spawn = center.offset(VillageLayout.PLAZA_SPAWN);
+            BlockPos spawn = safeSpawn(level, center);
+            level.setAttached(ModAttachments.VILLAGE_SPAWN, spawn);
             run(server, "setworldspawn " + spawn.getX() + " " + spawn.getY() + " " + spawn.getZ());
+            // pas d'apparition au hasard autour du point (sinon on peut tomber sur un toit) ; le nom de la règle dépend des versions
             run(server, "gamerule spawn_radius 0");
             run(server, "gamerule spawnRadius 0");
+            run(server, "gamerule respawn_radius 0");
         }
         BloxPiece.LOGGER.info("[BloxPiece] Village de départ construit en {} ms, centre de la place {} ({}, spawn du monde {})",
                 System.currentTimeMillis() - start, center, atSpawn ? "au spawn" : "déplacé : suivre la Boussole du Village", worldSpawn);
@@ -108,6 +118,105 @@ public final class StarterVillage {
     private static double horizontalDistance(BlockPos a, BlockPos b) {
         double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
         return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    // ------------------------------------------------------------------ point d'apparition sûr
+
+    /** Hauteur libre exigée au-dessus des pieds (le joueur fait 2 blocs : 3 de marge) et ciel dégagé au-dessus (pas sous un toit). */
+    private static final int SPAWN_HEADROOM = 3;
+    private static final int SPAWN_SKY_CHECK = 40;
+
+    /**
+     * Point d'apparition SÛR sur la place : départ devant la taverne (PLAZA_SPAWN), puis recherche en spirale sur la place. Une case
+     * convient si : sol plein dessous, 3 blocs d'air libres sur une zone 3 x 3 autour des pieds, et rien au-dessus jusqu'au ciel
+     * (jamais sous le toit du puits ni sur/dans un bâtiment). Repli : le centre de la place, 1 bloc au-dessus du dernier bloc.
+     */
+    static BlockPos safeSpawn(ServerLevel level, BlockPos center) {
+        BlockPos start = center.offset(VillageLayout.PLAZA_SPAWN);
+        int half = VillageLayout.PLAZA_RADIUS;
+        for (int r = 0; r <= half; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue;
+                    }
+                    BlockPos feet = new BlockPos(start.getX() + dx, center.getY(), start.getZ() + dz);
+                    if (VillageLayout.onPlaza(feet.getX() - center.getX(), feet.getZ() - center.getZ()) && isSafeSpot(level, feet)) {
+                        return feet;
+                    }
+                }
+            }
+        }
+        BlockPos fallback = new BlockPos(start.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING, start.getX(), start.getZ()), start.getZ());
+        BloxPiece.LOGGER.warn("[BloxPiece] Aucun point de spawn dégagé trouvé sur la place, repli en {}", fallback);
+        return fallback;
+    }
+
+    private static boolean isSafeSpot(ServerLevel level, BlockPos feet) {
+        BlockState ground = level.getBlockState(feet.below());
+        if (ground.isAir() || !ground.getFluidState().isEmpty() || !ground.isFaceSturdy(level, feet.below(), net.minecraft.core.Direction.UP)) {
+            return false;
+        }
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = 0; dy < SPAWN_HEADROOM; dy++) {
+                    BlockState s = level.getBlockState(feet.offset(dx, dy, dz));
+                    if (!s.isAir() || !s.getFluidState().isEmpty()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        for (int dy = SPAWN_HEADROOM; dy <= SPAWN_SKY_CHECK; dy++) {
+            if (!level.getBlockState(feet.above(dy)).isAir()) {
+                return false; // un toit au-dessus
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Après une apparition au point de spawn du monde (première connexion, ou mort sans lit / ancre) : si le joueur n'est pas
+     * exactement sur le point sûr du village, ou s'il est coincé dans un bloc / sur un toit, il est replacé sur la place.
+     * Un joueur qui réapparaît à son lit n'est jamais déplacé.
+     */
+    private static void secureSpawn(ServerPlayer player, boolean firstJoin) {
+        ServerLevel overworld = player.level().getServer().overworld();
+        BlockPos spawn = overworld.getAttached(ModAttachments.VILLAGE_SPAWN);
+        if (spawn == null || player.level() != overworld) {
+            return; // village déplacé (pas au spawn) ou autre dimension
+        }
+        if (!firstJoin && hasPersonalRespawn(player)) {
+            return;
+        }
+        BlockPos at = player.blockPosition();
+        double dx = at.getX() - spawn.getX(), dz = at.getZ() - spawn.getZ();
+        if (dx * dx + dz * dz > 48 * 48) {
+            return; // apparu ailleurs (lit, ancre...) : on ne touche à rien
+        }
+        if (at.equals(spawn)) {
+            return;
+        }
+        if (!isSafeSpot(overworld, spawn)) {
+            spawn = safeSpawn(overworld, overworld.getAttached(ModAttachments.VILLAGE_CENTER) == null ? spawn
+                    : overworld.getAttached(ModAttachments.VILLAGE_CENTER));
+            overworld.setAttached(ModAttachments.VILLAGE_SPAWN, spawn);
+        }
+        run(overworld.getServer(), "tp " + player.getStringUUID() + " " + (spawn.getX() + 0.5) + " " + spawn.getY() + " "
+                + (spawn.getZ() + 0.5) + " 180 0");
+    }
+
+    /** Le joueur a-t-il un point de réapparition personnel (lit, ancre) ? Nom de méthode selon les versions : plusieurs essais. */
+    private static boolean hasPersonalRespawn(ServerPlayer player) {
+        for (String name : new String[] {"getRespawnConfig", "getRespawnPosition"}) {
+            try {
+                Object value = player.getClass().getMethod(name).invoke(player);
+                return value != null;
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // essai suivant
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ point d'apparition du monde
@@ -270,8 +379,120 @@ public final class StarterVillage {
     static void build(ServerLevel level, BlockPos center) {
         VillageBuilder b = new VillageBuilder(level);
         terraform(b, center);
+        removeOrphanLeaves(b, center);
+        removeUnsupported(b, center);
         for (String skipped : VillagePlan.buildAll(b, center, (x, z) -> ground(level, x, z))) {
             BloxPiece.LOGGER.warn("[BloxPiece] Village : élément ignoré (place occupée) : {}", skipped);
+        }
+        removeDroppedItems(level, center);
+    }
+
+    /**
+     * Feuillages coupés en bordure : un arbre dont le tronc a été rasé par le terrassement laisse des feuilles sans tronc qui
+     * pourriraient ensuite en lâchant pousses, bâtons et pommes. Les feuilles naturelles sans tronc à moins de 6 blocs (portée vanilla) sont
+     * retirées tout de suite, sans objet lâché.
+     */
+    private static void removeOrphanLeaves(VillageBuilder b, BlockPos center) {
+        int inner = VillageLayout.TERRAIN_FLAT - 4, outer = VillageLayout.TERRAIN_BLEND + 8, y0 = center.getY();
+        int removed = 0;
+        for (int dx = -outer; dx <= outer; dx++) {
+            for (int dz = -outer; dz <= outer; dz++) {
+                double d = Math.sqrt(dx * dx + dz * dz);
+                if (d < inner || d > outer) {
+                    continue;
+                }
+                for (int y = y0 - 12; y <= y0 + 40; y++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    BlockState s = b.get(p);
+                    if (!isNaturalLeaves(s) || hasLogNear(b, p, 6)) {
+                        continue;
+                    }
+                    b.setTerrain(p, AIR.defaultBlockState());
+                    removed++;
+                }
+            }
+        }
+        if (removed > 0) {
+            BloxPiece.LOGGER.info("[BloxPiece] Village : {} feuillage(s) sans tronc retiré(s) en bordure", removed);
+        }
+    }
+
+    private static boolean isNaturalLeaves(BlockState s) {
+        String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
+        if (!id.endsWith("leaves")) {
+            return false;
+        }
+        for (var property : s.getProperties()) {
+            if (property.getName().equals("persistent")) {
+                return !Boolean.TRUE.equals(s.getValue(property));
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasLogNear(VillageBuilder b, BlockPos p, int r) {
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    BlockState s = b.get(p.offset(dx, dy, dz));
+                    if (!s.isAir() && isTreePart(s) && !net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock())
+                            .getPath().endsWith("leaves")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Après le terrassement : tout bloc qui ne tient plus (liane, liane des cavernes ou du Nether, lichen, racines suspendues,
+     * cacao, mousse suspendue, fleur ou herbe dont le sol a changé, neige sans support...) est retiré sans objet lâché. Chaque
+     * colonne est parcourue de haut en bas : une liane qui ne tenait que grâce à celle du dessus disparaît avec elle.
+     */
+    private static void removeUnsupported(VillageBuilder b, BlockPos center) {
+        ServerLevel level = b.level();
+        int outer = VillageLayout.TERRAIN_BLEND + 10, y0 = center.getY();
+        int removed = 0;
+        for (int dx = -outer; dx <= outer; dx++) {
+            for (int dz = -outer; dz <= outer; dz++) {
+                if (dx * dx + dz * dz > outer * outer) {
+                    continue;
+                }
+                int x = center.getX() + dx, z = center.getZ() + dz;
+                int top = Math.min(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), y0 + 70);
+                for (int y = top; y >= y0 - 16; y--) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState s = level.getBlockState(p);
+                    if (s.isAir() || !s.getFluidState().isEmpty() || s.canSurvive(level, p)) {
+                        continue;
+                    }
+                    b.setTerrain(p, AIR.defaultBlockState());
+                    removed++;
+                }
+            }
+        }
+        if (removed > 0) {
+            BloxPiece.LOGGER.info("[BloxPiece] Village : {} bloc(s) suspendu(s) sans support retiré(s) (lianes, plantes...)", removed);
+        }
+    }
+
+    /**
+     * Filet de sécurité : supprime les objets lâchés au sol dans la zone du village pendant la construction (herbes, fleurs,
+     * feuilles mortes, pousses...). Les blocs sont déjà posés sans objets lâchés ; ceci rattrape les cas restants.
+     */
+    private static void removeDroppedItems(ServerLevel level, BlockPos center) {
+        int r = VillageLayout.TERRAIN_BLEND + 25;
+        net.minecraft.world.phys.AABB area = new net.minecraft.world.phys.AABB(center.getX() - r, center.getY() - 64, center.getZ() - r,
+                center.getX() + r, center.getY() + 96, center.getZ() + r);
+        int removed = 0;
+        for (net.minecraft.world.entity.item.ItemEntity item
+                : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, area, e -> true)) {
+            item.discard();
+            removed++;
+        }
+        if (removed > 0) {
+            BloxPiece.LOGGER.info("[BloxPiece] Village : {} objet(s) lâché(s) pendant la construction supprimé(s)", removed);
         }
     }
 
@@ -293,7 +514,10 @@ public final class StarterVillage {
                 int z = center.getZ() + dz;
                 level.getChunk(x >> 4, z >> 4);
                 int floor = solidGround(level, x, z);                                // dessus du VRAI sol (sans arbres)
-                int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);   // feuillages et eau compris
+                // plus haut bloc de la colonne, TOUT compris : feuillages, eau, mais aussi lianes, lichens, racines suspendues,
+                // cacao... (MOTION_BLOCKING ignore ce qui ne bloque pas le passage : une colonne de lianes restait suspendue)
+                int top = Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z),
+                        level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z));
                 boolean inside = d <= VillageLayout.TERRAIN_FLAT;
                 double t = inside ? 0.0 : (d - VillageLayout.TERRAIN_FLAT) / (outer - VillageLayout.TERRAIN_FLAT);
                 t = t * t * (3 - 2 * t);

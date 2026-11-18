@@ -35,7 +35,8 @@ public final class IceFrostWalk {
                 BlockPos pos = feet.offset(dx, -1, dz);
                 BlockState state = level.getBlockState(pos);
                 // Seulement de l'eau immobile (source), avec de l'air juste au-dessus : comme Semelles givrantes
-                if (state.is(Blocks.WATER) && state.getFluidState().isSource() && level.getBlockState(pos.above()).isAir()) {
+                if (state.is(Blocks.WATER) && state.getFluidState().isSource() && level.getBlockState(pos.above()).isAir()
+                        && !nolan.bloxpiece.village.SafeZone.isProtected(level, pos)) { // pas de gel de la fontaine du village
                     level.setBlockAndUpdate(pos, frosted);
                     level.scheduleTick(pos, Blocks.FROSTED_ICE, Mth.nextInt(level.getRandom(), 60, 120)); // fonte progressive
                 }

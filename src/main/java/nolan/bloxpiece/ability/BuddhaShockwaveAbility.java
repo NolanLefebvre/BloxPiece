@@ -15,6 +15,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.BuddhaEffects;
+import nolan.bloxpiece.registry.ModParticles;
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.fruit.WaterCurse;
 
@@ -118,10 +119,18 @@ public class BuddhaShockwaveAbility implements Ability {
         Wave fired = new Wave(wave.level, player, palmOf(player), dir);
         fired.windup = WINDUP_TICKS;
         player.setAttached(ModAttachments.BUDDHA_POSE, 1); // bras tendu, paume ouverte
-        BuddhaEffects.shockwaveBurst(wave.level, fired.origin, dir);
-        BuddhaHits.shake(wave.level, fired.origin, 40.0, 2.0F, 12);
-        wave.level.playSound(null, player.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.5F, 0.8F);
-        wave.level.playSound(null, player.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 2.0F, 0.7F);
+        // Puissance divine : éclair et dôme devant la paume, PAUME GÉANTE dorée projetée, éclairs dorés, onde au sol, caméra qui tremble
+        ServerLevel level = wave.level;
+        BuddhaEffects.shockwaveBurst(level, fired.origin, dir);
+        BuddhaEffects.palmImprint(level, fired.origin.add(dir.scale(3.0)), dir, 2.4, ModParticles.BUDDHA_GLOW);
+        BuddhaEffects.goldenBolts(level, fired.origin, dir, RANGE * 0.6, 7);
+        BuddhaEffects.groundRing(level, player.position(), 3.5 * player.getScale());
+        BuddhaHits.shake(level, fired.origin, 64.0, 3.5F, 22);
+        Vec3 o = fired.origin;
+        level.playSound(null, o.x, o.y, o.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 3.0F, 0.7F);
+        level.playSound(null, o.x, o.y, o.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 3.0F, 0.5F);
+        level.playSound(null, o.x, o.y, o.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.5F, 0.6F);
+        level.playSound(null, o.x, o.y, o.z, SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 2.5F, 0.6F);
         advance(fired); // le dôme apparaît instantanément devant la paume
         return fired;
     }
@@ -141,6 +150,11 @@ public class BuddhaShockwaveAbility implements Ability {
                 double progress = (double) wave.windup / WINDUP_TICKS;
                 wave.owner.setAttached(ModAttachments.BUDDHA_POSE, raisePose(progress));
                 BuddhaEffects.shockwaveWindup(wave.level, palmOf(wave.owner), progress, wave.windup);
+                if (wave.windup == WINDUP_TICKS / 2) { // l'énergie gronde, le sol commence à trembler
+                    Vec3 p = palmOf(wave.owner);
+                    wave.level.playSound(null, p.x, p.y, p.z, SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 2.0F, 0.8F);
+                    BuddhaHits.shake(wave.level, p, 24.0, 0.6F, WINDUP_TICKS / 2);
+                }
                 if (wave.windup == WINDUP_TICKS) {
                     WAVES.set(i, fire(wave));
                 }
@@ -196,9 +210,23 @@ public class BuddhaShockwaveAbility implements Ability {
             float damage = NEAR_DAMAGE + (FAR_DAMAGE - NEAR_DAMAGE) * (float) falloff;
             Vec3 push = new Vec3(wave.dir.x, 0.0, wave.dir.z).normalize().scale(PUSH * (1.0 - 0.4 * falloff)).add(0.0, LIFT, 0.0);
             BuddhaHits.strike(wave.level, wave.owner, target, damage, push);
+            Vec3 t = target.getBoundingBox().getCenter();
+            wave.level.sendParticles(ModParticles.BUDDHA_FLASH, true, true, t.x, t.y, t.z, 1, 0.0, 0.0, 0.0, 0.0);
+            wave.level.sendParticles(ModParticles.BUDDHA_SPARK, true, true, t.x, t.y, t.z, 25, 0.4, 0.6, 0.4, 0.4);
+            wave.level.playSound(null, t.x, t.y, t.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.8F, 0.5F);
         }
 
         BuddhaEffects.shockwaveFront(wave.level, c, wave.dir, front, radius, wave.age);
+        if (wave.age % 3 == 1) {
+            BuddhaEffects.palmImprint(wave.level, c.add(wave.dir.scale(front)), wave.dir, radius * 0.32, ModParticles.BUDDHA_GLOW_ORANGE);
+        }
+        if (wave.age == TICKS - 1) { // l'onde frappe à pleine portée : impact final
+            Vec3 end = c.add(wave.dir.scale(RANGE));
+            BuddhaEffects.shockwaveImpact(wave.level, end, wave.dir, END_RADIUS * 0.6);
+            BuddhaHits.shake(wave.level, end, 40.0, 2.0F, 12);
+            wave.level.playSound(null, end.x, end.y, end.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 3.0F, 0.6F);
+            wave.level.playSound(null, end.x, end.y, end.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.5F, 1.6F);
+        }
         wave.age++;
     }
 

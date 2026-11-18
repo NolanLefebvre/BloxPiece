@@ -9,9 +9,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 
+import nolan.bloxpiece.handcuffs.Handcuffs;
 import nolan.bloxpiece.registry.ModAttachments;
 
 /**
+ * Menottes (première personne) : menotté, le joueur ne voit plus ni ses mains ni les objets tenus (mains liées dans le dos).
+ * <p>
  * Gura Gura no Mi (première personne) : pendant une attaque qui porte une boule sismique (attachment HIDE_HAND_ITEM), la main et
  * l'objet tenu ne sont pas dessinés devant l'écran : la boule sismique (placée en bas de l'écran, côté main) les remplace, et rien
  * ne la traverse. Injection facultative (require = 0) : si la méthode change dans une future version, la main reste simplement
@@ -23,7 +26,7 @@ public abstract class HideFirstPersonHandMixin {
     @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true, require = 0)
     private void bloxpiece$hideHand(CallbackInfo info) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null && player.getAttached(ModAttachments.HIDE_HAND_ITEM) != null) {
+        if (player != null && (player.getAttached(ModAttachments.HIDE_HAND_ITEM) != null || Handcuffs.isCuffed(player))) {
             info.cancel();
         }
     }

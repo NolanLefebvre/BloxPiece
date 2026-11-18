@@ -25,6 +25,16 @@ import nolan.bloxpiece.BloxPiece;
  */
 public final class VillageBuilder {
 
+    /**
+     * Pose « silencieuse » : prévenir les clients (2), SANS mise à jour de forme des voisins (16 : une fleur, une herbe haute ou
+     * un tapis de feuilles dont on retire le support n'est pas détruit en cascade) et SANS objets lâchés (32 : rien ne tombe au
+     * sol, même si un bloc est remplacé ou cassé). Valeurs des drapeaux de Level.setBlock (UPDATE_CLIENTS, UPDATE_KNOWN_SHAPE,
+     * UPDATE_SUPPRESS_DROPS), stables depuis des années.
+     */
+    static final int SILENT = 2 | 16 | 32;
+    /** Pour le recalcul final des formes : clients + pas d'objets lâchés. */
+    static final int SHAPE = 2 | 32;
+
     private final ServerLevel level;
     private final RandomSource random;
     private final List<BlockPos> placed = new ArrayList<>();
@@ -74,8 +84,19 @@ public final class VillageBuilder {
             this.refused++;
             return;
         }
-        this.level.setBlock(pos, state, Block.UPDATE_CLIENTS);
+        this.level.setBlock(pos, state, SILENT);
         this.placed.add(p);
+        this.occupied.add(columnKey(pos.getX(), pos.getZ()));
+    }
+
+    /**
+     * Pose avec mises à jour normales (drapeau 3) : seulement pour l'eau qui doit couler dès la création (cascade de la fontaine),
+     * en mode construction. Rien autour ne peut lâcher d'objet (pierre et eau seulement).
+     */
+    public void setLive(BlockPos pos, BlockState state) {
+        BlockPos p = pos.immutable();
+        this.structure.add(p);
+        this.level.setBlock(pos, state, 3);
         this.occupied.add(columnKey(pos.getX(), pos.getZ()));
     }
 
@@ -85,7 +106,7 @@ public final class VillageBuilder {
             this.refused++;
             return;
         }
-        this.level.setBlock(pos, state, Block.UPDATE_CLIENTS);
+        this.level.setBlock(pos, state, SILENT);
     }
 
     public BlockState get(BlockPos pos) {
@@ -122,7 +143,7 @@ public final class VillageBuilder {
             BlockState state = this.level.getBlockState(pos);
             BlockState shaped = Block.updateFromNeighbourShapes(state, this.level, pos);
             if (shaped != state) {
-                this.level.setBlock(pos, shaped, Block.UPDATE_CLIENTS);
+                this.level.setBlock(pos, shaped, SHAPE);
             }
         }
     }

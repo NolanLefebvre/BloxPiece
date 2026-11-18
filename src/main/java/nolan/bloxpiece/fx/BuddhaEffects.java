@@ -450,6 +450,101 @@ public class BuddhaEffects {
         send(level, ModParticles.BUDDHA_GLOW_PALE, origin, (int) (6 * fade), r0 * 0.5, r0 * 0.5, r0 * 0.5, 0.0);
     }
 
+    /**
+     * Empreinte d'une PAUME GÉANTE dorée dans le plan perpendiculaire à {@code dir}, centrée en {@code c} : paume (anneau +
+     * rayons), quatre doigts dressés et le pouce, à l'échelle {@code scale} (1 = environ 3 blocs de haut).
+     */
+    public static void palmImprint(ServerLevel level, Vec3 c, Vec3 dir, double scale, ParticleOptions particle) {
+        Vec3[] b = basis(dir);
+        Vec3 side = b[0];
+        Vec3 up = b[1].y < 0 ? b[1].scale(-1.0) : b[1];
+        if (Math.abs(dir.y) > 0.9) { // regard vers le haut / le bas : la main reste lisible
+            up = new Vec3(0.0, 0.0, 1.0);
+            side = dir.cross(up).normalize();
+        }
+        double step = 0.3;
+        // paume : anneau et rayons
+        double palmR = 1.0 * scale;
+        int ring = (int) (palmR * 2 * Math.PI / step);
+        for (int i = 0; i < ring; i++) {
+            double a = 2.0 * Math.PI * i / ring;
+            send(level, particle, c.add(side.scale(Math.cos(a) * palmR)).add(up.scale(Math.sin(a) * palmR * 0.9)), 1, 0, 0, 0, 0);
+        }
+        for (int k = 0; k < 6; k++) {
+            double a = Math.PI * 2 * k / 6;
+            for (double t = 0.2; t < palmR; t += step) {
+                send(level, ModParticles.BUDDHA_GLOW_PALE, c.add(side.scale(Math.cos(a) * t)).add(up.scale(Math.sin(a) * t * 0.9)), 1, 0, 0, 0, 0);
+            }
+        }
+        // doigts
+        double[] xs = {-0.72, -0.24, 0.24, 0.72};
+        double[] len = {1.25, 1.6, 1.5, 1.1};
+        for (int f = 0; f < 4; f++) {
+            Vec3 base = c.add(side.scale(xs[f] * scale)).add(up.scale(0.75 * scale));
+            for (double t = 0; t <= len[f] * scale; t += step) {
+                Vec3 p = base.add(up.scale(t));
+                send(level, particle, p.add(side.scale(-0.16 * scale)), 1, 0, 0, 0, 0);
+                send(level, particle, p.add(side.scale(0.16 * scale)), 1, 0, 0, 0, 0);
+            }
+            send(level, ModParticles.BUDDHA_SPARK, base.add(up.scale(len[f] * scale)), 2, 0.05, 0.05, 0.05, 0.02);
+        }
+        // pouce, en diagonale sur le côté
+        Vec3 thumbDir = side.scale(-0.75).add(up.scale(0.65)).normalize();
+        Vec3 thumbBase = c.add(side.scale(-0.9 * scale)).add(up.scale(-0.1 * scale));
+        for (double t = 0; t <= 1.0 * scale; t += step) {
+            send(level, particle, thumbBase.add(thumbDir.scale(t)), 1, 0, 0, 0, 0);
+        }
+    }
+
+    /** Éclairs dorés : lignes brisées qui partent de {@code from} dans le cône de l'onde. */
+    public static void goldenBolts(ServerLevel level, Vec3 from, Vec3 dir, double length, int count) {
+        RandomSource random = level.getRandom();
+        Vec3[] b = basis(dir);
+        for (int k = 0; k < count; k++) {
+            Vec3 p = from;
+            Vec3 heading = dir.add(b[0].scale((random.nextDouble() - 0.5) * 0.9)).add(b[1].scale((random.nextDouble() - 0.5) * 0.9)).normalize();
+            double travelled = 0;
+            while (travelled < length) {
+                double seg = 1.2 + random.nextDouble() * 1.6;
+                Vec3 jitter = b[0].scale((random.nextDouble() - 0.5) * 1.4).add(b[1].scale((random.nextDouble() - 0.5) * 1.4));
+                Vec3 next = p.add(heading.scale(seg)).add(jitter);
+                Vec3 d = next.subtract(p);
+                int n = Math.max(2, (int) (d.length() / 0.25));
+                for (int i = 0; i <= n; i++) {
+                    send(level, i % 3 == 0 ? ModParticles.BUDDHA_GLOW_PALE : ModParticles.BUDDHA_SPARK, p.add(d.scale((double) i / n)), 1, 0, 0, 0, 0);
+                }
+                p = next;
+                travelled += seg;
+            }
+            send(level, ModParticles.BUDDHA_FLASH, p, 1, 0, 0, 0, 0);
+        }
+    }
+
+    /** Anneau d'onde au sol autour de {@code center} (rayon {@code radius}) : lumière dorée et éclats du sol soulevés. */
+    public static void groundRing(ServerLevel level, Vec3 center, double radius) {
+        BlockState ground = groundBlock(level, center);
+        int points = (int) (radius * 10);
+        for (int i = 0; i < points; i++) {
+            double a = 2.0 * Math.PI * i / points;
+            Vec3 out = new Vec3(Math.cos(a), 0.0, Math.sin(a));
+            Vec3 p = center.add(out.scale(radius)).add(0.0, 0.15, 0.0);
+            send(level, i % 2 == 0 ? ModParticles.BUDDHA_GLOW : ModParticles.BUDDHA_GLOW_ORANGE, p, 0, out.x, 0.05, out.z, 0.35);
+            if (ground != null && i % 3 == 0) {
+                send(level, new BlockParticleOption(ParticleTypes.BLOCK, ground), p, 0, out.x * 0.4, 1.0, out.z * 0.4, 0.45);
+            }
+        }
+    }
+
+    /** Impact final de l'onde à sa portée maximale : éclair, sphère d'étincelles, paume dorée et anneau de lumière. */
+    public static void shockwaveImpact(ServerLevel level, Vec3 c, Vec3 dir, double radius) {
+        send(level, ModParticles.BUDDHA_FLASH, c, 2, 0.5, 0.5, 0.5, 0.0);
+        sphere(level, ModParticles.BUDDHA_SPARK, c, 120, 0.9);
+        send(level, ModParticles.BUDDHA_GLOW_PALE, c, 60, radius * 0.5, radius * 0.5, radius * 0.5, 0.0);
+        palmImprint(level, c, dir, radius * 0.38, ModParticles.BUDDHA_GLOW);
+        circle(level, ModParticles.BUDDHA_GLOW_ORANGE, c, dir, radius * 1.1, (int) (radius * 9), 0.0);
+        send(level, ModParticles.BUDDHA_PETAL, c, 30, radius * 0.4, radius * 0.4, radius * 0.4, 0.08);
+    }
+
     // ---------------------------------------------------------------- Déflagration (attaque 4)
 
     /** Charge de la Déflagration : l'énergie converge de tous côtés vers le joueur et une aura dorée l'enveloppe, de plus en plus dense. */

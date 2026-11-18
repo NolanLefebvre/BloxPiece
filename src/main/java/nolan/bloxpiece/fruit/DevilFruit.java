@@ -43,14 +43,25 @@ public class DevilFruit {
         return id;
     }
 
-    /** Item de ce fruit. Convention : l'item d'un fruit d'id "fire" s'appelle "fire_fruit". */
+    /** Identifiant de l'item = vrai nom du fruit (fire -> mera_mera_no_mi...), celui de /give. */
+    public static String itemName(String fruitId) {
+        return switch (fruitId) {
+            case "fire" -> "mera_mera_no_mi";
+            case "buddha" -> "hito_hito_no_mi_model_daibutsu";
+            case "ice" -> "hie_hie_no_mi";
+            case "gura" -> "gura_gura_no_mi";
+            default -> fruitId + "_no_mi";
+        };
+    }
+
+    /** Item de ce fruit (identifiant = vrai nom du fruit). */
     public Identifier itemId() {
-        return BloxPiece.id(id + "_fruit");
+        return BloxPiece.id(itemName(id));
     }
 
     /** Clé de traduction du nom du fruit (c'est le nom de son item), pour les interfaces. */
     public String translationKey() {
-        return "item." + BloxPiece.MOD_ID + "." + id + "_fruit";
+        return "item." + BloxPiece.MOD_ID + "." + itemName(id);
     }
 
     /** Renvoie l'attaque de ce slot, ou null si ce fruit n'en a pas à cet emplacement. */

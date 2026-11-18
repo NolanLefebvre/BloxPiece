@@ -52,6 +52,11 @@ public final class Frame {
         return this.texture == null ? block : this.texture.apply(block);
     }
 
+    /** Pose « vivante » (l'eau coule tout de suite) : voir VillageBuilder.setLive. */
+    public void live(int x, int y, int z, Block block) {
+        this.builder.setLive(pos(x, y, z), block.defaultBlockState());
+    }
+
     public void set(int x, int y, int z, Block block) {
         set(x, y, z, tex(block).defaultBlockState());
     }

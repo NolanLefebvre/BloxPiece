@@ -31,14 +31,16 @@ public final class VillagePlan {
         STALLS_PLACED.clear();
         plaza(b, center);
         b.structureMode(true);
-        List<BlockPos> doorFronts = new ArrayList<>();
+        List<Frame> doorFrames = new ArrayList<>();
+        List<Building> doorBuildings = new ArrayList<>();
         for (VillageLayout.Entry entry : VillageLayout.BUILDINGS) {
             Building building = entry.recipe().get();
             Frame frame = new Frame(b, center.offset(entry.origin()), entry.rotation());
             building.build(frame);
-            doorFronts.add(frame.pos(building.doubleDoor ? -1 : 0, 0, building.approach));
+            doorFrames.add(frame);
+            doorBuildings.add(building);
         }
-        Decor.well(new Frame(b, center, Rotation.NONE));
+        Decor.fountain(new Frame(b, center, Rotation.NONE));
         b.structureMode(false);
         BlockPos spawn = center.offset(VillageLayout.PLAZA_SPAWN);
         for (int dx = -1; dx <= 1; dx++) {
@@ -49,7 +51,8 @@ public final class VillagePlan {
         for (BlockPos[] lane : VillageLayout.LANES) {
             Decor.path(b, center.offset(lane[0]), center.offset(lane[1]));
         }
-        connectDoors(b, center, doorFronts);
+        connectDoors(b, center, doorFrames, doorBuildings);
+        repairNetwork(b, center);
         b.structureMode(true);
         stalls(b, center);
         b.structureMode(false);
@@ -69,6 +72,8 @@ public final class VillagePlan {
                 Decor.palm(b, new BlockPos(at.getX(), groundY.applyAsInt(at.getX(), at.getZ()), at.getZ()));
             }
         }
+        exitRoads(b, center, groundY);
+        repairNetwork(b, center);
         flowerBeds(b, center, 46);
         Decor.greenery(b, center, VillageLayout.TERRAIN_FLAT);
         b.finish();
@@ -118,14 +123,13 @@ public final class VillagePlan {
      * Raccords : chaque seuil de porte est relié au point le plus proche du réseau (allées et bord de la place) par un petit
      * chemin, pour des jonctions continues jusqu'à chaque entrée. Les allées partant de la place y sont aussi raccordées.
      */
-    private static void connectDoors(VillageBuilder b, BlockPos center, List<BlockPos> doorFronts) {
+    private static void connectDoors(VillageBuilder b, BlockPos center, List<Frame> frames, List<Building> buildings) {
         List<BlockPos> network = new ArrayList<>();
-        int half = VillageLayout.PLAZA_HALF;
-        for (int i = -half; i <= half; i++) {
-            network.add(center.offset(i, 0, -half));
-            network.add(center.offset(i, 0, half));
-            network.add(center.offset(-half, 0, i));
-            network.add(center.offset(half, 0, i));
+        for (int k = 0; k < 96; k++) { // bord de la place ronde
+            double a = Math.PI * 2 * k / 96;
+            int ex = (int) Math.round(Math.cos(a) * (VillageLayout.PLAZA_RADIUS - 1));
+            int ez = (int) Math.round(Math.sin(a) * (VillageLayout.PLAZA_RADIUS - 1));
+            network.add(center.offset(ex, 0, ez));
         }
         for (BlockPos[] lane : VillageLayout.LANES) {
             BlockPos a = center.offset(lane[0]), c = center.offset(lane[1]);
@@ -138,32 +142,411 @@ public final class VillagePlan {
         // allées qui commencent près de la place : prolongées jusqu'au pavé
         for (BlockPos[] lane : VillageLayout.LANES) {
             BlockPos start = center.offset(lane[0]);
-            int dx = Math.abs(start.getX() - center.getX()), dz = Math.abs(start.getZ() - center.getZ());
-            if (Math.max(dx, dz) > half && Math.max(dx, dz) <= half + 6) {
-                BlockPos edge = new BlockPos(center.getX() + clampHalf(start.getX() - center.getX(), half), start.getY(),
-                        center.getZ() + clampHalf(start.getZ() - center.getZ(), half));
+            int dx = start.getX() - center.getX(), dz = start.getZ() - center.getZ();
+            double len = Math.sqrt(dx * dx + dz * dz), edgeR = VillageLayout.plazaRadius(dx, dz) - 1;
+            if (len > edgeR && len <= edgeR + 7) {
+                BlockPos edge = new BlockPos(center.getX() + (int) Math.round(dx / len * edgeR), start.getY(),
+                        center.getZ() + (int) Math.round(dz / len * edgeR));
                 Decor.path(b, edge, start);
             }
         }
-        for (BlockPos door : doorFronts) {
-            BlockPos best = null;
-            double bestD = Double.MAX_VALUE;
-            for (BlockPos n : network) {
-                double d = (double) (n.getX() - door.getX()) * (n.getX() - door.getX())
-                        + (double) (n.getZ() - door.getZ()) * (n.getZ() - door.getZ());
-                if (d < bestD) {
-                    bestD = d;
-                    best = n;
-                }
+        for (int i = 0; i < frames.size(); i++) {
+            Frame f = frames.get(i);
+            Building building = buildings.get(i);
+            int x0 = building.doubleDoor ? -1 : 0;
+            BlockPos end = f.pos(x0, 0, building.approach + 2);
+            BlockPos target = nearestPath(b, end, 24);
+            // perron / sentier d'un bloc de large, droit depuis la porte, puis jusqu'à l'allée la plus proche
+            for (int z = building.approach; z <= building.approach + 2; z++) {
+                trailCell(b, f.pos(x0, -1, z), false);
             }
-            if (best != null) { // même tout près : le seuil lui-même devient chemin
-                Decor.path(b, best, door);
+            if (target != null) {
+                trail(b, end, target);
             }
         }
     }
 
-    private static int clampHalf(int v, int half) {
-        return Math.max(-half, Math.min(half, v));
+    /** Case d'allée la plus proche (terre battue, gravier, pavés, place) dans un rayon donné, ou null. */
+    private static BlockPos nearestPath(VillageBuilder b, BlockPos from, int radius) {
+        BlockPos best = null;
+        int bestD = Integer.MAX_VALUE;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                int d = dx * dx + dz * dz;
+                if (d >= bestD || d > radius * radius) {
+                    continue;
+                }
+                BlockPos g = new BlockPos(from.getX() + dx, from.getY() - 1, from.getZ() + dz);
+                if (isPathBlock(b.get(g)) && !b.isStructure(g.above())) {
+                    bestD = d;
+                    best = g.above();
+                }
+            }
+        }
+        return best;
+    }
+
+    /** Sentier d'un bloc de large en ligne (presque) droite, qui s'arrête dès qu'il touche une allée existante. */
+    private static void trail(VillageBuilder b, BlockPos from, BlockPos to) {
+        int dx = to.getX() - from.getX(), dz = to.getZ() - from.getZ();
+        int n = Math.max(Math.abs(dx), Math.abs(dz));
+        for (int s = 1; s <= n; s++) {
+            int x = from.getX() + Math.round((float) dx * s / n);
+            int z = from.getZ() + Math.round((float) dz * s / n);
+            BlockPos g = new BlockPos(x, from.getY() - 1, z);
+            if (isPathBlock(b.get(g))) {
+                return; // jonction faite
+            }
+            trailCell(b, g, true);
+        }
+    }
+
+    private static void trailCell(VillageBuilder b, BlockPos ground, boolean keepAway) {
+        if (!isSoil(b.get(ground)) || b.isStructure(ground.above())) {
+            return;
+        }
+        if (keepAway && Decor.nearStructure(b, ground.getX(), ground.getY() + 1, ground.getZ(), 1)) {
+            return;
+        }
+        float r = b.random().nextFloat();
+        b.set(ground, (r < 0.8F ? DIRT_PATH : r < 0.92F ? GRAVEL : COARSE_DIRT).defaultBlockState());
+        BlockState above = b.get(ground.above());
+        if (!above.isAir() && above.canBeReplaced()) {
+            b.set(ground.above(), AIR.defaultBlockState());
+        }
+    }
+
+    private static boolean isPathBlock(BlockState s) {
+        return s.is(DIRT_PATH) || s.is(GRAVEL) || s.is(COBBLESTONE) || s.is(STONE_BRICKS) || s.is(MOSSY_STONE_BRICKS) || s.is(ANDESITE);
+    }
+
+    private static boolean isSoil(BlockState s) {
+        return s.is(GRASS_BLOCK) || s.is(DIRT) || s.is(PODZOL) || s.is(COARSE_DIRT) || s.is(MYCELIUM);
+    }
+
+    /** Rayon jusqu'où les routes de sortie se prolongent (au-delà du village, dans la nature). */
+    private static final int EXIT_RADIUS = 74;
+
+    /**
+     * Routes de sortie vers le nord, l'est, le sud et l'ouest : chacune part du réseau d'allées et file vers l'extérieur jusqu'à
+     * EXIT_RADIUS, bien au-delà du terrain aplani, en suivant le relief. Le tracé est calculé (plus court chemin sur la grille)
+     * pour contourner les bâtiments à distance, l'eau et la lave ; il ne traverse jamais une construction.
+     */
+    private static void exitRoads(VillageBuilder b, BlockPos center, IntBinaryOperator groundY) {
+        double[][] dirs = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+        java.util.Set<Long> taken = new java.util.HashSet<>();
+        for (double[] d : dirs) {
+            // secteur de départ ±35°, élargi seulement si aucune allée ne s'y trouve
+            for (double minDot : new double[] {0.82, 0.64, 0.42}) {
+                if (exitRoad(b, center, groundY, d, taken, minDot)) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private static long key(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
+    }
+
+    /** Une route de sortie dans la direction {@code d} : part d'une allée du même côté du village. */
+    private static boolean exitRoad(VillageBuilder b, BlockPos center, IntBinaryOperator groundY, double[] d, java.util.Set<Long> taken,
+            double minDot) {
+        int r = EXIT_RADIUS, size = 2 * r + 1, y0 = center.getY();
+        int[] groundCache = new int[size * size];
+        byte[] pass = new byte[size * size]; // 0 inconnu, 1 libre, 2 interdit
+        java.util.Arrays.fill(groundCache, Integer.MIN_VALUE);
+        double[] dist = new double[size * size];
+        int[] prev = new int[size * size];
+        java.util.Arrays.fill(dist, Double.MAX_VALUE);
+        java.util.Arrays.fill(prev, -1);
+        java.util.PriorityQueue<double[]> queue = new java.util.PriorityQueue<>(java.util.Comparator.comparingDouble(a -> a[0]));
+        // sources : les cases d'allée situées du côté de la sortie (secteur de ±35°), loin du centre
+        int flat = VillageLayout.TERRAIN_FLAT;
+        for (int dx = -flat; dx <= flat; dx++) {
+            for (int dz = -flat; dz <= flat; dz++) {
+                double len = Math.sqrt(dx * dx + dz * dz);
+                if (len < 10 || (dx * d[0] + dz * d[1]) / len < minDot) {
+                    continue;
+                }
+                BlockState g = b.get(new BlockPos(center.getX() + dx, y0 - 1, center.getZ() + dz));
+                if (g.is(DIRT_PATH) || g.is(GRAVEL)) {
+                    int i = (dx + r) * size + (dz + r);
+                    dist[i] = 0;
+                    groundCache[i] = y0;
+                    queue.add(new double[] {0, i});
+                }
+            }
+        }
+        int[][] steps = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+        while (!queue.isEmpty()) {
+            double[] top = queue.poll();
+            int i = (int) top[1];
+            if (top[0] > dist[i]) {
+                continue;
+            }
+            int cx = i / size - r, cz = i % size - r;
+            for (int[] st : steps) {
+                int nx = cx + st[0], nz = cz + st[1];
+                if (nx < -r || nx > r || nz < -r || nz > r || nx * nx + nz * nz > r * r) {
+                    continue;
+                }
+                int j = (nx + r) * size + (nz + r);
+                if (pass[j] == 0) {
+                    pass[j] = passable(b, center, nx, nz, groundY, groundCache, j) ? (byte) 1 : (byte) 2;
+                }
+                if (pass[j] == 2) {
+                    continue;
+                }
+                if (nearTaken(taken, nx, nz, 6)) {
+                    continue; // jamais collée à une autre route de sortie
+                }
+                double cost = (st[0] != 0 && st[1] != 0 ? 1.414 : 1.0)
+                        + (Decor.nearStructure(b, center.getX() + nx, y0, center.getZ() + nz, 3) ? 1.5 : 0.0);
+                int h1 = groundCache[i] == Integer.MIN_VALUE ? y0 : groundCache[i];
+                if (Math.abs(groundCache[j] - h1) > 1) {
+                    continue; // jamais de marche de plus d'un bloc : la route contourne les pentes raides
+                }
+                cost += Math.abs(groundCache[j] - h1) * 2.0; // évite les pentes
+                if (dist[i] + cost < dist[j]) {
+                    dist[j] = dist[i] + cost;
+                    prev[j] = i;
+                    queue.add(new double[] {dist[j], j});
+                }
+            }
+        }
+        // arrivée : la case du bord la moins coûteuse dans un secteur de ±15° autour de la direction
+        {
+            int best = -1;
+            for (int i = 0; i < size * size; i++) {
+                int x = i / size - r, z = i % size - r;
+                double len = Math.sqrt(x * x + z * z);
+                if (dist[i] == Double.MAX_VALUE || len < r - 2) {
+                    continue;
+                }
+                if ((x * d[0] + z * d[1]) / len < Math.cos(Math.toRadians(15))) {
+                    continue;
+                }
+                if (best < 0 || dist[i] < dist[best]) {
+                    best = i;
+                }
+            }
+            if (best < 0) {
+                return false;
+            }
+            for (int i = best; i >= 0 && dist[i] > 0; i = prev[i]) {
+                int x = i / size - r, z = i % size - r;
+                taken.add(key(x, z));
+                for (int ox = -1; ox <= 1; ox++) {
+                    for (int oz = -1; oz <= 1; oz++) {
+                        int wx = center.getX() + x + ox, wz = center.getZ() + z + oz;
+                        if (Decor.nearStructure(b, wx, y0, wz, 1)) {
+                            continue;
+                        }
+                        int gy = surface(center, wx, wz, groundY);
+                        BlockPos g = new BlockPos(wx, gy - 1, wz);
+                        BlockState onTop = b.get(g.above());
+                        int centreY = groundCache[i] == Integer.MIN_VALUE ? y0 : groundCache[i];
+                        boolean axis = ox == 0 && oz == 0; // la case du tracé lui-même (pentes déjà limitées à 1 bloc)
+                        if (!axis && (Math.abs(gy - centreY) > 1 || stepTooHigh(b, center, wx, wz, gy, groundY))) {
+                            continue; // bord de route trop haut ou trop bas : la route se resserre plutôt que de faire une marche
+                        }
+                        if (isSoil(b.get(g)) && (onTop.isAir() || onTop.canBeReplaced())) {
+                            b.set(g, Decor.pathBlock(b.random()));
+                            for (int up = 1; up <= 2; up++) {   // herbes hautes, fleurs, buissons doubles
+                                BlockState above = b.get(g.offset(0, up, 0));
+                                if (!above.isAir() && above.canBeReplaced()) {
+                                    b.set(g.offset(0, up, 0), AIR.defaultBlockState());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Composantes de réseau plus petites que ça (bouts de chemin isolés) : effacées si on ne peut pas les relier. */
+    private static final int MIN_FRAGMENT = 12;
+
+    /**
+     * Réparation du réseau d'allées (dans le terrain aplani) : chaque morceau d'allée séparé du réseau principal (celui de la
+     * place) y est relié par un sentier d'un bloc, par le plus court passage libre (jamais collé à un mur) ; un petit bout isolé
+     * qu'on ne peut pas relier redevient de l'herbe. Plus aucune coupure, plus aucune porte isolée.
+     */
+    private static void repairNetwork(VillageBuilder b, BlockPos center) {
+        int r = VillageLayout.TERRAIN_FLAT - 1, size = 2 * r + 1, y0 = center.getY();
+        for (int pass = 0; pass < 12; pass++) {
+            int[] comp = new int[size * size];
+            java.util.Arrays.fill(comp, -1);
+            List<List<Integer>> comps = new ArrayList<>();
+            for (int i = 0; i < size * size; i++) {
+                if (comp[i] != -1 || !isNetwork(b, center, i / size - r, i % size - r, r)) {
+                    continue;
+                }
+                List<Integer> cells = new ArrayList<>();
+                java.util.ArrayDeque<Integer> q = new java.util.ArrayDeque<>();
+                q.add(i);
+                comp[i] = comps.size();
+                while (!q.isEmpty()) {
+                    int c = q.poll();
+                    cells.add(c);
+                    int cx = c / size - r, cz = c % size - r;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            int nx = cx + dx, nz = cz + dz;
+                            if (Math.abs(nx) > r || Math.abs(nz) > r) {
+                                continue;
+                            }
+                            int j = (nx + r) * size + (nz + r);
+                            if (comp[j] == -1 && isNetwork(b, center, nx, nz, r)) {
+                                comp[j] = comps.size();
+                                q.add(j);
+                            }
+                        }
+                    }
+                }
+                comps.add(cells);
+            }
+            int main = comp[r * size + r]; // la place
+            if (main < 0 || comps.size() <= 1) {
+                return;
+            }
+            boolean changed = false;
+            for (int k = 0; k < comps.size(); k++) {
+                if (k == main) {
+                    continue;
+                }
+                List<Integer> cells = comps.get(k);
+                if (link(b, center, cells, comp, main, r, size)) {
+                    changed = true;
+                    break; // les composantes ont changé : on recommence l'analyse
+                }
+                if (cells.size() < MIN_FRAGMENT) {
+                    for (int c : cells) {
+                        BlockPos g = new BlockPos(center.getX() + c / size - r, y0 - 1, center.getZ() + c % size - r);
+                        b.set(g, GRASS_BLOCK.defaultBlockState());
+                    }
+                    changed = true;
+                }
+            }
+            if (!changed) {
+                return;
+            }
+        }
+    }
+
+    private static boolean isNetwork(VillageBuilder b, BlockPos center, int x, int z, int r) {
+        if (x * x + z * z > r * r) {
+            return false;
+        }
+        if (VillageLayout.onPlaza(x, z)) {
+            return true; // la place
+        }
+        BlockPos g = new BlockPos(center.getX() + x, center.getY() - 1, center.getZ() + z);
+        BlockState s = b.get(g);
+        return (s.is(DIRT_PATH) || s.is(GRAVEL) || s.is(COBBLESTONE) || s.is(COARSE_DIRT)) && !b.isStructure(g);
+    }
+
+    /** Relie une composante au réseau principal par le plus court sentier libre (largeur 1). */
+    private static boolean link(VillageBuilder b, BlockPos center, List<Integer> cells, int[] comp, int main, int r, int size) {
+        int y0 = center.getY();
+        int[] prev = new int[size * size];
+        java.util.Arrays.fill(prev, -2);
+        java.util.ArrayDeque<Integer> q = new java.util.ArrayDeque<>();
+        for (int c : cells) {
+            prev[c] = -1;
+            q.add(c);
+        }
+        int found = -1, steps = 0;
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!q.isEmpty() && found < 0 && steps < 40000) {
+            int c = q.poll();
+            steps++;
+            int cx = c / size - r, cz = c % size - r;
+            for (int[] d : dirs) {
+                int nx = cx + d[0], nz = cz + d[1];
+                if (Math.abs(nx) > r || Math.abs(nz) > r || nx * nx + nz * nz > r * r) {
+                    continue;
+                }
+                int j = (nx + r) * size + (nz + r);
+                if (prev[j] != -2) {
+                    continue;
+                }
+                if (comp[j] == main) {
+                    prev[j] = c;
+                    found = j;
+                    break;
+                }
+                int wx = center.getX() + nx, wz = center.getZ() + nz;
+                BlockPos g = new BlockPos(wx, y0 - 1, wz);
+                BlockState above = b.get(g.above());
+                boolean free = (isSoil(b.get(g)) || comp[j] >= 0) && (above.isAir() || above.canBeReplaced())
+                        && !Decor.nearStructure(b, wx, y0, wz, 1);
+                if (!free) {
+                    continue;
+                }
+                prev[j] = c;
+                q.add(j);
+            }
+        }
+        if (found < 0) {
+            return false;
+        }
+        for (int c = prev[found]; c >= 0 && prev[c] != -1; c = prev[c]) {
+            trailCell(b, new BlockPos(center.getX() + c / size - r, y0 - 1, center.getZ() + c % size - r), false);
+        }
+        return true;
+    }
+
+    private static int surface(BlockPos center, int wx, int wz, IntBinaryOperator groundY) {
+        int ddx = wx - center.getX(), ddz = wz - center.getZ();
+        int flat = VillageLayout.TERRAIN_FLAT;
+        return ddx * ddx + ddz * ddz <= flat * flat ? center.getY() : groundY.applyAsInt(wx, wz);
+    }
+
+    /** Une case de route voisine déjà posée est-elle à plus d'un bloc de hauteur de celle-ci ? */
+    private static boolean stepTooHigh(VillageBuilder b, BlockPos center, int wx, int wz, int gy, IntBinaryOperator groundY) {
+        for (int[] d : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+            int ny = surface(center, wx + d[0], wz + d[1], groundY);
+            if (Math.abs(ny - gy) > 1 && isPathBlock(b.get(new BlockPos(wx + d[0], ny - 1, wz + d[1])))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean nearTaken(java.util.Set<Long> taken, int x, int z, int r) {
+        if (taken.isEmpty()) {
+            return false;
+        }
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (taken.contains(key(x + dx, z + dz))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Case franchissable par une route de sortie : sol naturel (pas d'eau ni de lave), aucune construction à côté. */
+    private static boolean passable(VillageBuilder b, BlockPos center, int x, int z, IntBinaryOperator groundY, int[] cache, int j) {
+        int wx = center.getX() + x, wz = center.getZ() + z;
+        int gy = x * x + z * z <= VillageLayout.TERRAIN_FLAT * VillageLayout.TERRAIN_FLAT ? center.getY() : groundY.applyAsInt(wx, wz);
+        cache[j] = gy;
+        BlockState g = b.get(new BlockPos(wx, gy - 1, wz));
+        if (!g.getFluidState().isEmpty() || g.is(ICE) || g.is(PACKED_ICE) || !(isSoil(g) || isPathBlock(g) || g.is(SAND))) {
+            return false; // eau, lave, glace, tronc d'arbre, roche...
+        }
+        for (int dy = 0; dy <= 1; dy++) {
+            BlockState s = b.get(new BlockPos(wx, gy + dy, wz));
+            if (!s.isAir() && !s.canBeReplaced()) {
+                return false; // mobilier, arbre, lampadaire
+            }
+        }
+        return !Decor.nearStructure(b, wx, center.getY(), wz, 1);
     }
 
     /** Étals posés (position du vendeur, coordonnées monde), pour la console. */
@@ -278,7 +661,7 @@ public final class VillagePlan {
      */
     private static void lampposts(VillageBuilder b, BlockPos center) {
         List<BlockPos> lamps = new ArrayList<>();
-        int c = VillageLayout.PLAZA_HALF - 1;
+        int c = (int) Math.round((VillageLayout.PLAZA_RADIUS - 2) / Math.sqrt(2)); // en diagonale, près du bord de la place
         for (int[] corner : new int[][] {{-c, -c}, {c, -c}, {-c, c}, {c, c}}) {
             tryLamp(b, center, lamps, corner[0], corner[1], -Integer.signum(corner[0]), 0);
         }
@@ -320,7 +703,7 @@ public final class VillagePlan {
         int y = at.getY();
         // pas sur le chemin ni sur la place
         BlockState under = b.get(at.below());
-        boolean onPlaza = Math.abs(lx) <= VillageLayout.PLAZA_HALF && Math.abs(lz) <= VillageLayout.PLAZA_HALF;
+        boolean onPlaza = VillageLayout.onPlaza(lx, lz);
         if (!onPlaza && !under.is(GRASS_BLOCK) && !under.is(DIRT)) {
             return false;
         }
@@ -429,18 +812,29 @@ public final class VillagePlan {
         return ground.is(DIRT_PATH) || ground.is(GRAVEL) || ground.is(COBBLESTONE);
     }
 
-    /** Place pavée (pierre taillée, pavés, andésite, un peu de mousse), coins arrondis. */
+    /**
+     * Place pavée RONDE (bord doucement ondulé) : pierre taillée, pavés, andésite, un peu de mousse, un anneau d'andésite polie
+     * autour de la fontaine et une bordure de pavés moussus sur le pourtour.
+     */
     private static void plaza(VillageBuilder b, BlockPos center) {
         RandomSource random = b.random();
         int half = VillageLayout.PLAZA_HALF;
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
-                if (Math.abs(dx) == half && Math.abs(dz) == half) {
+                if (!VillageLayout.onPlaza(dx, dz)) {
                     continue;
                 }
-                float r = random.nextFloat();
-                BlockState s = (r < 0.5F ? STONE_BRICKS : r < 0.75F ? COBBLESTONE : r < 0.9F ? ANDESITE : MOSSY_STONE_BRICKS)
-                        .defaultBlockState();
+                double d = Math.sqrt(dx * dx + dz * dz), edge = VillageLayout.plazaRadius(dx, dz);
+                BlockState s;
+                if (d >= 6.5 && d < 7.5) {
+                    s = POLISHED_ANDESITE.defaultBlockState();          // anneau autour de la fontaine
+                } else if (d > edge - 1) {
+                    s = (random.nextFloat() < 0.5F ? MOSSY_COBBLESTONE : COBBLESTONE).defaultBlockState(); // bordure
+                } else {
+                    float r = random.nextFloat();
+                    s = (r < 0.5F ? STONE_BRICKS : r < 0.75F ? COBBLESTONE : r < 0.9F ? ANDESITE : MOSSY_STONE_BRICKS)
+                            .defaultBlockState();
+                }
                 b.set(center.offset(dx, -1, dz), s);
             }
         }

@@ -144,18 +144,26 @@ public final class Quests {
         updated.set(index, quest.asClaimed());
         player.setAttached(ModAttachments.QUESTS, new QuestData(data.day(), data.resetAt(), updated));
 
-        QuestType.Reward reward = quest.reward();
-        if (reward.isXp()) {
-            Progression.addXp(player, reward.count());
-        } else {
-            Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(reward.id()));
-            ItemStack stack = new ItemStack(item, reward.count());
-            if (!player.getInventory().add(stack)) {
-                player.spawnAtLocation((ServerLevel) player.level(), stack); // inventaire plein : l'objet tombe aux pieds du joueur
-            }
+        // cristaux d'XP garantis (selon la difficulté), puis la récompense tirée
+        QuestType type = quest.questType();
+        if (type != null) {
+            give(player, type.crystal(quest.target()));
         }
+        give(player, quest.reward());
         player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
         player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.2F);
+    }
+
+    private static void give(ServerPlayer player, QuestType.Reward reward) {
+        if (reward.isXp()) {
+            Progression.addXp(player, reward.count());
+            return;
+        }
+        Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(reward.id()));
+        ItemStack stack = new ItemStack(item, reward.count());
+        if (!player.getInventory().add(stack) && !stack.isEmpty()) {
+            player.spawnAtLocation((ServerLevel) player.level(), stack); // inventaire plein : l'objet tombe aux pieds du joueur
+        }
     }
 
     /** À chaque tick serveur (ModEvents) : nouveau jour = nouvelles quêtes ; distance parcourue à pied / à la nage. */

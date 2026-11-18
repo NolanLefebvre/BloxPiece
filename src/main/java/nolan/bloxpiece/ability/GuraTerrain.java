@@ -59,6 +59,7 @@ public final class GuraTerrain {
 
     private static boolean breakable(ServerLevel level, BlockPos pos, BlockState state) {
         return !state.isAir() && state.getFluidState().isEmpty() && level.getBlockEntity(pos) == null
+                && !nolan.bloxpiece.village.SafeZone.isProtected(level, pos) // village de départ : intouchable
                 && state.getDestroySpeed(level, pos) >= 0.0F && state.getDestroySpeed(level, pos) < 40.0F; // pierre, minerais, deepslate... (pas l'obsidienne)
     }
 

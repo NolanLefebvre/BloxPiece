@@ -138,8 +138,8 @@ public class EnteiFireball extends LargeFireball {
                         continue;
                     }
                     BlockState state = level.getBlockState(pos);
-                    if (state.isAir()) {
-                        continue;
+                    if (state.isAir() || nolan.bloxpiece.village.SafeZone.isProtected(level, pos)) {
+                        continue; // rien à casser, ou village de départ (intouchable)
                     }
                     // Règles de destruction : on ne touche jamais aux blocs incassables ni à ceux de très forte résistance
                     if (state.getBlock().getExplosionResistance() >= INDESTRUCTIBLE || state.getDestroySpeed(level, pos) < 0.0F) {
@@ -159,7 +159,7 @@ public class EnteiFireball extends LargeFireball {
         // Flammes au hasard sur le fond du cratère (comme l'explosion vanilla avec mobGriefing)
         RandomSource random = level.getRandom();
         for (BlockPos p : removed) {
-            if (random.nextInt(3) == 0 && level.getBlockState(p).isAir()) {
+            if (random.nextInt(3) == 0 && level.getBlockState(p).isAir() && !nolan.bloxpiece.village.SafeZone.isProtected(level, p)) {
                 BlockPos below2 = p.below();
                 if (level.getBlockState(below2).isFaceSturdy(level, below2, Direction.UP)) {
                     level.setBlock(p, Blocks.FIRE.defaultBlockState(), Block.UPDATE_ALL);

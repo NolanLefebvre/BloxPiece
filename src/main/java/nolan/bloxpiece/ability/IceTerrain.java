@@ -226,6 +226,9 @@ public final class IceTerrain {
     }
 
     private static void place(ServerLevel level, BlockPos pos, BlockState original, BlockState placed, int durationTicks) {
+        if (nolan.bloxpiece.village.SafeZone.isProtected(level, pos)) {
+            return; // village de départ : pas de glace posée dans le décor
+        }
         long until = level.getGameTime() + durationTicks + level.getRandom().nextInt(60);
         BLOCKS.put(pos.immutable(), new Frozen(level, original, placed, until));
         level.setBlock(pos, placed, 3);

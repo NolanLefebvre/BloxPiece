@@ -136,6 +136,12 @@ public class ModAttachments {
             builder -> builder.persistent(net.minecraft.core.BlockPos.CODEC)
     );
 
+    /** Village de départ au spawn : point d'apparition sûr (à l'air libre sur la place), vérifié à chaque apparition. */
+    public static final AttachmentType<net.minecraft.core.BlockPos> VILLAGE_SPAWN = AttachmentRegistry.create(
+            BloxPiece.id("village_spawn"),
+            builder -> builder.persistent(net.minecraft.core.BlockPos.CODEC)
+    );
+
     /** Le joueur a déjà reçu sa Boussole du Village (première connexion). Sauvegardé, gardé à la mort. */
     public static final AttachmentType<Boolean> VILLAGE_COMPASS_GIVEN = AttachmentRegistry.create(
             BloxPiece.id("village_compass_given"),

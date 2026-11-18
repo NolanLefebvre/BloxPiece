@@ -30,8 +30,21 @@ public final class VillageLayout {
     /** Rayon aplani autour du centre (blocs), puis raccord en pente douce jusqu'à TERRAIN_BLEND. */
     public static final int TERRAIN_FLAT = 52;
     public static final int TERRAIN_BLEND = 62;
-    /** Demi-côté de la place pavée. */
-    public static final int PLAZA_HALF = 8;
+    /** Rayon moyen de la place pavée, ronde (bord légèrement ondulé, naturel). */
+    public static final int PLAZA_RADIUS = 11;
+    /** Demi-côté du carré qui contient la place (pour les parcours de cases). */
+    public static final int PLAZA_HALF = PLAZA_RADIUS + 2;
+
+    /** Rayon de la place dans la direction (dx, dz) : un cercle doucement ondulé (toujours le même pour un monde donné). */
+    public static double plazaRadius(int dx, int dz) {
+        double a = Math.atan2(dz, dx);
+        return PLAZA_RADIUS + 0.7 * Math.sin(3 * a) + 0.4 * Math.sin(5 * a + 1.0);
+    }
+
+    /** La case (dx, dz) (relative au centre) est-elle sur la place ? */
+    public static boolean onPlaza(int dx, int dz) {
+        return dx * dx + dz * dz <= plazaRadius(dx, dz) * plazaRadius(dx, dz);
+    }
 
     /** Écartement du plan : toutes les positions (bâtiments, allées, mobilier, arbres) sont multipliées par ce facteur. */
     public static final double SPREAD = 1.2;
@@ -46,7 +59,7 @@ public final class VillageLayout {
     }
 
     /** Point de spawn des joueurs (si le village est au spawn) : sur la place, devant la taverne. */
-    public static final BlockPos PLAZA_SPAWN = new BlockPos(0, 0, -5);
+    public static final BlockPos PLAZA_SPAWN = new BlockPos(0, 0, -7);
 
     /** Un bâtiment du plan : nom, origine, rotation, recette, places de PNJ (repère local). */
     public record Entry(String name, BlockPos origin, Rotation rotation, Supplier<Building> recipe, List<BlockPos> npcSpots) {

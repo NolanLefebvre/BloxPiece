@@ -32,7 +32,6 @@ import nolan.bloxpiece.fx.BuddhaEffects;
 import nolan.bloxpiece.fx.FireEffects;
 import nolan.bloxpiece.mob.ArmedPirate;
 import nolan.bloxpiece.mob.BloxMob;
-import nolan.bloxpiece.mob.Pirate;
 import nolan.bloxpiece.quest.QuestType;
 import nolan.bloxpiece.quest.Quests;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -148,7 +147,7 @@ public class ModEvents {
             }
             // Quêtes journalières : pirates et monstres hostiles tués par un joueur
             if (source.getEntity() instanceof ServerPlayer killer && entity != killer) {
-                if (entity instanceof ArmedPirate || entity instanceof Pirate) {
+                if (entity instanceof ArmedPirate) {
                     Quests.progress(killer, QuestType.KILL_PIRATES, 1);
                 }
                 if (entity instanceof Enemy) {

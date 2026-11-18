@@ -37,6 +37,7 @@ public class BloxPiece implements ModInitializer {
         ModSpawns.initialize();
         ModWorldgen.initialize(); // minerai de Granite Marin au fond des océans
         StarterVillage.initialize(); // village pirate de départ, au spawn d'un monde neuf
+        nolan.bloxpiece.village.SafeZone.initialize(); // zone sécurisée du village : invulnérabilité, blocs intouchables
         ModNetworking.initialize();
         ModCommands.initialize();
         ModEvents.initialize();

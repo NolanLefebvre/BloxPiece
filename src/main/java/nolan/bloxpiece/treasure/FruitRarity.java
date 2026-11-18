@@ -19,10 +19,10 @@ public enum FruitRarity {
 
     /** Rareté de chaque fruit (id de l'objet). */
     private static final Map<String, FruitRarity> BY_ITEM = Map.of(
-            "bloxpiece:ice_fruit", RARE,
-            "bloxpiece:fire_fruit", LEGENDARY,
-            "bloxpiece:buddha_fruit", LEGENDARY,
-            "bloxpiece:gura_fruit", MYTHIC
+            "bloxpiece:hie_hie_no_mi", RARE,
+            "bloxpiece:mera_mera_no_mi", LEGENDARY,
+            "bloxpiece:hito_hito_no_mi_model_daibutsu", LEGENDARY,
+            "bloxpiece:gura_gura_no_mi", MYTHIC
     );
 
     public final String id;

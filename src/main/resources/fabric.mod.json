@@ -24,6 +24,7 @@
 	},
 	"mixins": [
 		"bloxpiece.mixins.json",
+		"bloxpiece.optional.mixins.json",
 		{
 			"config": "bloxpiece.client.mixins.json",
 			"environment": "client"

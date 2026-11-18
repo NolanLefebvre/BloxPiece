@@ -36,7 +36,7 @@ public class QuestsScreen extends BloxPanelScreen {
     private static final int CARD_GAP = 4;
     private static final int CARD_X = PAD;
     private static final int CARD_W = PANEL_W - 2 * PAD;
-    private static final int BAR_W = 110;
+    private static final int BAR_W = 86;
     private static final int CLAIM_W = 70;
     private static final int CLAIM_H = 16;
 
@@ -138,10 +138,27 @@ public class QuestsScreen extends BloxPanelScreen {
         g.outline(bx, by, BAR_W, 7, COLOR_GOLD_DIM);
         g.text(font, quest.progress() + " / " + quest.target(), bx + BAR_W + 6, by, done ? COLOR_GREEN : 0xFFFFFFFF, true);
 
-        // Récompense : icône + nombre (survol : nom de la récompense)
+        // Récompenses : cristaux d'XP garantis (selon la difficulté) + bonus tiré (survol : nom de la récompense)
         int claimX = CARD_X + CARD_W - CLAIM_W - 6;
-        int rx = claimX - 44, ry = y + (CARD_H - 16) / 2;
-        QuestType.Reward reward = quest.reward();
+        int ry = y + (CARD_H - 16) / 2;
+        if (type != null) {
+            drawReward(g, font, type.crystal(quest.target()), claimX - 82, ry, mx, my, mouseX, mouseY);
+        }
+        drawReward(g, font, quest.reward(), claimX - 44, ry, mx, my, mouseX, mouseY);
+
+        // Bouton Récupérer / Terminée
+        int cy = y + (CARD_H - CLAIM_H) / 2;
+        boolean claimable = done && !quest.claimed();
+        boolean hovered = claimable && inside(mx, my, claimX, cy, CLAIM_W, CLAIM_H);
+        g.fill(claimX, cy, claimX + CLAIM_W, cy + CLAIM_H, claimable ? (hovered ? 0xFF3A3010 : 0xFF2A2410) : 0xFF101016);
+        g.outline(claimX, cy, CLAIM_W, CLAIM_H, claimable ? (hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD) : 0xFF33333F);
+        Component label = Component.translatable(quest.claimed() ? "screen.bloxpiece.quests.claimed" : "screen.bloxpiece.quests.claim");
+        int color = quest.claimed() ? COLOR_GREEN : claimable ? COLOR_GOLD_BRIGHT : COLOR_HINT;
+        g.centeredText(font, label, claimX + CLAIM_W / 2, cy + (CLAIM_H - font.lineHeight) / 2 + 1, color);
+    }
+
+    private void drawReward(GuiGraphicsExtractor g, Font font, QuestType.Reward reward, int rx, int ry, int mx, int my,
+            int mouseX, int mouseY) {
         ItemStack icon = reward.isXp() ? new ItemStack(ModItems.XP_CRYSTAL_CABIN_BOY)
                 : new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(reward.id())), reward.count());
         g.fill(rx - 2, ry - 2, rx + 18, ry + 18, 0xFF07070C);
@@ -155,16 +172,6 @@ public class QuestsScreen extends BloxPanelScreen {
                     : Component.translatable("screen.bloxpiece.quests.reward_item", reward.count(), icon.getHoverName());
             g.setTooltipForNextFrame(font, tip, mouseX, mouseY);
         }
-
-        // Bouton Récupérer / Terminée
-        int cy = y + (CARD_H - CLAIM_H) / 2;
-        boolean claimable = done && !quest.claimed();
-        boolean hovered = claimable && inside(mx, my, claimX, cy, CLAIM_W, CLAIM_H);
-        g.fill(claimX, cy, claimX + CLAIM_W, cy + CLAIM_H, claimable ? (hovered ? 0xFF3A3010 : 0xFF2A2410) : 0xFF101016);
-        g.outline(claimX, cy, CLAIM_W, CLAIM_H, claimable ? (hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD) : 0xFF33333F);
-        Component label = Component.translatable(quest.claimed() ? "screen.bloxpiece.quests.claimed" : "screen.bloxpiece.quests.claim");
-        int color = quest.claimed() ? COLOR_GREEN : claimable ? COLOR_GOLD_BRIGHT : COLOR_HINT;
-        g.centeredText(font, label, claimX + CLAIM_W / 2, cy + (CLAIM_H - font.lineHeight) / 2 + 1, color);
     }
 
     private void drawBackButton(GuiGraphicsExtractor g, Font font, int mx, int my) {

@@ -1,0 +1,13 @@
+{
+	"required": false,
+	"package": "nolan.bloxpiece.mixin.optional",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"ServerExplosionMixin",
+		"BaseFireBlockMixin",
+		"FireBlockMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}

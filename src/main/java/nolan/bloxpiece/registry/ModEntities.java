@@ -22,7 +22,6 @@ import nolan.bloxpiece.fx.IceStatue;
 import nolan.bloxpiece.fx.IceTrident;
 import nolan.bloxpiece.fx.HikenFist;
 import nolan.bloxpiece.fx.Meteor;
-import nolan.bloxpiece.mob.Pirate;
 import nolan.bloxpiece.mob.PirateCaptain;
 import nolan.bloxpiece.mob.PirateGunner;
 import nolan.bloxpiece.mob.PirateSwordsman;
@@ -31,19 +30,11 @@ import nolan.bloxpiece.fx.QuakeFx;
 
 /**
  * Tous les types d'entités du mod. Une entité enregistrée ici est automatiquement utilisable
- * avec la commande vanilla : /summon bloxpiece:<nom> (ex : /summon bloxpiece:pirate).
+ * avec la commande vanilla : /summon bloxpiece:<nom> (ex : /summon bloxpiece:pirate_swordsman).
  */
 public class ModEntities {
 
-    public static final ResourceKey<EntityType<?>> PIRATE_KEY =
-            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate"));
-
-    public static final EntityType<Pirate> PIRATE = EntityType.Builder.of(Pirate::new, MobCategory.MONSTER)
-            .sized(0.6F, 1.95F)       // même hitbox qu'un joueur / zombie
-            .clientTrackingRange(8)
-            .build(PIRATE_KEY);
-
-    // Pirates armés : ils remplacent l'ancien pirate (toujours enregistré pour les mondes existants, mais il n'apparaît plus)
+    // Pirates armés (épéiste, tireur, capitaine). L'ancien pirate de base sans équipement a été supprimé.
     public static final ResourceKey<EntityType<?>> PIRATE_SWORDSMAN_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_swordsman"));
 
@@ -207,7 +198,6 @@ public class ModEntities {
 
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
-        register(PIRATE_KEY, PIRATE, Pirate.STATS.toAttributes());
         register(PIRATE_SWORDSMAN_KEY, PIRATE_SWORDSMAN, PirateSwordsman.STATS.toAttributes());
         register(PIRATE_GUNNER_KEY, PIRATE_GUNNER, PirateGunner.STATS.toAttributes());
         register(PIRATE_CAPTAIN_KEY, PIRATE_CAPTAIN, PirateCaptain.STATS.toAttributes()

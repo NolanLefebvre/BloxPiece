@@ -37,7 +37,6 @@ import nolan.bloxpiece.client.entity.GuraModels;
 import nolan.bloxpiece.client.entity.QuakeFxRenderer;
 import nolan.bloxpiece.client.entity.PirateGearModels;
 import nolan.bloxpiece.client.entity.PirateBulletRenderer;
-import nolan.bloxpiece.client.entity.PirateRenderer;
 import nolan.bloxpiece.client.hud.AbilityHud;
 import nolan.bloxpiece.client.particle.ModParticle;
 import nolan.bloxpiece.client.hud.ClientCooldowns;
@@ -88,7 +87,6 @@ public class BloxPieceClient implements ClientModInitializer {
     public void onInitializeClient() {
         BloxXpTooltip.register(); // infobulle des objets d'XP BloxPiece
         // Apparence des mobs du mod (un renderer par type d'entité)
-        EntityRendererRegistry.register(ModEntities.PIRATE, PirateRenderer::new);
         // Pirates armés (arme 3D en main) et balle de pistolet 3D
         // (4 skins chacun, équipement 3D : bandana + fourreau / tricorne + bandoulière)
         ModelLayerRegistry.registerModelLayer(PirateGearModels.SWORDSMAN, PirateGearModels::swordsman);

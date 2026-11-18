@@ -11,7 +11,7 @@ import nolan.bloxpiece.BloxPiece;
  * Paquet serveur -> client pour la roulette du Coffre au Trésor (TreasureChests) :
  * <ul>
  *   <li>{@link #OPEN} : ouvre la fenêtre (rien n'est encore consommé ni tiré) ;</li>
- *   <li>id d'un objet (ex : bloxpiece:fire_fruit) : réponse au clic sur OUVRIR, la roulette doit s'arrêter sur ce fruit
+ *   <li>id d'un objet (ex : bloxpiece:mera_mera_no_mi) : réponse au clic sur OUVRIR, la roulette doit s'arrêter sur ce fruit
  *       (le serveur le donnera lui-même à la fin de l'animation) ;</li>
  *   <li>{@link #FAILED} : le coffre n'est plus là, la fenêtre se ferme.</li>
  * </ul>
