@@ -63,6 +63,7 @@ public class ModEvents {
             // Paume du Bouddha : charge, puis onde de choc dorée après l'impact
             BuddhaPalmAbility.tick(server);
             BuddhaShockwaveAbility.tick(server);
+            nolan.bloxpiece.fx.GoldenColossus.tick(server); // paume colossale de l'Onde de choc
             BuddhaUltimateAbility.tick(server);
             BuddhaEffects.tick();
             // Passif Logia du fruit du Feu : membres dispersés en flammes
@@ -201,6 +202,7 @@ public class ModEvents {
             BuddhaTransformAbility.clear();
             BuddhaPalmAbility.clear();
             BuddhaShockwaveAbility.clear();
+            nolan.bloxpiece.fx.GoldenColossus.clear(server);
             BuddhaUltimateAbility.clear();
             BuddhaEffects.clear();
             LogiaIntangibility.clear();

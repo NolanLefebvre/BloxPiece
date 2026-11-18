@@ -93,10 +93,12 @@ final class AbilityRow {
         // Ligne 1 : nom à gauche, niveau requis à droite (vert = atteint, rouge = pas encore)
         int textX = x + TEXT_X;
         int right = x + w - RIGHT_PAD;
-        g.text(font, Component.translatable(ability.nameKey()), textX, y + 5,
-                unlocked ? COLOR_NAME : COLOR_NAME_LOCKED, true);
         Component level = Component.translatable("screen.bloxpiece.abilities.required_level", ability.requiredLevel());
-        g.text(font, level, right - font.width(level), y + 5, unlocked ? COLOR_LEVEL_OK : COLOR_LEVEL_LOCKED, true);
+        int levelX = right - font.width(level);
+        // nom raccourci s'il atteindrait le niveau requis (aucun chevauchement)
+        g.text(font, BloxPanelScreen.fit(font, Component.translatable(ability.nameKey()), levelX - 8 - textX), textX, y + 5,
+                unlocked ? COLOR_NAME : COLOR_NAME_LOCKED, true);
+        g.text(font, level, levelX, y + 5, unlocked ? COLOR_LEVEL_OK : COLOR_LEVEL_LOCKED, true);
 
         // Lignes suivantes : description, à la ligne automatiquement (la hauteur de la ligne s'adapte : voir heightFor)
         List<FormattedCharSequence> lines = descriptionLines(font, ability, w);

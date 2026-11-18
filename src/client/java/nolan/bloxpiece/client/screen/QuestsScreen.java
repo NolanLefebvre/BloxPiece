@@ -21,8 +21,8 @@ import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModItems;
 
 /**
- * Page Quêtes du menu personnage (bouton "Quêtes"). Onglets de catégories en haut (QuestCategory : seulement "Quêtes
- * journalières" pour l'instant), temps restant avant les nouvelles quêtes à droite, puis une carte par quête : titre, objectif,
+ * Page Quêtes du menu personnage (bouton "Quêtes"). Onglets de catégories en haut (QuestCategory : "Quêtes journalières" et
+ * "Quêtes uniques", ces dernières encore vides), temps restant avant les nouvelles quêtes à droite, puis une carte par quête : titre, objectif,
  * barre de progression "5 / 10", récompense (icône + nombre) et bouton "Récupérer" (actif quand la quête est terminée,
  * "Terminée" une fois récupérée). Tout est LU à chaque image depuis l'attachment QUESTS (synchronisé par le serveur) ; le bouton
  * envoie ClaimQuestPayload et le serveur vérifie tout.
@@ -36,7 +36,8 @@ public class QuestsScreen extends BloxPanelScreen {
     private static final int CARD_GAP = 4;
     private static final int CARD_X = PAD;
     private static final int CARD_W = PANEL_W - 2 * PAD;
-    private static final int BAR_W = 86;
+    /** Largeur réservée aux deux récompenses (icône + nombre chacune), entre les textes et le bouton Récupérer. */
+    private static final int REWARDS_W = 76;
     private static final int CLAIM_W = 70;
     private static final int CLAIM_H = 16;
 
@@ -58,7 +59,7 @@ public class QuestsScreen extends BloxPanelScreen {
 
     @Override
     protected int panelHeight() {
-        return backY() + BACK_H + 18;
+        return backY() + BACK_H + 10;
     }
 
     private int backY() {
@@ -66,14 +67,14 @@ public class QuestsScreen extends BloxPanelScreen {
     }
 
     @Override
-    protected Component hint() {
-        return Component.translatable("screen.bloxpiece.abilities.hint", closeKey.getTranslatedKeyMessage());
-    }
-
-    @Override
     protected void extractPanel(GuiGraphicsExtractor g, Font font, LocalPlayer player,
                                 int mx, int my, int mouseX, int mouseY, float dt) {
         drawTabs(g, font, mx, my);
+        if (this.category == QuestCategory.UNIQUE) {
+            drawUniqueQuests(g, font);
+            drawBackButton(g, font, mx, my);
+            return;
+        }
         QuestData data = player.getAttached(ModAttachments.QUESTS);
         if (data != null) {
             drawResetTimer(g, font, player, data);
@@ -105,13 +106,38 @@ public class QuestsScreen extends BloxPanelScreen {
         }
     }
 
-    /** "Nouvelles quêtes dans 12:34" : temps réel restant avant le prochain jour Minecraft (20 ticks = 1 s). */
+    /**
+     * Onglet Quêtes uniques : encore aucune quête (le contenu viendra plus tard). Un cadre en pointillés dorés avec une icône,
+     * un titre et une explication, centré dans la zone des cartes.
+     */
+    private void drawUniqueQuests(GuiGraphicsExtractor g, Font font) {
+        int x = CARD_X, y = CARDS_Y, w = CARD_W, h = Quests.DAILY_COUNT * (CARD_H + CARD_GAP) - CARD_GAP;
+        g.fill(x, y, x + w, y + h, COLOR_CARD);
+        // bordure en pointillés
+        for (int i = 0; i < w; i += 6) {
+            g.fill(x + i, y, x + Math.min(w, i + 3), y + 1, COLOR_GOLD_DIM);
+            g.fill(x + i, y + h - 1, x + Math.min(w, i + 3), y + h, COLOR_GOLD_DIM);
+        }
+        for (int i = 0; i < h; i += 6) {
+            g.fill(x, y + i, x + 1, y + Math.min(h, i + 3), COLOR_GOLD_DIM);
+            g.fill(x + w - 1, y + i, x + w, y + Math.min(h, i + 3), COLOR_GOLD_DIM);
+        }
+        int cy = y + h / 2;
+        g.item(new ItemStack(ModItems.TREASURE_CHEST), x + w / 2 - 8, cy - 34);
+        g.centeredText(font, Component.translatable("screen.bloxpiece.quests.unique.empty"), x + w / 2, cy - 10, COLOR_GOLD_BRIGHT);
+        g.centeredText(font, Component.translatable("screen.bloxpiece.quests.unique.hint"), x + w / 2, cy + 4, COLOR_LABEL);
+    }
+
+    /**
+     * "Nouvelles quêtes dans 12:34" : temps réel restant avant le prochain jour Minecraft (20 ticks = 1 s). Affiché à droite de
+     * la ligne du bouton Retour (la ligne des onglets reste libre pour les onglets : aucun chevauchement).
+     */
     private void drawResetTimer(GuiGraphicsExtractor g, Font font, LocalPlayer player, QuestData data) {
         long ticksLeft = Math.max(0L, data.resetAt() - player.level().getGameTime()); // resetAt vient du serveur
         long seconds = ticksLeft / 20;
-        Component text = Component.translatable("screen.bloxpiece.quests.reset",
-                String.format("%d:%02d", seconds / 60, seconds % 60));
-        g.text(font, text, PANEL_W - PAD - font.width(text), TABS_Y + 3, COLOR_LABEL, true);
+        Component text = fit(font, Component.translatable("screen.bloxpiece.quests.reset",
+                String.format("%d:%02d", seconds / 60, seconds % 60)), PANEL_W - 2 * PAD - BACK_W - 10);
+        g.text(font, text, PANEL_W - PAD - font.width(text), backY() + (BACK_H - font.lineHeight) / 2 + 1, COLOR_LABEL, true);
     }
 
     // ------------------------------------------------------------------ cartes de quêtes
@@ -125,26 +151,31 @@ public class QuestsScreen extends BloxPanelScreen {
         // Titre et objectif
         Component title = type == null ? Component.literal(quest.type()) : Component.translatable(type.titleKey());
         Component objective = type == null ? Component.empty() : Component.translatable(type.objectiveKey(), quest.target());
-        g.text(font, title, CARD_X + 6, y + 5, COLOR_GOLD_BRIGHT, true);
-        g.text(font, objective, CARD_X + 6, y + 16, COLOR_LABEL, false);
+        // zone de texte : de la gauche de la carte jusqu'avant les icônes de récompense (rien ne passe dessous)
+        int textRight = CARD_X + CARD_W - CLAIM_W - 6 - REWARDS_W - 6;
+        String counter = quest.progress() + " / " + quest.target();
+        int counterX = textRight - font.width(counter);
+        g.text(font, fit(font, title, counterX - 6 - (CARD_X + 6)), CARD_X + 6, y + 5, COLOR_GOLD_BRIGHT, true);
+        g.text(font, counter, counterX, y + 5, done ? COLOR_GREEN : 0xFFFFFFFF, true);
+        g.text(font, fit(font, objective, textRight - (CARD_X + 6)), CARD_X + 6, y + 16, COLOR_LABEL, false);
 
-        // Barre de progression + compteur
+        // Barre de progression (sur toute la largeur de la zone de texte)
         int bx = CARD_X + 6, by = y + 28;
-        g.fill(bx, by, bx + BAR_W, by + 7, 0xFF07070C);
-        int fill = Math.round((BAR_W - 2) * Math.min(1.0F, quest.progress() / (float) Math.max(1, quest.target())));
+        int barW = textRight - bx;
+        g.fill(bx, by, bx + barW, by + 7, 0xFF07070C);
+        int fill = Math.round((barW - 2) * Math.min(1.0F, quest.progress() / (float) Math.max(1, quest.target())));
         if (fill > 0) {
             g.fillGradient(bx + 1, by + 1, bx + 1 + fill, by + 6, done ? 0xFF8BF28F : 0xFF55C7FF, done ? 0xFF2E9A3A : 0xFF1F6BE0);
         }
-        g.outline(bx, by, BAR_W, 7, COLOR_GOLD_DIM);
-        g.text(font, quest.progress() + " / " + quest.target(), bx + BAR_W + 6, by, done ? COLOR_GREEN : 0xFFFFFFFF, true);
+        g.outline(bx, by, barW, 7, COLOR_GOLD_DIM);
 
         // Récompenses : cristaux d'XP garantis (selon la difficulté) + bonus tiré (survol : nom de la récompense)
         int claimX = CARD_X + CARD_W - CLAIM_W - 6;
         int ry = y + (CARD_H - 16) / 2;
         if (type != null) {
-            drawReward(g, font, type.crystal(quest.target()), claimX - 82, ry, mx, my, mouseX, mouseY);
+            drawReward(g, font, type.crystal(quest.target()), claimX - REWARDS_W, ry, mx, my, mouseX, mouseY);
         }
-        drawReward(g, font, quest.reward(), claimX - 44, ry, mx, my, mouseX, mouseY);
+        drawReward(g, font, quest.reward(), claimX - REWARDS_W / 2, ry, mx, my, mouseX, mouseY);
 
         // Bouton Récupérer / Terminée
         int cy = y + (CARD_H - CLAIM_H) / 2;
@@ -192,6 +223,22 @@ public class QuestsScreen extends BloxPanelScreen {
             playClickSound();
             onClose();
             return true;
+        }
+        // onglets de catégories (mêmes positions que drawTabs)
+        int tx = PAD;
+        for (QuestCategory cat : QuestCategory.values()) {
+            int w = this.minecraft.font.width(Component.translatable(cat.titleKey())) + 14;
+            if (inside(mx, my, tx, TABS_Y, w, TAB_H)) {
+                if (cat != this.category) {
+                    playClickSound();
+                    this.category = cat;
+                }
+                return true;
+            }
+            tx += w + 4;
+        }
+        if (this.category != QuestCategory.DAILY) {
+            return false; // pas encore de bouton dans l'onglet des quêtes uniques
         }
         LocalPlayer player = this.minecraft.player;
         QuestData data = player == null ? null : player.getAttached(ModAttachments.QUESTS);

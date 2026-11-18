@@ -74,6 +74,7 @@ public final class VillageBlocks {
     public static final Block GREEN_CARPET = get("green_carpet");
     public static final Block HAY_BLOCK = get("hay_block");
     public static final Block ICE = get("ice");
+    public static final Block FROSTED_ICE = get("frosted_ice");
     public static final Block JUNGLE_LEAVES = get("jungle_leaves");
     public static final Block JUNGLE_LOG = get("jungle_log");
     public static final Block LADDER = get("ladder");

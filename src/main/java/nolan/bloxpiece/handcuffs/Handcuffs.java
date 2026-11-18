@@ -1,5 +1,6 @@
 package nolan.bloxpiece.handcuffs;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -61,7 +62,8 @@ import nolan.bloxpiece.registry.ModItems;
  *   <li>Porteur d'un fruit du démon : le Granite Marin lui retire ses pouvoirs. Vitesse -15 %, attaques bloquées (AbilityManager),
  *       passif Logia désactivé (LogiaIntangibility), transformation annulée et impossible.</li>
  *   <li>Retrait : clic droit avec une Clé de Menottes sur le joueur, ou sur soi-même (clic droit dans le vide avec la clé en main).
- *       Les menottes sont détruites. À la mort, elles tombent au sol.</li>
+ *       Les menottes sont détruites. À la mort, elles tombent au sol. Sans clé, elles s'ouvrent d'elles-mêmes au bout de
+ *       {@link #DURATION_SECONDS} secondes (5 minutes, joueurs et mobs) ; le joueur voit le temps restant à l'écran.</li>
  *   <li>Mobs : mêmes conditions (10 % de PV ou moins, poseur dans son dos), seulement les mobs qui ont des bras (tag d'entités
  *       bloxpiece:has_arms : zombies, squelettes, piglins, pirates...). Un mob menotté a les bras dans le dos, range son arme (un
  *       squelette range son arc), ne peut plus prendre de cible (MobMixin : aucune attaque, visée ni tir), ne peut plus infliger
@@ -76,6 +78,9 @@ public final class Handcuffs {
     /** Ralentissement d'un porteur de fruit menotté : -15 % de vitesse. */
     private static final Identifier SPEED_MODIFIER = BloxPiece.id("handcuffs_slowness");
     private static final double FRUIT_SLOWNESS = -0.15;
+
+    /** Durée des menottes : elles s'ouvrent d'elles-mêmes au bout de 5 minutes (la clé les retire plus tôt). */
+    public static final int DURATION_SECONDS = 5 * 60;
 
     /** Seuil de PV : la cible doit être à 10 % de ses PV maximum ou moins. */
     private static final float MAX_HEALTH_RATIO = 0.10F;
@@ -140,6 +145,7 @@ public final class Handcuffs {
 
     private static boolean apply(ServerPlayer target, ServerPlayer by) {
         target.setAttached(ModAttachments.HANDCUFFED, true);
+        target.setAttached(ModAttachments.HANDCUFF_SECONDS, DURATION_SECONDS);
         if (BuddhaTransformAbility.isActive(target)) {
             BuddhaTransformAbility.reset(target);
         }
@@ -162,6 +168,7 @@ public final class Handcuffs {
             return false;
         }
         target.removeAttached(ModAttachments.HANDCUFFED);
+        target.removeAttached(ModAttachments.HANDCUFF_SECONDS);
         updateSpeed(target, false);
         ServerLevel level = (ServerLevel) target.level();
         level.playSound(null, target.getX(), target.getY() + 1.0, target.getZ(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 0.6F, 1.8F);
@@ -198,6 +205,7 @@ public final class Handcuffs {
             return false;
         }
         mob.setAttached(ModAttachments.HANDCUFFED, true);
+        mob.setAttached(ModAttachments.HANDCUFF_SECONDS, DURATION_SECONDS);
         stowWeapons(mob);
         neutralize(mob);
         CUFFED_MOBS.add(mob);
@@ -213,13 +221,39 @@ public final class Handcuffs {
         if (!isCuffed(mob)) {
             return false;
         }
+        freeMob(mob);
+        by.sendSystemMessage(Component.translatable("message.bloxpiece.handcuffs.released_other", mob.getDisplayName()), true);
+        return true;
+    }
+
+    /** Retire les menottes d'un mob (clé ou expiration) : il reprend son arme. */
+    private static void freeMob(Mob mob) {
         mob.removeAttached(ModAttachments.HANDCUFFED);
+        mob.removeAttached(ModAttachments.HANDCUFF_SECONDS);
         CUFFED_MOBS.remove(mob);
         restoreWeapons(mob);
         ServerLevel level = (ServerLevel) mob.level();
         level.playSound(null, mob.getX(), mob.getY() + 1.0, mob.getZ(), SoundEvents.IRON_DOOR_OPEN, SoundSource.HOSTILE, 0.6F, 1.8F);
-        by.sendSystemMessage(Component.translatable("message.bloxpiece.handcuffs.released_other", mob.getDisplayName()), true);
-        return true;
+    }
+
+    /**
+     * Compte à rebours des menottes (une fois par seconde) : à zéro, elles s'ouvrent d'elles-mêmes et disparaissent. Une entité
+     * menottée avant l'ajout du compteur (ancienne sauvegarde) repart pour 5 minutes.
+     */
+    private static boolean countDown(Entity entity) {
+        Integer left = entity.getAttached(ModAttachments.HANDCUFF_SECONDS);
+        int next = (left == null ? DURATION_SECONDS : left) - 1;
+        if (next <= 0) {
+            return true;
+        }
+        entity.setAttached(ModAttachments.HANDCUFF_SECONDS, next);
+        return false;
+    }
+
+    /** Menottes ouvertes par le temps (joueur) : comme avec la clé, avec son propre message. */
+    private static void expire(ServerPlayer player) {
+        release(player, player);
+        player.sendSystemMessage(Component.translatable("message.bloxpiece.handcuffs.expired"), true);
     }
 
     /** Range l'arme (et la main secondaire) : un squelette range son arc, un pirate son sabre ou son pistolet. */
@@ -302,6 +336,19 @@ public final class Handcuffs {
     public static void tick(MinecraftServer server) {
         // Mobs menottés : toujours neutralisés (leurs IA essaient de reprendre une cible)
         CUFFED_MOBS.removeIf(mob -> mob.isRemoved() || !isCuffed(mob));
+        // Compte à rebours des menottes, une fois par seconde (5 minutes au total)
+        if (server.getTickCount() % 20 == 0) {
+            for (Mob mob : new ArrayList<>(CUFFED_MOBS)) {
+                if (countDown(mob)) {
+                    freeMob(mob);
+                }
+            }
+            for (ServerPlayer player : new ArrayList<>(server.getPlayerList().getPlayers())) {
+                if (isCuffed(player) && countDown(player)) {
+                    expire(player);
+                }
+            }
+        }
         for (Mob mob : CUFFED_MOBS) {
             neutralize(mob);
             flee(mob);
@@ -340,6 +387,7 @@ public final class Handcuffs {
             if (entity instanceof ServerPlayer player && isCuffed(player)) {
                 player.spawnAtLocation((ServerLevel) player.level(), new ItemStack(ModItems.SEASTONE_HANDCUFFS));
                 player.removeAttached(ModAttachments.HANDCUFFED);
+                player.removeAttached(ModAttachments.HANDCUFF_SECONDS);
             } else if (entity instanceof Mob mob && isCuffed(mob) && mob.level() instanceof ServerLevel level) {
                 mob.spawnAtLocation(level, new ItemStack(ModItems.SEASTONE_HANDCUFFS));
                 ItemStack[] stored = STORED_WEAPONS.remove(mob.getUUID());

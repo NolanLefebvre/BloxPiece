@@ -447,9 +447,10 @@ public class RouletteScreen extends Screen {
             color = COLOR_GOLD_BRIGHT;
         }
         title = title.copy().withStyle(ChatFormatting.BOLD);
+        float titleScale = Math.min(1.25F, (BANNER_W - 40) / (float) Math.max(1, this.font.width(title))); // reste dans la bannière
         g.pose().pushMatrix();
         g.pose().translate(PANEL_W / 2.0F, BANNER_Y + 10.0F);
-        g.pose().scale(1.25F);
+        g.pose().scale(titleScale);
         g.centeredText(this.font, title, 0, 0, color);
         g.pose().popMatrix();
         g.centeredText(this.font, Component.translatable("screen.bloxpiece.roulette.subtitle"), PANEL_W / 2, 32, COLOR_GOLD);
@@ -480,9 +481,11 @@ public class RouletteScreen extends Screen {
                 .withStyle(ChatFormatting.BOLD);
         g.centeredText(this.font, rarityLine, PANEL_W / 2, y + 8, a | (this.rarity.color & 0xFFFFFF));
         Component name = this.winner.getHoverName().copy().withStyle(ChatFormatting.BOLD);
+        // nom du fruit agrandi, mais jamais plus large que le parchemin (ex : « Hito Hito no Mi, Modèle : Daibutsu »)
+        float nameScale = Math.min(1.2F, (PLAQUE_W - 24) / (float) Math.max(1, this.font.width(name)));
         g.pose().pushMatrix();
         g.pose().translate(PANEL_W / 2.0F, y + 22.0F);
-        g.pose().scale(1.2F);
+        g.pose().scale(nameScale);
         g.centeredText(this.font, name, 0, 0, a | (this.rarity.color & 0xFFFFFF));
         g.pose().popMatrix();
         Component added = Component.translatable("screen.bloxpiece.roulette.added");
@@ -519,11 +522,6 @@ public class RouletteScreen extends Screen {
         g.centeredText(this.font, label.copy().withStyle(ChatFormatting.BOLD), BUTTON_W / 2, (BUTTON_H - 8) / 2, textColor);
         g.pose().popMatrix();
 
-        if (this.state == State.DONE) {
-            g.centeredText(this.font, Component.translatable("screen.bloxpiece.roulette.close"), PANEL_W / 2, PANEL_H + 6, COLOR_HINT);
-        } else if (this.state == State.READY) {
-            g.centeredText(this.font, Component.translatable("screen.bloxpiece.roulette.later"), PANEL_W / 2, PANEL_H + 6, COLOR_HINT);
-        }
     }
 
     // ------------------------------------------------------------------ outils

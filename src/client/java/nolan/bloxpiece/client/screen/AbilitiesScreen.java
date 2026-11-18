@@ -26,7 +26,7 @@ import nolan.bloxpiece.registry.ModAttachments;
 public class AbilitiesScreen extends BloxPanelScreen {
 
     // La hauteur du panneau s'adapte au contenu (chaque ligne s'adapte à sa description, voir AbilityRow.heightFor) :
-    // rien ne déborde jamais sur le bouton Retour ni sur le texte d'aide
+    // rien ne déborde jamais sur le bouton Retour
     private static final int MIN_PANEL_HEIGHT = PANEL_H;
 
     private static final int ROWS_X = PAD;
@@ -37,9 +37,9 @@ public class AbilitiesScreen extends BloxPanelScreen {
     private static final int BACK_W = 62;
     private static final int BACK_H = 14;
     private static final int BACK_X = PAD;
-    /** Espace entre la dernière attaque et le bouton Retour, puis entre le bouton et le texte d'aide (sur sa propre ligne). */
+    /** Espace entre la dernière attaque et le bouton Retour, puis sous le bouton. */
     private static final int BACK_MARGIN = 6;
-    private static final int HINT_SPACE = 18;
+    private static final int BOTTOM_SPACE = 10;
 
     private final CharacterScreen parent;
 
@@ -51,7 +51,7 @@ public class AbilitiesScreen extends BloxPanelScreen {
 
     @Override
     protected int panelHeight() {
-        return Math.max(MIN_PANEL_HEIGHT, backY() + BACK_H + HINT_SPACE);
+        return Math.max(MIN_PANEL_HEIGHT, backY() + BACK_H + BOTTOM_SPACE);
     }
 
     /** Bas de la liste des attaques (ou de la zone de message s'il n'y en a pas). */
@@ -72,14 +72,9 @@ public class AbilitiesScreen extends BloxPanelScreen {
         return y - ROW_GAP;
     }
 
-    /** Le bouton Retour, juste sous la dernière attaque, sur sa propre ligne (le texte d'aide est en dessous). */
+    /** Le bouton Retour, juste sous la dernière attaque, sur sa propre ligne. */
     private int backY() {
         return contentBottom() + BACK_MARGIN;
-    }
-
-    @Override
-    protected Component hint() {
-        return Component.translatable("screen.bloxpiece.abilities.hint", closeKey.getTranslatedKeyMessage());
     }
 
     @Override

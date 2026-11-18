@@ -62,12 +62,7 @@ public class CharacterScreen extends BloxPanelScreen {
 
     @Override
     protected int panelHeight() {
-        return QUESTS_Y + QUESTS_H + 18;
-    }
-
-    @Override
-    protected Component hint() {
-        return Component.translatable("screen.bloxpiece.character.hint", closeKey.getTranslatedKeyMessage());
+        return QUESTS_Y + QUESTS_H + 10;
     }
 
     @Override

@@ -187,10 +187,9 @@ public final class Interiors {
                 f.barrel(x, 2, zb + 1, Direction.SOUTH);
             }
         }
-        // comptoir (plateau en dalles)
+        // comptoir : une rangée de rondins écorcés, sans plateau en dalles au-dessus (le Tavernier reste bien visible)
         for (int x = -3; x <= 3; x++) {
             f.log(x, 1, zb + 3, STRIPPED_DARK_OAK_LOG, Direction.Axis.X);
-            f.slab(x, 2, zb + 3, DARK_OAK_SLAB, false);
         }
         // escalier vers l'étage, le long du mur est, montant vers le fond ; trémie dans le plancher au-dessus
         for (int i = 0; i < 4; i++) {
@@ -205,7 +204,7 @@ public final class Interiors {
             f.stairs(t[0], 1, t[1] + 1, OAK_STAIRS, Direction.SOUTH, false);
             f.stairs(t[0], 1, t[1] - 1, OAK_STAIRS, Direction.NORTH, false);
         }
-        for (int[] l : new int[][] {{-3, -4}, {2, -4}, {0, zb + 2}}) {
+        for (int[] l : new int[][] {{-3, -4}, {2, -4}}) { // plus de lanterne au-dessus du Tavernier (derrière le comptoir)
             f.lantern(l[0], 3, l[1], true);
         }
         f.fill(-1, 1, -2, 0, 1, -1, RED_CARPET);

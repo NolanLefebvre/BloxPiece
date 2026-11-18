@@ -89,6 +89,10 @@ public class BloxPieceClient implements ClientModInitializer {
         // Apparence des mobs du mod (un renderer par type d'entité)
         // Pirates armés (arme 3D en main) et balle de pistolet 3D
         // (4 skins chacun, équipement 3D : bandana + fourreau / tricorne + bandoulière)
+        // Tavernier du village de départ
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.TavernKeeperModel.LAYER,
+                nolan.bloxpiece.client.entity.TavernKeeperModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.TAVERN_KEEPER, nolan.bloxpiece.client.entity.TavernKeeperRenderer::new);
         ModelLayerRegistry.registerModelLayer(PirateGearModels.SWORDSMAN, PirateGearModels::swordsman);
         ModelLayerRegistry.registerModelLayer(PirateGearModels.GUNNER, PirateGearModels::gunner);
         EntityRendererRegistry.register(ModEntities.PIRATE_SWORDSMAN,
@@ -175,6 +179,9 @@ public class BloxPieceClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ShakePayload.TYPE,
                 (payload, context) -> CameraShake.start(payload.strength(), payload.ticks()));
         // Coffre au Trésor : ouverture de la roulette, puis fruit tiré par le serveur au clic sur OUVRIR (il le donne lui-même)
+        // PNJ : fenêtre de dialogue (clic droit sur le Tavernier)
+        ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.OpenDialoguePayload.TYPE, (payload, context) ->
+                Minecraft.getInstance().gui.setScreen(new nolan.bloxpiece.client.screen.DialogueScreen(payload.npc())));
         ClientPlayNetworking.registerGlobalReceiver(OpenRoulettePayload.TYPE, (payload, context) -> {
             Minecraft mc = Minecraft.getInstance();
             String id = payload.fruitItemId();

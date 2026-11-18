@@ -122,6 +122,15 @@ public class ModAttachments {
     );
 
     /**
+     * Menottes : secondes restantes avant qu'elles ne s'ouvrent d'elles-mêmes (joueurs et mobs). Sauvegardé, et envoyé au
+     * joueur concerné pour son compteur à l'écran (HandcuffsClient).
+     */
+    public static final AttachmentType<Integer> HANDCUFF_SECONDS = AttachmentRegistry.create(
+            BloxPiece.id("handcuff_seconds"),
+            builder -> builder.persistent(Codec.INT).syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /**
      * Village de départ : présent (true) sur l'Overworld une fois la question réglée pour ce monde (village construit, ou monde
      * existant ignoré). Sauvegardé avec le monde : le village n'est jamais reconstruit. Voir StarterVillage.
      */

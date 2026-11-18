@@ -44,6 +44,8 @@ public class ModNetworking {
         PayloadTypeRegistry.clientboundPlay().register(ShakePayload.TYPE, ShakePayload.CODEC);
         // Serveur -> Client (ouverture d'un Coffre au Trésor : roulette des fruits du démon)
         PayloadTypeRegistry.clientboundPlay().register(OpenRoulettePayload.TYPE, OpenRoulettePayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(nolan.bloxpiece.network.OpenDialoguePayload.TYPE,
+                nolan.bloxpiece.network.OpenDialoguePayload.CODEC); // dialogue des PNJ (Tavernier)
 
         ServerPlayNetworking.registerGlobalReceiver(UseAbilityPayload.TYPE, (payload, context) -> {
             if (payload.pressed()) {

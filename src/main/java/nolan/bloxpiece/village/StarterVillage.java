@@ -94,7 +94,7 @@ public final class StarterVillage {
         long start = System.currentTimeMillis();
         BlockPos worldSpawn = worldSpawn(level);
         BlockPos center = findSite(level, worldSpawn);
-        build(level, center);
+        center = build(level, center); // la place peut être surélevée au-dessus d'un lac voisin
         level.setAttached(ModAttachments.VILLAGE_CENTER, center);
         boolean atSpawn = horizontalDistance(center, worldSpawn) <= AT_SPAWN_DISTANCE;
         if (atSpawn) {
@@ -342,7 +342,7 @@ public final class StarterVillage {
      * être sur la terre ferme ; quelques points d'eau en bordure sont tolérés (village côtier), au-delà +100 par point.
      */
     private static int siteScore(ServerLevel level, int x, int z) {
-        int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE, wet = 0;
+        int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE, wet = 0, wetTop = Integer.MIN_VALUE;
         boolean centerWet = false;
         for (int i = -1; i < 8; i++) {
             int px = x, pz = z;
@@ -356,6 +356,7 @@ public final class StarterVillage {
             boolean isWet = !top.getFluidState().isEmpty() || top.is(ICE) || top.is(PACKED_ICE);
             if (isWet) {
                 wet++;
+                wetTop = Math.max(wetTop, h);
                 centerWet |= i < 0;
                 continue; // la hauteur de l'eau ne compte pas dans la pente (bord de mer)
             }
@@ -365,7 +366,11 @@ public final class StarterVillage {
         if (centerWet || max < min) {
             return 10_000;
         }
-        return (max - min) + Math.max(0, wet - COAST_WATER_POINTS) * 100;
+        int centerGround = ground(level, x, z);
+        // lac ou mer PLUS HAUT que l'emplacement : l'eau inonderait la place (au-delà de MAX_RAISE, impossible à corriger)
+        int lakeAbove = wetTop == Integer.MIN_VALUE ? 0 : wetTop - centerGround;
+        int lakePenalty = lakeAbove <= 0 ? 0 : lakeAbove <= MAX_RAISE ? lakeAbove * 3 : 1_000;
+        return (max - min) + Math.max(0, wet - COAST_WATER_POINTS) * 100 + lakePenalty;
     }
 
     /** Hauteur du sol (premier bloc libre au-dessus du terrain, sans les feuilles). Charge / génère le tronçon si besoin. */
@@ -376,7 +381,20 @@ public final class StarterVillage {
 
     // ------------------------------------------------------------------ construction
 
-    static void build(ServerLevel level, BlockPos center) {
+    /** Surélévation maximale de la place au-dessus d'un lac voisin (blocs). */
+    private static final int MAX_RAISE = 6;
+
+    /**
+     * Construit le village ; renvoie le centre réellement utilisé. Si un lac, une mare ou la mer (même gelés) touche la zone du
+     * village à une hauteur égale ou supérieure à la place, la place est surélevée juste au-dessus de l'eau (jusqu'à MAX_RAISE
+     * blocs) : l'eau ne peut jamais couler dans le village, et les berges descendent en pente douce vers l'eau.
+     */
+    static BlockPos build(ServerLevel level, BlockPos center) {
+        int water = highestWater(level, center, VillageLayout.TERRAIN_BLEND + 4);
+        if (water != Integer.MIN_VALUE && water + 1 > center.getY() && water + 1 - center.getY() <= MAX_RAISE) {
+            BloxPiece.LOGGER.info("[BloxPiece] Village : eau voisine à y={}, place surélevée de {} à {}", water, center.getY(), water + 1);
+            center = new BlockPos(center.getX(), water + 1, center.getZ());
+        }
         VillageBuilder b = new VillageBuilder(level);
         terraform(b, center);
         removeOrphanLeaves(b, center);
@@ -385,6 +403,64 @@ public final class StarterVillage {
             BloxPiece.LOGGER.warn("[BloxPiece] Village : élément ignoré (place occupée) : {}", skipped);
         }
         removeDroppedItems(level, center);
+        spawnTavernKeeper(level, center);
+        return center;
+    }
+
+    /**
+     * Le Tavernier, derrière le comptoir de la taverne (première place de PNJ de la taverne, voir VillageLayout), tourné vers
+     * la salle. Créé une seule fois, avec le village.
+     */
+    private static void spawnTavernKeeper(ServerLevel level, BlockPos center) {
+        for (VillageLayout.Entry entry : VillageLayout.BUILDINGS) {
+            if (!entry.name().equals("Taverne") || entry.npcSpots().isEmpty()) {
+                continue;
+            }
+            BlockPos spot = center.offset(entry.origin()).offset(entry.npcSpots().get(0).rotate(entry.rotation()));
+            nolan.bloxpiece.mob.TavernKeeper keeper = nolan.bloxpiece.registry.ModEntities.TAVERN_KEEPER.create(level,
+                    net.minecraft.world.entity.EntitySpawnReason.STRUCTURE);
+            if (keeper == null) {
+                return;
+            }
+            float yaw = switch (entry.rotation()) {     // la façade (et la salle) est vers +z local
+                case CLOCKWISE_90 -> 90.0F;
+                case CLOCKWISE_180 -> 180.0F;
+                case COUNTERCLOCKWISE_90 -> -90.0F;
+                default -> 0.0F;
+            };
+            keeper.setPos(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+            keeper.setYRot(yaw);
+            keeper.setYHeadRot(yaw);
+            keeper.setYBodyRot(yaw);
+            level.addFreshEntity(keeper);
+            BloxPiece.LOGGER.info("[BloxPiece] Tavernier placé derrière le comptoir en {}", spot);
+            return;
+        }
+    }
+
+    /** Plus haut niveau d'eau (ou de glace d'un lac gelé) dans le rayon donné, ou MIN_VALUE s'il n'y en a pas. */
+    private static int highestWater(ServerLevel level, BlockPos center, int radius) {
+        int best = Integer.MIN_VALUE;
+        for (int dx = -radius; dx <= radius; dx += 2) {
+            for (int dz = -radius; dz <= radius; dz += 2) {
+                if (dx * dx + dz * dz > radius * radius) {
+                    continue;
+                }
+                int x = center.getX() + dx, z = center.getZ() + dz;
+                level.getChunk(x >> 4, z >> 4);
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                BlockState top = level.getBlockState(new BlockPos(x, y, z));
+                if (isWaterLike(top)) {
+                    best = Math.max(best, y);
+                }
+            }
+        }
+        return best;
+    }
+
+    /** Eau, eau gelée (glace de lac, glace fondante) et blocs immergés (algues, herbes marines) : à traiter comme de l'eau. */
+    private static boolean isWaterLike(BlockState s) {
+        return !s.getFluidState().isEmpty() || s.is(ICE) || s.is(FROSTED_ICE);
     }
 
     /**
@@ -522,22 +598,26 @@ public final class StarterVillage {
                 double t = inside ? 0.0 : (d - VillageLayout.TERRAIN_FLAT) / (outer - VillageLayout.TERRAIN_FLAT);
                 t = t * t * (3 - 2 * t);
                 int target = (int) Math.round(Mth.lerp(t, y0, floor));
-                // dégagement au-dessus du sol cible (garde l'eau en bordure, hors du village)
+                // dégagement au-dessus du sol cible : dans le village tout part (eau et glace comprises : la place est sèche) ;
+                // en bordure, l'eau et la glace des lacs restent. La place étant au-dessus du niveau de l'eau voisine (voir
+                // build), une berge remblayée est toujours au moins au niveau de l'eau : l'eau ne peut pas s'y répandre.
                 for (int y = target; y <= Math.min(Math.max(top, floor) + 1, y0 + 45); y++) {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState s = b.get(p);
-                    if (!s.isAir() && (inside || s.getFluidState().isEmpty())) {
-                        b.setTerrain(p, AIR.defaultBlockState());
+                    if (!s.isAir() && (inside || !isWaterLike(s))) {
+                        b.setTerrain(p, AIR.defaultBlockState()); // hors du village, l'eau ET la glace d'un lac restent intactes
                     }
                 }
                 // remblai jusqu'au sol cible
                 for (int y = Math.min(floor, target) - 1; y < target; y++) {
                     BlockPos p = new BlockPos(x, y, z);
-                    if (y >= floor || b.get(p).isAir() || !b.get(p).getFluidState().isEmpty()) {
+                    if (y >= floor || b.get(p).isAir() || isWaterLike(b.get(p))) {
                         b.setTerrain(p, DIRT.defaultBlockState());
                     }
                 }
-                b.setTerrain(new BlockPos(x, target - 1, z), GRASS_BLOCK.defaultBlockState());
+                // dessus : herbe à l'air libre ; sous l'eau d'un lac en bordure, fond de sable (berge propre, pas d'herbe noyée)
+                boolean underwater = !inside && isWaterLike(b.get(new BlockPos(x, target, z)));
+                b.setTerrain(new BlockPos(x, target - 1, z), (underwater ? SAND : GRASS_BLOCK).defaultBlockState());
             }
         }
     }
@@ -552,8 +632,8 @@ public final class StarterVillage {
         int min = y - 96;
         while (y > min) {
             BlockState s = level.getBlockState(new BlockPos(x, y, z));
-            if (!s.isAir() && s.getFluidState().isEmpty() && !s.canBeReplaced() && !isTreePart(s)) {
-                break;
+            if (!s.isAir() && !isWaterLike(s) && !s.canBeReplaced() && !isTreePart(s)) {
+                break; // vrai sol (la glace d'un lac gelé n'en est pas : c'est de l'eau)
             }
             y--;
         }

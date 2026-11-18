@@ -70,12 +70,9 @@ public abstract class BloxPanelScreen extends Screen {
 
     // ------------------------------------------------------------------ à écrire dans chaque page
 
-    /** Dessine le contenu de la page (le cadre, le titre, l'indication du bas et le fondu sont déjà gérés). */
+    /** Dessine le contenu de la page (le cadre, le titre et le fondu sont déjà gérés). */
     protected abstract void extractPanel(GuiGraphicsExtractor g, Font font, LocalPlayer player,
                                          int mx, int my, int screenMouseX, int screenMouseY, float dt);
-
-    /** Texte d'aide affiché en bas du panneau. */
-    protected abstract Component hint();
 
     /** Titre affiché en haut du panneau (par défaut : le titre de la page ; une page peut l'adapter au joueur). */
     protected Component titleFor(LocalPlayer player) {
@@ -169,7 +166,6 @@ public abstract class BloxPanelScreen extends Screen {
         drawFrame(g, 0, 0, PANEL_W, panelH);
         drawTitle(g, mc.font, titleFor(player));
         extractPanel(g, mc.font, player, mx, my, mouseX, mouseY, dt);
-        g.centeredText(mc.font, hint(), PANEL_W / 2, panelH - 14, COLOR_HINT);
 
         // Fondu à l'ouverture
         int fade = (int) ((1.0F - open) * 255.0F);
@@ -193,17 +189,20 @@ public abstract class BloxPanelScreen extends Screen {
     // ------------------------------------------------------------------ dessin générique
 
     protected static void drawTitle(GuiGraphicsExtractor g, Font font, Component rawTitle) {
-        Component title = rawTitle.copy().withStyle(ChatFormatting.BOLD);
+        // titre trop long (ex : nom complet d'un fruit) : raccourci pour ne jamais toucher les ornements ni le cadre
+        Component title = fit(font, rawTitle.copy().withStyle(ChatFormatting.BOLD), PANEL_W - 2 * PAD - 40);
         int half = font.width(title) / 2;
         int cx = PANEL_W / 2;
 
         g.centeredText(font, title, cx, 9, COLOR_GOLD_BRIGHT);
 
-        // Ornements de part et d'autre du titre + filet sous l'en-tête
-        g.fill(PAD, 13, cx - half - 10, 14, COLOR_GOLD_DIM);
-        g.fill(cx + half + 10, 13, PANEL_W - PAD, 14, COLOR_GOLD_DIM);
-        g.fill(cx - half - 8, 12, cx - half - 5, 15, COLOR_GOLD);
-        g.fill(cx + half + 5, 12, cx + half + 8, 15, COLOR_GOLD);
+        // Ornements de part et d'autre du titre (seulement s'il reste de la place) + filet sous l'en-tête
+        if (cx - half - 10 > PAD + 4) {
+            g.fill(PAD, 13, cx - half - 10, 14, COLOR_GOLD_DIM);
+            g.fill(cx + half + 10, 13, PANEL_W - PAD, 14, COLOR_GOLD_DIM);
+            g.fill(cx - half - 8, 12, cx - half - 5, 15, COLOR_GOLD);
+            g.fill(cx + half + 5, 12, cx + half + 8, 15, COLOR_GOLD);
+        }
         g.fill(PAD, 24, PANEL_W - PAD, 25, COLOR_GOLD_DIM);
         g.fill(PANEL_W / 4, 24, PANEL_W * 3 / 4, 25, COLOR_GOLD);
     }
@@ -212,8 +211,7 @@ public abstract class BloxPanelScreen extends Screen {
         g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0x88000000); // ombre portée
         g.fill(x, y, x + w, y + h, COLOR_PANEL);
         g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, 0x1CFFFFFF, 0x00000000);
-        g.outline(x, y, w, h, COLOR_GOLD_DIM);
-        g.outline(x + 2, y + 2, w - 4, h - 4, COLOR_INNER_LINE);
+        g.outline(x, y, w, h, COLOR_GOLD_DIM); // un seul filet (l'ancienne ligne intérieure, parasite, est supprimée)
 
         // Coins dorés
         int l = 8;
@@ -225,6 +223,19 @@ public abstract class BloxPanelScreen extends Screen {
         g.fill(x - 1, y + h + 1 - l, x + 1, y + h + 1, COLOR_GOLD);
         g.fill(x + w + 1 - l, y + h - 1, x + w + 1, y + h + 1, COLOR_GOLD);
         g.fill(x + w - 1, y + h + 1 - l, x + w + 1, y + h + 1, COLOR_GOLD);
+    }
+
+    /**
+     * Texte raccourci ("...") s'il dépasse {@code maxWidth} pixels : utilisé partout où un texte pourrait déborder sur un
+     * autre élément (noms de fruits, objectifs de quêtes, titres...). Le style (gras, couleur) du début est conservé.
+     */
+    protected static Component fit(Font font, Component text, int maxWidth) {
+        if (maxWidth <= 0 || font.width(text) <= maxWidth) {
+            return text;
+        }
+        String ellipsis = "...";
+        String cut = font.plainSubstrByWidth(text.getString(), Math.max(0, maxWidth - font.width(ellipsis)));
+        return Component.literal(cut.stripTrailing() + ellipsis).withStyle(text.getStyle());
     }
 
     protected static boolean inside(int mx, int my, int x, int y, int w, int h) {

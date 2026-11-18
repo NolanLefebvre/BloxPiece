@@ -34,12 +34,12 @@ import nolan.bloxpiece.fruit.WaterCurse;
 public class BuddhaShockwaveAbility implements Ability {
 
     /** Portée de l'onde (blocs). */
-    static final double RANGE = 28.0; // doublée (avant : 14)
+    static final double RANGE = 44.0; // amplifiée (avant : 28, puis 14 à l'origine)
     /** Durée de propagation jusqu'à la portée maximale (ticks). */
-    private static final int TICKS = 10; // un peu plus long pour une onde deux fois plus grande (avant : 7)
+    private static final int TICKS = 14; // onde géante : propagation un peu plus longue (avant : 10)
     /** Rayon du cône au départ (blocs, devant la paume) et à la portée maximale. */
-    private static final double START_RADIUS = 3.0;  // doublés (avant : 1,5 et 6,5)
-    private static final double END_RADIUS = 13.0;
+    private static final double START_RADIUS = 5.0;  // amplifiés (avant : 3 et 13)
+    private static final double END_RADIUS = 22.0;
     /** Dégâts au contact du joueur, puis à la portée maximale (décroissance linéaire). */
     private static final float NEAR_DAMAGE = 30.0F;
     private static final float FAR_DAMAGE = 16.0F;
@@ -122,10 +122,12 @@ public class BuddhaShockwaveAbility implements Ability {
         // Puissance divine : éclair et dôme devant la paume, PAUME GÉANTE dorée projetée, éclairs dorés, onde au sol, caméra qui tremble
         ServerLevel level = wave.level;
         BuddhaEffects.shockwaveBurst(level, fired.origin, dir);
-        BuddhaEffects.palmImprint(level, fired.origin.add(dir.scale(3.0)), dir, 2.4, ModParticles.BUDDHA_GLOW);
+        BuddhaEffects.palmImprint(level, fired.origin.add(dir.scale(3.0)), dir, 3.5, ModParticles.BUDDHA_GLOW);
+        // la PAUME COLOSSALE en blocs d'or massifs (≈ 25 blocs de haut) file avec le front de l'onde
+        nolan.bloxpiece.fx.GoldenColossus.spawn(level, fired.origin.add(dir.scale(8.0)), dir, 2.5, (RANGE - 8.0) / TICKS, TICKS, 8);
         BuddhaEffects.goldenBolts(level, fired.origin, dir, RANGE * 0.6, 7);
         BuddhaEffects.groundRing(level, player.position(), 3.5 * player.getScale());
-        BuddhaHits.shake(level, fired.origin, 64.0, 3.5F, 22);
+        BuddhaHits.shake(level, fired.origin, 80.0, 4.5F, 28);
         Vec3 o = fired.origin;
         level.playSound(null, o.x, o.y, o.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 3.0F, 0.7F);
         level.playSound(null, o.x, o.y, o.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 3.0F, 0.5F);

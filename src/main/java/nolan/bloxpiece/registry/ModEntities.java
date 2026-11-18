@@ -34,6 +34,16 @@ import nolan.bloxpiece.fx.QuakeFx;
  */
 public class ModEntities {
 
+    // PNJ : le Tavernier du village de départ (invulnérable, immobile, dialogue au clic droit)
+    public static final ResourceKey<EntityType<?>> TAVERN_KEEPER_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("tavern_keeper"));
+
+    public static final EntityType<nolan.bloxpiece.mob.TavernKeeper> TAVERN_KEEPER =
+            EntityType.Builder.of(nolan.bloxpiece.mob.TavernKeeper::new, MobCategory.CREATURE)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(TAVERN_KEEPER_KEY);
+
     // Pirates armés (épéiste, tireur, capitaine). L'ancien pirate de base sans équipement a été supprimé.
     public static final ResourceKey<EntityType<?>> PIRATE_SWORDSMAN_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_swordsman"));
@@ -198,6 +208,7 @@ public class ModEntities {
 
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
+        register(TAVERN_KEEPER_KEY, TAVERN_KEEPER, nolan.bloxpiece.mob.TavernKeeper.attributes());
         register(PIRATE_SWORDSMAN_KEY, PIRATE_SWORDSMAN, PirateSwordsman.STATS.toAttributes());
         register(PIRATE_GUNNER_KEY, PIRATE_GUNNER, PirateGunner.STATS.toAttributes());
         register(PIRATE_CAPTAIN_KEY, PIRATE_CAPTAIN, PirateCaptain.STATS.toAttributes()
