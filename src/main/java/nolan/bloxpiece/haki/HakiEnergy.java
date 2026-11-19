@@ -35,8 +35,8 @@ public final class HakiEnergy {
 
     /** Minimum pour activer un Haki (5 %). */
     public static final int MIN_TO_ACTIVATE = 50;
-    /** Coût immédiat du Haki des Rois (25 %). */
-    public static final int CONQUEROR_COST = 250;
+    /** Coût immédiat du Haki des Rois (12 %). */
+    public static final int CONQUEROR_COST = 120;
     /** Recharge de chaque Haki coupé par une jauge vide. */
     private static final int EXHAUSTED_COOLDOWN = 20 * 5;
 
@@ -95,6 +95,12 @@ public final class HakiEnergy {
         if (type == HakiType.ARMAMENT) {
             return ArmamentHaki.mode(player) == ArmamentHaki.FULL_BODY ? 1.4F : 1.0F;
         }
+        if (type == HakiType.CONQUEROR) {
+            return 0.5F; // moins coûteux pour le moment (en plus de son coût d'activation réduit)
+        }
+        if (type == HakiType.OBSERVATION && nolan.bloxpiece.job.Jobs.is(player, nolan.bloxpiece.job.Job.SNIPER)) {
+            return nolan.bloxpiece.job.Jobs.SNIPER_OBSERVATION_DRAIN; // Sniper : l'Observation ne coûte presque rien
+        }
         return 1.0F;
     }
 
@@ -113,6 +119,9 @@ public final class HakiEnergy {
         if (count > 0) {
             LAST_USE.put(player.getUUID(), now);
             float drain = BASE_DRAIN * weights * (1.0F + STACK_BONUS * (count - 1));
+            if (nolan.bloxpiece.job.Jobs.is(player, nolan.bloxpiece.job.Job.SNIPER)) {
+                drain *= nolan.bloxpiece.job.Jobs.SNIPER_DRAIN; // Sniper : jauge qui se vide beaucoup moins vite
+            }
             energy -= drain;
             set(player, energy);
             if (energy <= 0.0F) {

@@ -4,7 +4,10 @@
 	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"CuffedMobModelMixin",
-		"UnconsciousPoseMixin"
+		"UnconsciousPoseMixin",
+		"PlayerModelSlimAccessor",
+		"ItemInHandHakiMixin",
+		"GuiItemHakiMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

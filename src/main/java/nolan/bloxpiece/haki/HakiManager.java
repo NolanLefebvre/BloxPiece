@@ -47,9 +47,28 @@ public final class HakiManager {
         return HAKIS.get(type);
     }
 
+    /** Aucun Haki n'est débloqué par défaut : ils se débloquent un par un (commande /haki unlock, plus tard des quêtes). */
     public static boolean isUnlocked(LivingEntity player, HakiType type) {
         Integer bits = player.getAttached(ModAttachments.HAKI_UNLOCKED);
-        return bits == null || (bits & type.bit()) != 0;
+        return bits != null && (bits & type.bit()) != 0;
+    }
+
+    /**
+     * Débloque (ou reverrouille) un Haki. L'attachment est renvoyé tout de suite au joueur : son HUD et sa page Haki se mettent
+     * à jour d'eux-mêmes. Reverrouillé : le Haki est coupé s'il était actif. Renvoie false si rien n'a changé.
+     */
+    public static boolean setUnlocked(ServerPlayer player, HakiType type, boolean unlocked) {
+        Integer bits = player.getAttached(ModAttachments.HAKI_UNLOCKED);
+        int before = bits == null ? 0 : bits;
+        int after = unlocked ? before | type.bit() : before & ~type.bit();
+        if (after == before) {
+            return false;
+        }
+        if (!unlocked && get(type).isActive(player)) {
+            get(type).stop(player);
+        }
+        player.setAttached(ModAttachments.HAKI_UNLOCKED, after);
+        return true;
     }
 
     /** Touche d'un Haki appuyée ({@code slot} = ordre de HakiType). Tout est vérifié ici, côté serveur. */
@@ -161,6 +180,7 @@ public final class HakiManager {
                 haki.tick(player);
             }
             HakiEnergy.tick(player, HAKIS); // jauge : consommation des Hakis actifs, ou remplissage
+            nolan.bloxpiece.job.Jobs.tick(player); // job : bonus des poings du Bagarreur
         }
         Unconscious.tick(server);
     }
@@ -184,7 +204,7 @@ public final class HakiManager {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayer player = handler.getPlayer();
             if (player.getAttached(ModAttachments.HAKI_UNLOCKED) == null) {
-                player.setAttached(ModAttachments.HAKI_UNLOCKED, ALL_UNLOCKED); // première version : les 3 Hakis dès le départ
+                player.setAttached(ModAttachments.HAKI_UNLOCKED, 0); // nouveau joueur : aucun Haki (à débloquer)
             }
             syncCooldowns(player);
         });

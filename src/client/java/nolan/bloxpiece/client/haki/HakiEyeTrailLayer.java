@@ -44,9 +44,16 @@ public class HakiEyeTrailLayer extends RenderLayer<AvatarRenderState, PlayerMode
     /** Prisme d'un pixel de section, long d'un pixel vers +Z : étiré à chaque tronçon. */
     private final ModelPart segment;
 
-    public HakiEyeTrailLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent, ModelPart root) {
+    /** Modèles de l'image rémanente (skin standard et skin fin). */
+    private final HakiAfterimage.GhostModel ghostWide;
+    private final HakiAfterimage.GhostModel ghostSlim;
+
+    public HakiEyeTrailLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent, ModelPart root, ModelPart wideRoot,
+                             ModelPart slimRoot) {
         super(parent);
         this.segment = root.getChild("segment");
+        this.ghostWide = new HakiAfterimage.GhostModel(wideRoot, false);
+        this.ghostSlim = new HakiAfterimage.GhostModel(slimRoot, true);
     }
 
     public static LayerDefinition createLayer() {
@@ -68,6 +75,11 @@ public class HakiEyeTrailLayer extends RenderLayer<AvatarRenderState, PlayerMode
         RenderType type = RenderTypes.entityTranslucent(TEXTURE);
         if (entity != null && Boolean.TRUE.equals(entity.getAttached(nolan.bloxpiece.registry.ModAttachments.HAKI_OBSERVATION))) {
             drawGlowingEyes(pose, collector, type, state.ageInTicks);
+        }
+        // image rémanente laissée par la dernière esquive
+        if (entity != null) {
+            HakiAfterimage.GhostModel ghost = HakiArmamentLayer.isSlim(this.getParentModel()) ? this.ghostSlim : this.ghostWide;
+            HakiAfterimage.render(pose, collector, state, entity, ghost, state.skin.body().texturePath());
         }
         float partial = state.ageInTicks - (float) Math.floor(state.ageInTicks);
         float time = HakiEyeTrail.now(partial);
@@ -134,9 +146,9 @@ public class HakiEyeTrailLayer extends RenderLayer<AvatarRenderState, PlayerMode
         for (int side = -1; side <= 1; side += 2) {
             float cx = side * HakiEyeTrail.EYE_X;
             // halo très léger, puis point vif
-            drawBox(pose, collector, type, cx, HakiEyeTrail.EYE_Y, HakiEyeTrail.EYE_Z - 0.01F, 1.1F, 1.1F, 0.02F,
+            drawBox(pose, collector, type, cx, HakiEyeTrail.EYE_Y, HakiEyeTrail.EYE_Z, 1.1F, 1.1F, 0.02F,
                     argb(0.35F * pulse, 0xFF1E30));
-            drawBox(pose, collector, type, cx, HakiEyeTrail.EYE_Y, HakiEyeTrail.EYE_Z - 0.02F, 0.45F, 0.45F, 0.02F,
+            drawBox(pose, collector, type, cx, HakiEyeTrail.EYE_Y, HakiEyeTrail.EYE_Z - 0.08F, 0.45F, 0.45F, 0.02F,
                     argb(pulse, 0xFF4A58));
         }
         pose.popPose();

@@ -22,41 +22,95 @@ import nolan.bloxpiece.progression.Progression;
 public class ModCommands {
 
     public static void initialize() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> {
-            dispatcher.register(
-                    Commands.literal("removedf")
-                            // Réservé aux opérateurs / game masters (modifiable via un mod de permissions)
-                            .requires(PermissionPredicates.require(
-                                    BloxPiece.id("command/removedf"), PermissionLevel.GAMEMASTERS))
-                            // /removedf  -> retire ton propre fruit
-                            .executes(context -> removeFruit(context.getSource(), context.getSource().getPlayerOrException()))
-                            // /removedf <joueur>  -> retire le fruit d'un joueur
-                            .then(Commands.argument("joueur", player())
-                                    .executes(context -> removeFruit(context.getSource(), getPlayer(context, "joueur")))));
+        // Toutes les commandes du mod sont rangées sous /bloxfruit (opérateurs / game masters ; chaque sous-commande a aussi sa
+        // propre permission, modifiable via un mod de permissions). Pour en ajouter une : un .then(...) de plus ici.
+        //   /bloxfruit removedf [joueur]                                          -> retire le fruit (le tien sans joueur)
+        //   /bloxfruit addxp <joueur> <quantité>                                  -> ajoute (ou retire si < 0) de l'XP
+        //   /bloxfruit resetcooldowns [joueur]                                    -> recharges des attaques et des Hakis
+        //   /bloxfruit job set <joueur> <swordman|brawler|sniper|none>              -> impose (ou retire) le job
+        //   /bloxfruit haki unlock|lock <joueur> <armament|observation|conqueror|all> -> débloque / reverrouille un Haki
+        CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> dispatcher.register(
+                Commands.literal("bloxfruit")
+                        .requires(PermissionPredicates.require(BloxPiece.id("command/bloxfruit"), PermissionLevel.GAMEMASTERS))
+                        .then(Commands.literal("removedf")
+                                .requires(PermissionPredicates.require(BloxPiece.id("command/removedf"), PermissionLevel.GAMEMASTERS))
+                                .executes(context -> removeFruit(context.getSource(), context.getSource().getPlayerOrException()))
+                                .then(Commands.argument("joueur", player())
+                                        .executes(context -> removeFruit(context.getSource(), getPlayer(context, "joueur")))))
+                        .then(Commands.literal("addxp")
+                                .then(Commands.argument("joueur", player())
+                                        .then(Commands.argument("quantite", IntegerArgumentType.integer())
+                                                .executes(context -> addXp(
+                                                        context.getSource(),
+                                                        getPlayer(context, "joueur"),
+                                                        IntegerArgumentType.getInteger(context, "quantite"))))))
+                        .then(Commands.literal("resetcooldowns")
+                                .executes(context -> resetCooldowns(context.getSource(), context.getSource().getPlayerOrException()))
+                                .then(Commands.argument("joueur", player())
+                                        .executes(context -> resetCooldowns(context.getSource(), getPlayer(context, "joueur")))))
+                        .then(Commands.literal("job")
+                                .requires(PermissionPredicates.require(BloxPiece.id("command/job"), PermissionLevel.GAMEMASTERS))
+                                .then(jobChoices(Commands.literal("set"))))
+                        .then(Commands.literal("haki")
+                                .requires(PermissionPredicates.require(BloxPiece.id("command/haki"), PermissionLevel.GAMEMASTERS))
+                                .then(hakiTypes(Commands.literal("unlock"), true))
+                                .then(hakiTypes(Commands.literal("lock"), false)))));
+    }
 
-            // /bloxpiece addxp <joueur> <quantité>  -> commande de test du système de niveaux
-            //   quantité > 0 : ajoute de l'XP ; quantité < 0 : en retire (le niveau peut baisser) ; 0 : ne change rien
-            // /bloxpiece resetcooldowns [joueur]  -> remet à zéro les recharges des attaques du fruit et des trois Hakis
-            // Les sous-commandes héritent de la permission de "bloxpiece" (opérateurs / game masters).
-            dispatcher.register(
-                    Commands.literal("bloxpiece")
-                            .requires(PermissionPredicates.require(
-                                    BloxPiece.id("command/bloxpiece"), PermissionLevel.GAMEMASTERS))
-                            .then(Commands.literal("addxp")
-                                    .then(Commands.argument("joueur", player())
-                                            .then(Commands.argument("quantite", IntegerArgumentType.integer())
-                                                    .executes(context -> addXp(
-                                                            context.getSource(),
-                                                            getPlayer(context, "joueur"),
-                                                            IntegerArgumentType.getInteger(context, "quantite"))))))
-                            .then(Commands.literal("resetcooldowns")
-                                    // sans joueur : tes propres recharges
-                                    .executes(context -> resetCooldowns(
-                                            context.getSource(), context.getSource().getPlayerOrException()))
-                                    .then(Commands.argument("joueur", player())
-                                            .executes(context -> resetCooldowns(
-                                                    context.getSource(), getPlayer(context, "joueur"))))));
-        });
+    /** /bloxfruit job set <joueur> <swordman|brawler|sniper|none> */
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> jobChoices(
+            com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> root) {
+        com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ?> target = Commands.argument("joueur", player());
+        for (nolan.bloxpiece.job.Job job : nolan.bloxpiece.job.Job.values()) {
+            target.then(Commands.literal(job.id).executes(context -> setJob(context.getSource(), getPlayer(context, "joueur"), job)));
+        }
+        target.then(Commands.literal("none").executes(context -> setJob(context.getSource(), getPlayer(context, "joueur"), null)));
+        return root.then(target);
+    }
+
+    private static int setJob(CommandSourceStack source, ServerPlayer target, nolan.bloxpiece.job.Job job) { // job null = aucun
+        nolan.bloxpiece.job.Jobs.set(target, job);
+        Component name = job == null ? Component.translatable("message.bloxpiece.job.none") : Component.translatable(job.nameKey());
+        target.sendSystemMessage(Component.translatable("message.bloxpiece.job.set_notify", name));
+        source.sendSuccess(() -> Component.translatable("message.bloxpiece.job.set_success", target.getDisplayName(), name), true);
+        return 1;
+    }
+
+    /** Nom de chaque choix de la commande : les trois Hakis, puis « all » (les trois à la fois). */
+    private static final String[][] HAKI_NAMES = {{"armament"}, {"observation"}, {"conqueror"}, {"all"}};
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> hakiTypes(
+            com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> root, boolean unlock) {
+        com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ?> target = Commands.argument("joueur", player());
+        for (int i = 0; i < HAKI_NAMES.length; i++) {
+            nolan.bloxpiece.haki.HakiType type = i < 3 ? nolan.bloxpiece.haki.HakiType.values()[i] : null;
+            for (String name : HAKI_NAMES[i]) {
+                target.then(Commands.literal(name).executes(context -> setHaki(context.getSource(), getPlayer(context, "joueur"),
+                        type, unlock)));
+            }
+        }
+        return root.then(target);
+    }
+
+    private static int setHaki(CommandSourceStack source, ServerPlayer target, nolan.bloxpiece.haki.HakiType type, boolean unlock) {
+        int changed = 0;
+        for (nolan.bloxpiece.haki.HakiType t : nolan.bloxpiece.haki.HakiType.values()) {
+            if ((type == null || t == type) && nolan.bloxpiece.haki.HakiManager.setUnlocked(target, t, unlock)) {
+                changed++;
+                if (unlock) {
+                    target.sendSystemMessage(Component.translatable("message.bloxpiece.haki.unlocked", Component.translatable(t.nameKey())));
+                }
+            }
+        }
+        Component what = type == null ? Component.translatable("message.bloxpiece.haki.all") : Component.translatable(type.nameKey());
+        if (changed == 0) {
+            source.sendFailure(Component.translatable(unlock ? "message.bloxpiece.haki.already_unlocked"
+                    : "message.bloxpiece.haki.already_locked", target.getDisplayName(), what));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable(unlock ? "message.bloxpiece.haki.unlock_success"
+                : "message.bloxpiece.haki.lock_success", what, target.getDisplayName()), true);
+        return changed;
     }
 
     private static int removeFruit(CommandSourceStack source, ServerPlayer target) {

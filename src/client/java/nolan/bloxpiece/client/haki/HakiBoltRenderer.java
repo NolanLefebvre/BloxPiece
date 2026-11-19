@@ -118,10 +118,14 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
     public void submit(BoltState state, PoseStack pose, SubmitNodeCollector collector, CameraRenderState camera) {
         float age = state.age;
         float life = state.life;
-        // apparition (jaillit en 1,5 tick) et extinction (se rétracte vers sa pointe sur le dernier tiers)
-        float grow = Math.min(1.0F, age / 1.5F);
-        float fade = age < life * 0.66F ? 1.0F : Math.max(0.0F, (life - age) / (life * 0.34F));
-        if (grow <= 0.0F || fade <= 0.0F) {
+        // DÉCHARGE LIBRE : la tête de l'éclair jaillit du corps et file vers l'extérieur (40 % de la vie), puis la queue se
+        // détache du joueur et la suit : l'éclair entier s'éloigne et traverse l'espace avant de s'éteindre au loin
+        float life01 = Math.min(1.0F, age / life);
+        float head = smooth(Math.min(1.0F, life01 / 0.4F));
+        float tail = life01 < 0.22F ? 0.0F : smooth((life01 - 0.22F) / 0.78F) * 0.92F;
+        float grow = 1.0F;
+        float fade = life01 < 0.75F ? 1.0F : Math.max(0.0F, (1.0F - life01) / 0.25F);
+        if (head - tail <= 0.02F || fade <= 0.0F) {
             super.submit(state, pose, collector, camera);
             return;
         }
@@ -132,15 +136,17 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         float intensity = Math.min(1.25F, surge) * fade;
 
         float[] dir = direction(state);
-        float length = 2.8F * state.size;
-        // l'éclair s'élance un peu dans sa direction pendant sa vie
-        float push = age * 0.08F;
+        // longue portée : environ 3,5 à 5 blocs de canal, qui en plus s'éloigne du joueur pendant sa vie (jusqu'à ~7 blocs)
+        float length = 5.4F * state.size;
+        float push = life01 * life01 * 2.0F;
         float[] origin = {dir[0] * push, dir[1] * push, dir[2] * push};
 
         List<Path> paths = new ArrayList<>();
         Random shape = new Random(state.seed * 1_000_003L);               // stable : direction des fourches
         Random jag = new Random(state.seed * 92_821L + crackle * 15_485_863L); // crépitement : change tous les 2 ticks
-        Path main = channel(origin, dir, length * grow, MAIN_POINTS, ROOT_WIDTH, 0.16F, age, state.seed, shape, jag, 0);
+        // canal complet (forme stable, elle ne s'étire pas), dont on ne dessine que la portion [queue, tête] qui file
+        Path full = channel(origin, dir, length * grow, MAIN_POINTS, ROOT_WIDTH, 0.12F, age, state.seed, shape, jag, 0);
+        Path main = trim(full, tail, head);
         paths.add(main);
         int forks = 2 + shape.nextInt(3);
         for (int f = 0; f < forks; f++) {
@@ -148,10 +154,15 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
                 continue; // une fourche manque à ce crépitement : elles clignotent
             }
             int at = 3 + shape.nextInt(MAIN_POINTS - 7);
-            float[] start = main.points().get(Math.min(at, main.points().size() - 1));
+            float atT = at / (float) (MAIN_POINTS - 1);
+            if (atT < tail || atT > head) {
+                continue; // la fourche ne naît que sur la partie visible de la décharge
+            }
+            float[] start = full.points().get(at);
             float[] forkDir = deviate(dir, 0.45F + shape.nextFloat() * 0.5F, shape);
             float forkLen = length * grow * (0.28F + shape.nextFloat() * 0.3F) * (1.0F - at / (float) MAIN_POINTS * 0.5F);
-            Path fork = channel(start, forkDir, forkLen, 8, main.widths()[at] * 0.55F, 0.1F, age, state.seed + f * 17, shape, jag, 1);
+            forkLen *= Math.min(1.0F, (head - atT) * 3.0F + 0.3F); // elle pousse en même temps que la tête avance
+            Path fork = channel(start, forkDir, forkLen, 8, full.widths()[at] * 0.55F, 0.1F, age, state.seed + f * 17, shape, jag, 1);
             paths.add(fork);
             if (shape.nextFloat() < 0.5F) {
                 int at2 = 2 + shape.nextInt(4);
@@ -177,6 +188,43 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         // 3) halo rouge diffus (canal principal seulement)
         drawPath(pose, collector, 2, glowType, main, HAZE_SCALE, argb(0.12F * intensity, HAZE_COLOR));
         super.submit(state, pose, collector, camera);
+    }
+
+    private static float smooth(float t) {
+        t = Math.max(0.0F, Math.min(1.0F, t));
+        return t * t * (3.0F - 2.0F * t);
+    }
+
+    /**
+     * Portion [from, to] (0 = racine, 1 = pointe) d'un canal, avec des extrémités interpolées : la décharge visible. Sa largeur
+     * est maximale au milieu et s'effile aux deux bouts (une décharge libre n'est rattachée à rien).
+     */
+    private static Path trim(Path full, float from, float to) {
+        List<float[]> pts = full.points();
+        int n = pts.size();
+        List<float[]> out = new ArrayList<>();
+        List<Float> widths = new ArrayList<>();
+        float maxWidth = 0.0F;
+        for (float w : full.widths()) {
+            maxWidth = Math.max(maxWidth, w);
+        }
+        int steps = Math.max(2, (int) Math.ceil((to - from) * (n - 1)) + 1);
+        for (int k = 0; k < steps; k++) {
+            float t = from + (to - from) * k / (steps - 1);
+            float f = t * (n - 1);
+            int i = Math.min(n - 2, (int) f);
+            float r = f - i;
+            float[] a = pts.get(i), b = pts.get(i + 1);
+            out.add(new float[] {a[0] + (b[0] - a[0]) * r, a[1] + (b[1] - a[1]) * r, a[2] + (b[2] - a[2]) * r});
+            float u = k / (float) (steps - 1);
+            float bulge = full.widths()[i] / Math.max(1.0E-4F, maxWidth);
+            widths.add(ROOT_WIDTH * (0.3F + 0.7F * (float) Math.sin(Math.PI * u)) * (0.7F + 0.3F * bulge));
+        }
+        float[] w = new float[widths.size()];
+        for (int k = 0; k < w.length; k++) {
+            w[k] = widths.get(k);
+        }
+        return new Path(out, w, full.level());
     }
 
     /** Direction unitaire de l'éclair (même convention que le serveur : rotation Y, puis angle depuis la verticale). */

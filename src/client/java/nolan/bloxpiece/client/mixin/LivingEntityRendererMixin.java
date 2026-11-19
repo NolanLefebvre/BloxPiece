@@ -61,11 +61,13 @@ public abstract class LivingEntityRendererMixin {
             RenderLayer<AvatarRenderState, PlayerModel> cuffs = new HandcuffsLayer(parent, context.bakeLayer(HandcuffsLayer.LAYER));
             this.layers.add(cuffs);
             // Haki de l'Armement : revêtement noir métallique (ne dessine rien sans Haki actif)
-            RenderLayer<AvatarRenderState, PlayerModel> armament = new nolan.bloxpiece.client.haki.HakiArmamentLayer(parent);
+            RenderLayer<AvatarRenderState, PlayerModel> armament = new nolan.bloxpiece.client.haki.HakiArmamentLayer(parent,
+                    context.bakeLayer(nolan.bloxpiece.client.haki.HakiArmamentLayer.LAYER));
             this.layers.add(armament);
             // Haki de l'Observation : ruban rouge des yeux pendant une esquive (ne dessine rien sinon)
             RenderLayer<AvatarRenderState, PlayerModel> eyeTrail = new nolan.bloxpiece.client.haki.HakiEyeTrailLayer(parent,
-                    context.bakeLayer(nolan.bloxpiece.client.haki.HakiEyeTrailLayer.LAYER));
+                    context.bakeLayer(nolan.bloxpiece.client.haki.HakiEyeTrailLayer.LAYER),
+                    context.bakeLayer(ModelLayers.PLAYER), context.bakeLayer(ModelLayers.PLAYER)); // (même maillage : sûr d'exister)
             this.layers.add(eyeTrail);
         } else if (model instanceof HumanoidModel) {
             // Mobs humanoïdes (zombies, squelettes, piglins, pirates...) : menottes aux poignets s'ils sont menottés
@@ -77,7 +79,19 @@ public abstract class LivingEntityRendererMixin {
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;F)V", at = @At("TAIL"))
     private void bloxpiece$extractCuffed(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo info) {
         ((CuffedRenderState) state).bloxpiece$setCuffed(Handcuffs.isCuffed(entity));
-        ((nolan.bloxpiece.client.haki.UnconsciousRenderState) state).bloxpiece$setUnconscious(
-                nolan.bloxpiece.haki.Unconscious.is(entity));
+        boolean unconscious = nolan.bloxpiece.haki.Unconscious.is(entity);
+        nolan.bloxpiece.client.haki.UnconsciousRenderState lie = (nolan.bloxpiece.client.haki.UnconsciousRenderState) state;
+        lie.bloxpiece$setUnconscious(unconscious);
+        if (!unconscious) {
+            lie.bloxpiece$setLie(nolan.bloxpiece.client.haki.UnconsciousRenderState.STANDING, 0.0F);
+        } else {
+            // bipède : modèle humanoïde (zombies, squelettes, piglins, endermen, PNJ...), joueur, ou bipède connu -> sur le dos ;
+            // tout le reste (quadrupèdes, araignées...) -> sur le côté
+            boolean biped = entity instanceof net.minecraft.world.entity.player.Player
+                    || ((LivingEntityRenderer<?, ?, ?>) (Object) this).getModel() instanceof HumanoidModel
+                    || nolan.bloxpiece.client.haki.UnconsciousRenderState.BIPEDS.contains(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath());
+            lie.bloxpiece$setLie(biped ? nolan.bloxpiece.client.haki.UnconsciousRenderState.ON_BACK
+                    : nolan.bloxpiece.client.haki.UnconsciousRenderState.ON_SIDE, entity.getBbWidth());
+        }
     }
 }

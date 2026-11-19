@@ -21,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import nolan.bloxpiece.registry.ModAttachments;
 
 /**
- * Haki de l'Observation (Kenbunshoku). Appui : activé (ou coupé) ; dure {@link #DURATION} ticks. Actif, il esquive TOUTES les
+ * Haki de l'Observation (Kenbunshoku). Appui : activé (ou coupé) ; tient tant que la jauge de Haki n'est pas vide. Actif, il esquive TOUTES les
  * attaques dirigées contre le joueur : coups de mobs ou de joueurs, projectiles (flèches, balles...), attaques de fruits du
  * démon, explosions déclenchées par un ennemi. Jamais les dégâts de l'environnement : chute, noyade, lave, feu ou brûlure,
  * poison, faim, gel, vide.
@@ -30,9 +30,7 @@ import nolan.bloxpiece.registry.ModAttachments;
  */
 public final class ObservationHaki implements Haki {
 
-    private static final int DURATION = 20 * 20;
     private static final int COOLDOWN_MANUAL = 20 * 6;
-    private static final int COOLDOWN_EXPIRED = 20 * 20;
 
     private final Map<UUID, Long> until = new HashMap<>();
     /** Dernier type d'esquive joué par chaque joueur. */
@@ -51,7 +49,7 @@ public final class ObservationHaki implements Haki {
             return;
         }
         player.setAttached(ModAttachments.HAKI_OBSERVATION, true);
-        this.until.put(player.getUUID(), player.level().getGameTime() + DURATION);
+        this.until.put(player.getUUID(), player.level().getGameTime());
         player.level().playSound(null, player.getX(), player.getY() + 1.6, player.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.6F, 1.8F);
         player.level().playSound(null, player.getX(), player.getY() + 1.6, player.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 0.8F);
         if (player.level() instanceof ServerLevel level) {
@@ -62,11 +60,7 @@ public final class ObservationHaki implements Haki {
 
     @Override
     public void tick(ServerPlayer player) {
-        Long end = this.until.get(player.getUUID());
-        if (end != null && player.level().getGameTime() >= end) {
-            stop(player);
-            HakiManager.startCooldown(player, type(), COOLDOWN_EXPIRED);
-        }
+        // plus de durée limitée : actif jusqu'à ce que la jauge de Haki soit vide (HakiEnergy) ou qu'on le coupe
     }
 
     @Override

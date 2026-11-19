@@ -53,6 +53,15 @@ public class ModParticles {
     /** Halo rouge autour de la traînée des yeux, et pupille incandescente. */
     public static final SimpleParticleType HAKI_EYE_GLOW = register("haki_eye_glow");
 
+    /** Haki des Rois : éclat d'énergie noir et rouge sombre, projeté hors du corps. */
+    public static final SimpleParticleType HAKI_SHARD = register("haki_shard");
+    /** Haki des Rois : étincelle de tension rouge vif, très brève. */
+    public static final SimpleParticleType HAKI_SPARK = register("haki_spark");
+    /** Haki des Rois : petite onde de choc rouge (anneau qui s'élargit et s'efface). */
+    public static final SimpleParticleType HAKI_RING = register("haki_ring");
+    /** Haki des Rois : brume d'aura noire teintée de rouge (remplace la fumée grise). */
+    public static final SimpleParticleType HAKI_MIST = register("haki_mist");
+
     private static SimpleParticleType register(String name) {
         return Registry.register(BuiltInRegistries.PARTICLE_TYPE, BloxPiece.id(name), FabricParticleTypes.simple());
     }

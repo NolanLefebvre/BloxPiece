@@ -25,6 +25,11 @@ public class ModNetworking {
         PayloadTypeRegistry.serverboundPlay().register(SaberStrikePayload.TYPE, SaberStrikePayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SaberStrikePayload.TYPE, (payload, context) ->
                 IceSaberAbility.strike(context.player()));
+        // Choix du job dans le menu du personnage (le serveur vérifie le niveau)
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.ChooseJobPayload.TYPE,
+                nolan.bloxpiece.network.ChooseJobPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.ChooseJobPayload.TYPE, (payload, context) ->
+                nolan.bloxpiece.job.Jobs.choose(context.player(), payload.job()));
         // Bouton "Récupérer" d'une quête journalière (le serveur vérifie tout)
         PayloadTypeRegistry.serverboundPlay().register(ClaimQuestPayload.TYPE, ClaimQuestPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ClaimQuestPayload.TYPE, (payload, context) ->

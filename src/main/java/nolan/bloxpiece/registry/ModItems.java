@@ -100,6 +100,20 @@ public class ModItems {
             new Item.Properties().stacksTo(1).durability(250)
     );
 
+    // Armes de la Marine (modèles 3D à part, lâchées parfois par les Marines) : sabre réglementaire et fusil long à silex
+    public static final Item MARINE_SABER = register(
+            "marine_saber",
+            PirateSaberItem::new,
+            new Item.Properties().stacksTo(1).durability(500).attributes(PirateSaberItem.attributes(7.0, -2.3))
+    );
+
+    /** Fusil de la Marine : mousquet long, plus lent à recharger que le pistolet mais bien plus puissant et précis. */
+    public static final Item MARINE_RIFLE = register(
+            "marine_rifle",
+            properties -> new FlintlockItem(properties, 50, 14.0F, 4.0),
+            new Item.Properties().stacksTo(1).durability(300)
+    );
+
     // Cristaux d'XP BloxPiece : une seule famille, 4 paliers (rang pirate, couleur = rareté). XP du système de niveaux du mod,
     // voir LevelCurve : niveau 1 -> 2 = 100 XP, niveau 10 -> 11 = 3 162 XP, niveau 50 -> 51 = 35 355 XP
     public static final Item XP_CRYSTAL_CABIN_BOY = register("xp_crystal_cabin_boy",
@@ -183,7 +197,7 @@ public class ModItems {
                     // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
                     // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
                     java.util.List<Item> first = java.util.List.of(TREASURE_CHEST, FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT,
-                            PIRATE_SABER, CAPTAIN_SABER, FLINTLOCK,
+                            PIRATE_SABER, CAPTAIN_SABER, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
                             XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
                     first.forEach(entries::accept);
                     BuiltInRegistries.ITEM.stream()

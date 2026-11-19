@@ -45,7 +45,7 @@ import net.minecraft.world.phys.Vec3;
 import nolan.bloxpiece.BloxPiece;
 import nolan.bloxpiece.ability.BuddhaTransformAbility;
 import nolan.bloxpiece.fruit.Fruits;
-import nolan.bloxpiece.mob.ArmedPirate;
+import nolan.bloxpiece.mob.ArmedHumanoid;
 import nolan.bloxpiece.registry.ModAttachments;
 import nolan.bloxpiece.registry.ModItems;
 
@@ -289,7 +289,7 @@ public final class Handcuffs {
         mob.setAggressive(false);
         mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
         mob.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
-        if (mob instanceof ArmedPirate pirate) {
+        if (mob instanceof ArmedHumanoid pirate) {
             pirate.setAiming(false); // bras baissé (pas de pose de visée)
         }
     }

@@ -26,6 +26,21 @@ public class ModSpawns {
                 .minGroupSeparation(64)                // avant : 80
                 .debug(true));                         // mets false quand l'équilibrage te convient
 
+        // MARINES : patrouilles de 2 à 6, plus rares que les pirates. Épéistes (60 %) et Fusiliers (40 %). Neutres envers les
+        // joueurs, ils attaquent les pirates qu'ils croisent.
+        GroupSpawner.register(new GroupSpawnRule(ModEntities.MARINE_SWORDSMAN)
+                .mixWith(ModEntities.MARINE_RIFLEMAN, 0.4)
+                .groupSize(2, 6)
+                .groupSpread(6)
+                .distance(40, 100)
+                .interval(seconds(90), minutes(4))
+                .globalGap(seconds(15))
+                .retryDelay(seconds(10))
+                .populationLimits(8, 40)
+                .populationRadius(100)
+                .minGroupSeparation(80)
+                .debug(false));
+
         GroupSpawner.initialize();
     }
 

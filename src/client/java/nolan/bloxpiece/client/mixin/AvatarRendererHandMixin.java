@@ -43,7 +43,7 @@ public abstract class AvatarRendererHandMixin {
                 (net.minecraft.client.model.player.PlayerModel) ((net.minecraft.client.renderer.entity.LivingEntityRenderer<?, ?, ?>) (Object) this).getModel();
         boolean rightArm = arm == model.rightArm;
         boolean mainArm = rightArm == (player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
-        nolan.bloxpiece.client.haki.HakiArmamentLayer.submitHand(pose, collector, arm, skin, player, mainArm,
+        nolan.bloxpiece.client.haki.HakiArmamentLayer.submitHand(pose, collector, arm, skin, player, mainArm, rightArm, model,
                 player.tickCount + partialTick);
     }
 }

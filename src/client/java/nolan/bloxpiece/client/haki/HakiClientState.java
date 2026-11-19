@@ -14,8 +14,11 @@ import nolan.bloxpiece.registry.ModAttachments;
  */
 public final class HakiClientState {
 
-    /** Revêtement : mode affiché, début du bras, début du reste du corps (-1 = pas encore). */
-    private record Armament(int mode, float armSince, float bodySince) {
+    /**
+     * Revêtement : mode affiché, début du bras, début du reste du corps (-1 = pas encore), et retrait en cours : instant du
+     * retrait (-1 = pas de retrait), bras et corps atteints au moment du retrait.
+     */
+    private record Armament(int mode, float armSince, float bodySince, float releaseSince, float armAt, float bodyAt) {
     }
 
     /** Esquive : côté, et tick de jeu (client) du début. */
@@ -37,22 +40,55 @@ public final class HakiClientState {
      */
     public static float[] armament(Entity entity, float age) {
         int mode = ArmamentHaki.mode(entity);
-        if (mode == 0) {
-            ARMAMENT.remove(entity.getId());
-            return null;
-        }
         Armament last = ARMAMENT.get(entity.getId());
-        if (last == null) {
-            last = new Armament(mode, age, mode == ArmamentHaki.FULL_BODY ? age : -1.0F);
+        if (mode == 0) {
+            return release(entity, last, age);
+        }
+        if (last == null || last.releaseSince() >= 0.0F) {
+            last = new Armament(mode, age, mode == ArmamentHaki.FULL_BODY ? age : -1.0F, -1.0F, 0.0F, 0.0F);
             ARMAMENT.put(entity.getId(), last);
         } else if (last.mode() != mode) {
             // maintien de la touche : le bras reste couvert, le Haki se propage au reste du corps
-            last = new Armament(mode, last.armSince(), mode == ArmamentHaki.FULL_BODY ? age : -1.0F);
+            last = new Armament(mode, last.armSince(), mode == ArmamentHaki.FULL_BODY ? age : -1.0F, -1.0F, 0.0F, 0.0F);
             ARMAMENT.put(entity.getId(), last);
         }
         float arm = clamp((age - last.armSince()) / TRANSITION_TICKS);
         float body = last.bodySince() < 0.0F ? 0.0F : clamp((age - last.bodySince()) / (TRANSITION_TICKS * 1.4F));
-        return new float[] {arm, body};
+        // + temps écoulés (ticks) depuis le début du bras et du corps (-1 = pas encore), pour les effets de l'apparition
+        return new float[] {arm, body, age - last.armSince(), last.bodySince() < 0.0F ? -1.0F : age - last.bodySince()};
+    }
+
+    /** Durée du retrait du Haki (ticks). */
+    public static final float RELEASE_TICKS = 14.0F;
+
+    /**
+     * Retrait du Haki de l'Armement : le revêtement reflue, dans le même style que son apparition mais à l'envers. En corps
+     * entier, il quitte d'abord les jambes, la tête, l'autre bras et le torse (70 % du temps), puis redescend le bras principal
+     * jusqu'au bout des doigts et disparaît. Renvoie la progression « rembobinée », ou null quand tout est retiré.
+     */
+    private static float[] release(Entity entity, Armament last, float age) {
+        if (last == null) {
+            return null;
+        }
+        if (last.releaseSince() < 0.0F) {
+            // début du retrait : on part de ce qui était couvert à cet instant
+            float arm = clamp((age - last.armSince()) / TRANSITION_TICKS);
+            float body = last.bodySince() < 0.0F ? 0.0F : clamp((age - last.bodySince()) / (TRANSITION_TICKS * 1.4F));
+            last = new Armament(last.mode(), last.armSince(), last.bodySince(), age, arm, body);
+            ARMAMENT.put(entity.getId(), last);
+        }
+        float t = (age - last.releaseSince()) / RELEASE_TICKS;
+        if (t >= 1.0F || t < -1.0F) {
+            ARMAMENT.remove(entity.getId());
+            return null;
+        }
+        float left = 1.0F - Math.max(0.0F, t);
+        boolean full = last.bodySince() >= 0.0F && last.bodyAt() > 0.0F;
+        float arm = full ? clamp(left / 0.3F) * last.armAt() : left * last.armAt();
+        float body = full ? clamp((left - 0.3F) / 0.7F) * last.bodyAt() : 0.0F;
+        // temps « loin » de l'apparition : pas d'éclat de durcissement, mais le front, les ondes et la vague restent animés
+        float since = 1000.0F + (age - last.releaseSince());
+        return new float[] {arm, body, since, full ? since : -1.0F};
     }
 
     /**
@@ -139,6 +175,7 @@ public final class HakiClientState {
         net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
         if (level != null) {
             DODGE.put(entityId, new Dodge(variant, right, level.getGameTime()));
+            HakiAfterimage.request(entityId); // image rémanente de la position d'avant l'esquive
         }
     }
 

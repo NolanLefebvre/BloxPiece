@@ -32,7 +32,7 @@ import nolan.bloxpiece.registry.ModAttachments;
  * attaques de fruit à droite : icône, touche en bas à droite, voile et secondes pendant la recharge. Un Haki actif est éclairé
  * (cadre doré qui pulse, voile de sa couleur). Si la place manque, les cases passent sur plusieurs rangées vers le haut.
  * Aussi : voile sombre et « Inconscient » quand le joueur est évanoui par un Haki des Rois.
- * Icônes : assets/bloxpiece/textures/gui/haki/&lt;id&gt;.png (16x16).
+ * Icônes : assets/bloxpiece/textures/gui/haki/&lt;id&gt;.png (carrées, toute taille : affichées dans la case de 16 px).
  */
 public final class HakiHud implements HudElement {
 
@@ -91,17 +91,15 @@ public final class HakiHud implements HudElement {
         if (Unconscious.is(player)) {
             drawUnconscious(g, mc, player);
         }
-        // seulement les Hakis débloqués (les cases apparaissent au déblocage) ; rien du tout si aucun
-        java.util.List<HakiType> owned = new java.util.ArrayList<>();
+        // rien du tout tant qu'aucun Haki n'est débloqué ; dès le premier, les trois cases s'affichent (cadenas sur les autres)
+        boolean any = false;
         for (HakiType type : HakiType.values()) {
-            if (HakiManager.isUnlocked(player, type)) {
-                owned.add(type);
-            }
+            any |= HakiManager.isUnlocked(player, type);
         }
-        if (owned.isEmpty()) {
+        if (!any) {
             return;
         }
-        HakiType[] types = owned.toArray(new HakiType[0]);
+        HakiType[] types = HakiType.values();
         int rightEdge = lastSlotRight(mc, player, g.guiWidth());
         int fit = Mth.clamp((rightEdge - SCREEN_MARGIN + GAP) / (SLOT_SIZE + GAP), 1, types.length);
         int rows = (types.length + fit - 1) / fit;
@@ -235,6 +233,13 @@ public final class HakiHud implements HudElement {
         int alpha = !unlocked ? 0x50 : cooling ? 0x70 : 0xD0;
         g.blit(RenderPipelines.GUI_TEXTURED, icon(type), x + 1, y + 1, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE,
                 (alpha << 24) | 0xFFFFFF);
+        if (!unlocked) {
+            // Haki pas encore débloqué : cadenas par-dessus l'icône atténuée (comme les attaques verrouillées du fruit)
+            g.blit(RenderPipelines.GUI_TEXTURED, nolan.bloxpiece.client.hud.AbilityHud.LOCK_ICON, x + 1, y + 1, 0.0F, 0.0F,
+                    ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
+            g.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_COOLDOWN);
+            return;
+        }
         if (active) {
             g.fill(x + 1, y + 1, x + 1 + ICON_SIZE, y + 1 + ICON_SIZE, ACTIVE_TINT[type.ordinal()]);
             float pulse = 0.5F + 0.5F * Mth.sin((now % 40) / 40.0F * ((float) Math.PI * 2.0F));

@@ -16,17 +16,26 @@ import nolan.bloxpiece.fx.PirateBullet;
 
 /**
  * Pistolet à silex (arme du Pirate Tireur, lootable). Clic droit : tire une balle (PirateBullet) dans la direction du regard.
- * Chaque tir consomme 1 poudre à canon (sauf en créatif) et le pistolet doit ensuite être rechargé {@link #RELOAD_TICKS} ticks.
+ * Chaque tir consomme 1 poudre à canon (sauf en créatif) et l'arme doit ensuite être rechargée. Sert aussi au fusil de la Marine.
  * Sans poudre : un simple déclic.
  */
 public class FlintlockItem extends Item {
 
-    private static final int RELOAD_TICKS = 30;
-    private static final float DAMAGE = 9.0F;
-    private static final double SPEED = 3.0;
+    private final int reloadTicks;
+    private final float damage;
+    private final double speed;
 
+    /** Pistolet à silex des pirates. */
     public FlintlockItem(Properties properties) {
+        this(properties, 30, 9.0F, 3.0);
+    }
+
+    /** Arme à feu sur mesure (ex : fusil de la Marine : rechargement long, gros dégâts, balle rapide). */
+    public FlintlockItem(Properties properties, int reloadTicks, float damage, double speed) {
         super(properties);
+        this.reloadTicks = reloadTicks;
+        this.damage = damage;
+        this.speed = speed;
     }
 
     @Override
@@ -40,8 +49,9 @@ public class FlintlockItem extends Item {
             return InteractionResult.FAIL;
         }
         Vec3 look = player.getLookAngle();
-        PirateBullet.fire(serverLevel, player, player.getEyePosition().add(look.scale(0.5)).add(0.0, -0.1, 0.0), look, SPEED, DAMAGE);
-        player.getCooldowns().addCooldown(stack, RELOAD_TICKS);
+        PirateBullet.fire(serverLevel, player, player.getEyePosition().add(look.scale(0.5)).add(0.0, -0.1, 0.0), look, this.speed,
+                this.damage);
+        player.getCooldowns().addCooldown(stack, this.reloadTicks);
         return InteractionResult.SUCCESS;
     }
 

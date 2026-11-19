@@ -14,8 +14,9 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import nolan.bloxpiece.client.haki.UnconsciousRenderState;
 
 /**
- * Haki des Rois : une entité (joueur ou mob) évanouie est couchée sur le côté, au ras du sol : après son orientation habituelle,
- * le modèle entier est remonté d'une demi-largeur (l'épaule touche le sol) puis basculé de 90°. Mixin facultatif
+ * Haki des Rois : une entité évanouie est couchée au ras du sol, après son orientation habituelle : les bipèdes (joueurs,
+ * zombies, villageois...) tombent SUR LE DOS (bascule de 90° en arrière autour des pieds), les autres (quadrupèdes, araignées...)
+ * tombent SUR LE CÔTÉ (bascule de 90° sur le flanc), remontés selon leur largeur pour reposer sur le sol. Mixin facultatif
  * (bloxpiece.client.optional.mixins.json) : si la méthode change dans une version de Minecraft, l'entité reste simplement debout,
  * mais toujours paralysée.
  */
@@ -24,8 +25,17 @@ public abstract class UnconsciousPoseMixin {
 
     @Inject(method = "setupRotations", at = @At("TAIL"), require = 0)
     private void bloxpiece$lieDown(LivingEntityRenderState state, PoseStack pose, float bodyRot, float scale, CallbackInfo info) {
-        if (state instanceof UnconsciousRenderState u && u.bloxpiece$isUnconscious()) {
-            pose.translate(0.0F, 0.3F, 0.0F);
+        if (!(state instanceof UnconsciousRenderState u) || !u.bloxpiece$isUnconscious()) {
+            return;
+        }
+        float width = u.bloxpiece$lieWidth() > 0.0F ? u.bloxpiece$lieWidth() : 0.6F;
+        if (u.bloxpiece$lieMode() == UnconsciousRenderState.ON_BACK) {
+            // bipède : bascule EN ARRIÈRE autour des pieds, visage vers le ciel, le dos posé au sol (épaisseur ~ moitié de la largeur)
+            pose.translate(0.0F, width * 0.28F, 0.0F);
+            pose.rotateDegrees(Axis.XP, 90.0F);
+        } else {
+            // quadrupède et autres : couché sur le flanc, remonté d'une demi-largeur
+            pose.translate(0.0F, width * 0.5F, 0.0F);
             pose.rotateDegrees(Axis.ZP, 90.0F);
         }
     }

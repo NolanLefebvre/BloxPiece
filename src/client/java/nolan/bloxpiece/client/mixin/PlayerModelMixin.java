@@ -33,6 +33,9 @@ public class PlayerModelMixin {
 
     @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("TAIL"))
     private void bloxpiece$raiseArmWhileCharging(AvatarRenderState state, CallbackInfo info) {
+        if ((Object) this instanceof nolan.bloxpiece.client.haki.HakiAfterimage.GhostModel) {
+            return; // image rémanente du Haki de l'Observation : sa pose figée est posée par le modèle lui-même
+        }
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             return;
@@ -267,6 +270,8 @@ public class PlayerModelMixin {
             return;
         }
         PlayerModel model = (PlayerModel) (Object) this;
+        // image rémanente : la pose d'AVANT l'esquive est figée à la première image
+        nolan.bloxpiece.client.haki.HakiAfterimage.capture(player, model, state.ageInTicks - (float) Math.floor(state.ageInTicks));
         float k = dodge.amount();
         float side = dodge.side();
         // buste et bras

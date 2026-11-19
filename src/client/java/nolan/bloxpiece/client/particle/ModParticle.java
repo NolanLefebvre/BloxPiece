@@ -44,7 +44,13 @@ public class ModParticle extends SingleQuadParticle {
         // Haki de l'Observation : traînée des yeux, immobile, rouge vif au coeur presque blanc qui s'amincit en virant au rouge sombre
         // coeur fin presque blanc-rose qui vire au rouge et s'amincit (queue effilée) ; halo rouge plus large et plus doux
         HAKI_EYE    (9,  12, 0.028F, 0.15F, 1.00F, 0.0F,   0xFFE4E0, 0xFF1830, 1.00F, false),
-        HAKI_EYE_GLOW (5, 8, 0.085F, 0.30F, 1.00F, 0.0F,   0xFF3A48, 0xB00818, 0.55F, false);
+        HAKI_EYE_GLOW (5, 8, 0.085F, 0.30F, 1.00F, 0.0F,   0xFF3A48, 0xB00818, 0.55F, false),
+        // Haki des Rois : éclat noir qui vire au rouge sombre en ralentissant, étincelle rouge vif, onde de choc rouge qui
+        // s'élargit, brume d'aura noire teintée de rouge
+        HAKI_SHARD  (10, 16, 0.055F, 0.40F, 0.88F, 0.06F,  0x140003, 0x8A0A16, 0.90F, true),
+        HAKI_SPARK  (4,  7,  0.05F, 0.25F, 0.80F, 0.0F,    0xFFE0D8, 0xFF1A24, 0.90F, true),
+        HAKI_RING   (6,  8,  0.40F, 6.00F, 1.00F, 0.0F,    0xFF2A30, 0x6A0008, 0.45F, false),
+        HAKI_MIST   (16, 26, 0.28F, 1.80F, 0.90F, -0.01F,  0x2A0408, 0x0A0002, 0.35F, true);
 
         final int minLife, maxLife;
         final float size, endSize, friction, gravity, alpha;

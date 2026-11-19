@@ -22,7 +22,7 @@ import nolan.bloxpiece.registry.ModAttachments;
  * Haki de l'Armement (Busoshoku). Appui : le bras principal se couvre de Haki (lueur en fusion violacée, puis revêtement noir
  * métallique : rendu client HakiArmamentLayer) — dégâts au corps à corps et des armes fortement augmentés. Touche MAINTENUE
  * ({@link #HOLD_TICKS} ticks) : le revêtement se propage à tout le corps — dégâts augmentés et dégâts subis fortement réduits.
- * Nouvel appui : le Haki se retire. Durée maximale {@link #MAX_TICKS} ticks, puis recharge.
+ * Nouvel appui : le Haki se retire. Pas de durée maximale : il tient tant que la jauge de Haki n'est pas vide.
  */
 public final class ArmamentHaki implements Haki {
 
@@ -31,9 +31,7 @@ public final class ArmamentHaki implements Haki {
 
     /** Maintien de la touche avant le corps entier (0,6 s) : mesuré CÔTÉ CLIENT, qui envoie alors l'action HOLD. */
     public static final int HOLD_TICKS = 12;
-    private static final int MAX_TICKS = 20 * 60;
     private static final int COOLDOWN_MANUAL = 20 * 4;
-    private static final int COOLDOWN_EXPIRED = 20 * 15;
 
     /** Bonus de dégâts : bras +70 % ; corps entier +45 %. */
     private static final double ARM_DAMAGE = 0.70;
@@ -96,18 +94,27 @@ public final class ArmamentHaki implements Haki {
             return;
         }
         long now = player.level().getGameTime();
-        setDamageBonus(player, mode == FULL_BODY ? FULL_DAMAGE : ARM_DAMAGE);
+        // arme (ou tout objet tenu qui n'est pas un bloc) imprégnée de Haki : léger bonus en plus, proportionnel aux dégâts
+        setDamageBonus(player, (mode == FULL_BODY ? FULL_DAMAGE : ARM_DAMAGE) + (isImbued(player, player.getMainHandItem()) ? WEAPON_BONUS : 0.0));
         // fumerolles sombres autour du revêtement
         if (player.tickCount % 6 == 0 && player.level() instanceof ServerLevel level) {
             Vec3 c = player.position().add(0.0, mode == FULL_BODY ? 1.0 : 1.2, 0.0);
             double spread = mode == FULL_BODY ? 0.35 : 0.15;
             level.sendParticles(ParticleTypes.SMOKE, c.x, c.y, c.z, 1, spread, mode == FULL_BODY ? 0.6 : 0.1, spread, 0.0);
         }
-        Long since = this.activeSince.get(player.getUUID());
-        if (since != null && now - since >= MAX_TICKS) {
-            stop(player);
-            HakiManager.startCooldown(player, type(), COOLDOWN_EXPIRED);
-        }
+        // plus de durée maximale : le Haki reste actif jusqu'à ce que la jauge de Haki soit vide (HakiEnergy) ou qu'on le retire
+    }
+
+    /** Bonus des dégâts quand l'objet tenu est imprégné de Haki (+15 %, multiplicateur des dégâts totaux). */
+    private static final double WEAPON_BONUS = 0.15;
+
+    /**
+     * L'objet tenu peut-il être imprégné de Haki (arme, outil, objet quelconque ; pas la main vide ni un bloc) ? Réservé au job
+     * Épéiste : les autres jobs ne propagent pas le Haki sur leur arme.
+     */
+    public static boolean isImbued(net.minecraft.world.entity.Entity holder, net.minecraft.world.item.ItemStack stack) {
+        return !stack.isEmpty() && !(stack.getItem() instanceof net.minecraft.world.item.BlockItem)
+                && nolan.bloxpiece.job.Jobs.is(holder, nolan.bloxpiece.job.Job.SWORDMAN);
     }
 
     private static void setDamageBonus(ServerPlayer player, double bonus) {

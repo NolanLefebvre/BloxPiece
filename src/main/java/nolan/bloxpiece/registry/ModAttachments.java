@@ -25,6 +25,13 @@ public class ModAttachments {
                     .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
     );
 
+    /** Job du joueur (identifiant de nolan.bloxpiece.job.Job), choisi dès le niveau 5. Sauvegardé, gardé à la mort. */
+    public static final AttachmentType<String> PLAYER_JOB = AttachmentRegistry.create(
+            BloxPiece.id("job"),
+            builder -> builder.persistent(Codec.STRING).copyOnDeath()
+                    .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
+    );
+
     /**
      * Les quêtes du joueur (journalières pour l'instant, voir Quests). Sauvegardées, conservées à la mort, synchronisées avec
      * le client du joueur (affichage du menu Quêtes). Pas de valeur = pas encore tirées (elles le sont à la connexion).
@@ -197,6 +204,13 @@ public class ModAttachments {
     public static final AttachmentType<Integer> HAKI_DODGE = AttachmentRegistry.create(
             BloxPiece.id("haki_dodge"),
             builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /** Maîtrise du Haki : une case par type (0 = base, 1 = maîtrisé), voir HakiMastery. Sauvegardée, gardée à la mort. */
+    public static final AttachmentType<java.util.List<Integer>> HAKI_MASTERY = AttachmentRegistry.create(
+            BloxPiece.id("haki_mastered"),
+            builder -> builder.persistent(Codec.INT.listOf()).copyOnDeath()
+                    .syncWith(ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), AttachmentSyncPredicate.targetOnly())
     );
 
     /** Jauge de Haki (0 à HakiEnergy.MAX), gardée à la déconnexion ; envoyée seulement au joueur concerné (son HUD). */

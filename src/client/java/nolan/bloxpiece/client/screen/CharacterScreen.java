@@ -49,8 +49,17 @@ public class CharacterScreen extends BloxPanelScreen {
     private static final int QUESTS_Y = XP_Y + 34;
     private static final int QUESTS_W = 70;
     private static final int QUESTS_H = 14;
+    // Bouton "Haki" à côté du bouton "Quêtes", même style
+    private static final int HAKI_X = QUESTS_X + QUESTS_W + 6;
+    private static final int HAKI_W = 70;
+
+    // Pseudo inscrit dans la bordure du haut
+    private static final int NAME_TAG_MAX = 110;
 
     private final List<CharacterInfoRow> rows = CharacterInfoRows.create();
+    /** Clic sur une ligne verrouillée : son prérequis s'affiche brièvement (en plus de l'infobulle). */
+    private long lockedClickAt;
+    private @org.jspecify.annotations.Nullable CharacterInfoRow lockedClicked;
 
     // Barre d'XP animée : valeur affichée qui rattrape la valeur réelle
     private float shownXpFraction = 0.0F;
@@ -69,9 +78,33 @@ public class CharacterScreen extends BloxPanelScreen {
     protected void extractPanel(GuiGraphicsExtractor g, Font font, LocalPlayer player,
                                 int mx, int my, int mouseX, int mouseY, float dt) {
         drawPortrait(g, font, player, mx, my);
+        drawNameTag(g, font, player);
         drawRows(g, font, player, mx, my, mouseX, mouseY);
         drawExperience(g, font, player, mx, my, mouseX, mouseY, dt);
         drawQuestsButton(g, font, mx, my);
+        drawButton(g, font, mx, my, HAKI_X, QUESTS_Y, HAKI_W, QUESTS_H, Component.translatable("screen.bloxpiece.haki.button"));
+    }
+
+    /** Bouton du bas du menu (même style que « Quêtes »). */
+    private void drawButton(GuiGraphicsExtractor g, Font font, int mx, int my, int x, int y, int w, int h, Component label) {
+        boolean hovered = inside(mx, my, x, y, w, h);
+        g.fill(x, y, x + w, y + h, hovered ? CharacterInfoRow.COLOR_BACKGROUND_HOVER : CharacterInfoRow.COLOR_BACKGROUND);
+        g.outline(x, y, w, h, hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD);
+        g.centeredText(font, label, x + w / 2, y + (h - font.lineHeight) / 2 + 1, hovered ? COLOR_GOLD_BRIGHT : COLOR_LABEL);
+    }
+
+    /**
+     * Pseudo du joueur, intégré à la BORDURE supérieure du panneau (comme une légende) : le filet doré s'interrompt et le nom
+     * s'y inscrit, en doré, à gauche, aligné sur les marges du menu. Minimaliste, et il ne prend aucune place dans le contenu.
+     */
+    private void drawNameTag(GuiGraphicsExtractor g, Font font, LocalPlayer player) {
+        Component name = fit(font, player.getName(), NAME_TAG_MAX);
+        int w = font.width(name);
+        int x = PAD + 4;
+        g.fill(x - 4, -1, x + w + 4, 2, COLOR_PANEL);           // le filet s'interrompt sous le nom
+        g.fill(x - 5, 0, x - 4, 1, COLOR_GOLD);                  // petites butées dorées de part et d'autre
+        g.fill(x + w + 4, 0, x + w + 5, 1, COLOR_GOLD);
+        g.text(font, name, x, -3, COLOR_GOLD, true);
     }
 
     private void drawQuestsButton(GuiGraphicsExtractor g, Font font, int mx, int my) {
@@ -95,9 +128,22 @@ public class CharacterScreen extends BloxPanelScreen {
             this.minecraft.gui.setScreen(new QuestsScreen(this, closeKey));
             return true;
         }
+        if (inside(mx, my, HAKI_X, QUESTS_Y, HAKI_W, QUESTS_H)) {
+            playClickSound();
+            this.minecraft.gui.setScreen(new HakiScreen(this, closeKey));
+            return true;
+        }
         int y = ROWS_Y;
         for (CharacterInfoRow row : rows) {
             if (inside(mx, my, ROWS_X, y, ROWS_W, ROW_H)) {
+                if (row.isLocked(player)) {
+                    // verrouillée : petit son « refusé » et rappel du prérequis sous la ligne
+                    this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                            net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 0.6F));
+                    lockedClicked = row;
+                    lockedClickAt = System.currentTimeMillis();
+                    return true;
+                }
                 if (row.isClickable(player)) {
                     row.click(this);
                     return true;
@@ -107,6 +153,12 @@ public class CharacterScreen extends BloxPanelScreen {
             y += ROW_H + ROW_GAP;
         }
         return false;
+    }
+
+    /** Ouvre le choix des jobs (appelé par la ligne "job"). */
+    void openJobs() {
+        playClickSound();
+        this.minecraft.gui.setScreen(new JobScreen(this, closeKey));
     }
 
     /** Ouvre la page des attaques du fruit (appelé par la ligne "fruit"). */
@@ -159,8 +211,19 @@ public class CharacterScreen extends BloxPanelScreen {
         for (CharacterInfoRow row : rows) {
             boolean hovered = inside(mx, my, ROWS_X, y, ROWS_W, ROW_H);
             row.extract(g, font, player, ROWS_X, y, ROWS_W, ROW_H, hovered);
-            if (hovered && row.isClickable(player)) {
+            if (hovered && row.isLocked(player)) {
+                g.setTooltipForNextFrame(font, row.lockTooltip(player), screenMouseX, screenMouseY);
+            } else if (hovered && row.isClickable(player)) {
                 g.setTooltipForNextFrame(font, row.clickTooltip(), screenMouseX, screenMouseY);
+            }
+            // clic sur une ligne verrouillée : le prérequis s'affiche 1,5 s, discrètement, en rouge, à droite de la ligne
+            if (row == lockedClicked && System.currentTimeMillis() - lockedClickAt < 1500L) {
+                long age = System.currentTimeMillis() - lockedClickAt;
+                int alpha = (int) (255 * Math.min(1.0F, (1500L - age) / 400.0F));
+                Component reason = fit(font, row.lockTooltip(player), ROWS_W - 4);
+                g.fill(ROWS_X, y, ROWS_X + ROWS_W, y + ROW_H, (Math.max(0, alpha - 60) << 24) & 0xD0000000);
+                g.centeredText(font, reason, ROWS_X + ROWS_W / 2, y + (ROW_H - font.lineHeight) / 2 + 1,
+                        (Math.max(26, alpha) << 24) | 0xFF7070);
             }
             y += ROW_H + ROW_GAP;
         }

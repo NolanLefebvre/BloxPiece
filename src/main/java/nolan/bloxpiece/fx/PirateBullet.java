@@ -18,7 +18,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-import nolan.bloxpiece.mob.ArmedPirate;
+import nolan.bloxpiece.mob.ArmedHumanoid;
 import nolan.bloxpiece.registry.ModEntities;
 
 /**
@@ -75,7 +75,7 @@ public class PirateBullet extends ModFxEntity {
         double reach = block.getType() == HitResult.Type.MISS ? this.velocity.length() : block.getLocation().distanceTo(start);
         Vec3 dir = this.velocity.normalize();
         List<LivingEntity> candidates = level.getEntitiesOfClass(LivingEntity.class, new AABB(start, end).inflate(1.0),
-                e -> e != owner && e.isAlive() && !e.isSpectator() && !(owner instanceof ArmedPirate && e instanceof ArmedPirate));
+                e -> e != owner && e.isAlive() && !e.isSpectator() && !(owner instanceof ArmedHumanoid shooter && shooter.isAlly(e))); // pas de tir allié
         for (double d = 0.0; d <= reach; d += STEP) {
             Vec3 p = start.add(dir.scale(d));
             for (LivingEntity target : candidates) {

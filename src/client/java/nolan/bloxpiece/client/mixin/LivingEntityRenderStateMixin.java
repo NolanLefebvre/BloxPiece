@@ -18,6 +18,28 @@ public abstract class LivingEntityRenderStateMixin implements CuffedRenderState,
     @Unique
     private boolean bloxpiece$unconscious;
 
+    @Unique
+    private int bloxpiece$lieMode;
+
+    @Unique
+    private float bloxpiece$lieWidth;
+
+    @Override
+    public int bloxpiece$lieMode() {
+        return this.bloxpiece$lieMode;
+    }
+
+    @Override
+    public float bloxpiece$lieWidth() {
+        return this.bloxpiece$lieWidth;
+    }
+
+    @Override
+    public void bloxpiece$setLie(int mode, float width) {
+        this.bloxpiece$lieMode = mode;
+        this.bloxpiece$lieWidth = width;
+    }
+
     @Override
     public boolean bloxpiece$isUnconscious() {
         return this.bloxpiece$unconscious;

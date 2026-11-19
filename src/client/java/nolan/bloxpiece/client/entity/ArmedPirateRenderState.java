@@ -7,4 +7,10 @@ public class ArmedPirateRenderState extends HumanoidRenderState {
     public boolean aiming;
     /** Numéro du skin (variante visuelle) de ce pirate. */
     public int variant;
+    /** Arme tenue à deux mains (fusil) : pose de visée à deux bras. */
+    public boolean twoHanded;
+    /** Recul du coup de feu : 1 juste après le tir, puis 0. */
+    public float recoil;
+    /** Arme rangée (fusil dans le dos) : la pièce « back_rifle » du modèle est affichée. */
+    public boolean weaponStowed;
 }

@@ -153,6 +153,15 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(PirateGearModels.CAPTAIN, PirateGearModels::captain);
         EntityRendererRegistry.register(ModEntities.PIRATE_CAPTAIN,
                 context -> new ArmedPirateRenderer(context, PirateGearModels.CAPTAIN, "pirate_captain", 2));
+        // Marines (même rendu que les pirates : équipement 3D, arme 3D en main, pose de visée ; fusil à deux mains)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.MarineGearModels.SWORDSMAN,
+                nolan.bloxpiece.client.entity.MarineGearModels::swordsman);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.MarineGearModels.RIFLEMAN,
+                nolan.bloxpiece.client.entity.MarineGearModels::rifleman);
+        EntityRendererRegistry.register(ModEntities.MARINE_SWORDSMAN, context -> new ArmedPirateRenderer(context,
+                nolan.bloxpiece.client.entity.MarineGearModels.SWORDSMAN, "marine_swordsman", 4));
+        EntityRendererRegistry.register(ModEntities.MARINE_RIFLEMAN, context -> new ArmedPirateRenderer(context,
+                nolan.bloxpiece.client.entity.MarineGearModels.RIFLEMAN, "marine_rifleman", 4));
         ModelLayerRegistry.registerModelLayer(PirateBulletRenderer.LAYER, PirateBulletRenderer.BulletModel::createLayer);
         EntityRendererRegistry.register(ModEntities.PIRATE_BULLET, PirateBulletRenderer::new);
         // Le calque du modèle doit être enregistré AVANT le renderer qui s'en sert
@@ -193,6 +202,10 @@ public class BloxPieceClient implements ClientModInitializer {
         particles.register(ModParticles.FROST_GLOW, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.FROST_GLOW));
         particles.register(ModParticles.HAKI_EYE, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_EYE));
         particles.register(ModParticles.HAKI_EYE_GLOW, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_EYE_GLOW));
+        particles.register(ModParticles.HAKI_SHARD, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_SHARD));
+        particles.register(ModParticles.HAKI_SPARK, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_SPARK));
+        particles.register(ModParticles.HAKI_RING, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_RING));
+        particles.register(ModParticles.HAKI_MIST, sprites -> new ModParticle.Provider(sprites, ModParticle.Style.HAKI_MIST));
 
         // Entités du fruit de la Glace (calques des modèles d'abord, renderers ensuite)
         ModelLayerRegistry.registerModelLayer(IceModels.TridentModel.LAYER, IceModels.TridentModel::createLayer);
@@ -213,6 +226,8 @@ public class BloxPieceClient implements ClientModInitializer {
 
         // Menottes en Granite Marin : modèle des bracelets portés, cadenas sur la hotbar, inventaire verrouillé
         ModelLayerRegistry.registerModelLayer(HandcuffsLayer.LAYER, HandcuffsLayer::createLayer);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiArmamentLayer.LAYER,
+                nolan.bloxpiece.client.haki.HakiArmamentLayer::createLayer);
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiEyeTrailLayer.LAYER,
                 nolan.bloxpiece.client.haki.HakiEyeTrailLayer::createLayer);
         HandcuffsClient.register();
@@ -222,6 +237,7 @@ public class BloxPieceClient implements ClientModInitializer {
         AbilityHud.register();
         // HUD des 3 Hakis à gauche de la hotbar, éclairs du Haki des Rois
         nolan.bloxpiece.client.haki.HakiHud.register();
+        nolan.bloxpiece.client.hud.JobUnlockBanner.register(); // bannière « Job débloqué » au niveau 5
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER,
                 nolan.bloxpiece.client.haki.HakiBoltRenderer.BoltModel::createLayer);
         EntityRendererRegistry.register(ModEntities.HAKI_BOLT, nolan.bloxpiece.client.haki.HakiBoltRenderer::new);
@@ -268,6 +284,8 @@ public class BloxPieceClient implements ClientModInitializer {
             nolan.bloxpiece.client.haki.HakiClientState.clear();
             nolan.bloxpiece.client.haki.HakiHud.reset();
             nolan.bloxpiece.client.haki.HakiEyeTrail.clear();
+            nolan.bloxpiece.client.haki.HakiAfterimage.clear();
+            nolan.bloxpiece.client.haki.HakiItemCoat.clear();
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -281,6 +299,8 @@ public class BloxPieceClient implements ClientModInitializer {
             attackWasDown = attackDown;
             ClientWaterCurse.tick(client);
             LogiaClient.tick(client);
+            nolan.bloxpiece.client.haki.HakiItemCoat.tick(client);
+            nolan.bloxpiece.client.hud.JobUnlockBanner.tick(client); // revêtement du Haki sur l'objet en main (et objet lâché)
             if (client.player == null || client.getConnection() == null) {
                 return;
             }

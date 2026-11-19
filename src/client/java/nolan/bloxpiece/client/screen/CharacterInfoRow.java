@@ -28,6 +28,9 @@ public final class CharacterInfoRow {
     static final int COLOR_BACKGROUND = 0x40000000;
     static final int COLOR_BACKGROUND_HOVER = 0x40FFD25A;
     private static final int COLOR_LABEL = 0xFF9A9AAA;
+    private static final int COLOR_LABEL_LOCKED = 0xFF5E5E6A;
+    private static final int COLOR_BACKGROUND_LOCKED = 0x60000000;
+    private static final int COLOR_ACCENT_LOCKED = 0xFF55555F;
     private static final int COLOR_CLICK_HINT = 0xFFC8A24A;
     private static final int COLOR_CLICK_HINT_HOVER = 0xFFFFD25A;
     private static final int ICON_SIZE = 16;
@@ -42,6 +45,10 @@ public final class CharacterInfoRow {
     private @Nullable Predicate<LocalPlayer> clickEnabled;
     private @Nullable Consumer<CharacterScreen> onClick;
     private @Nullable Component clickTooltip;
+
+    // Ligne verrouillée (facultatif) : grisée, cadenas sur l'icône, pas de clic, infobulle qui donne le prérequis
+    private @Nullable Predicate<LocalPlayer> lockedWhen;
+    private @Nullable Function<LocalPlayer, Component> lockTooltip;
 
     /**
      * @param icon   texture 16x16 (ex : textures/gui/character/level.png)
@@ -74,9 +81,24 @@ public final class CharacterInfoRow {
         return this;
     }
 
-    /** Cette ligne réagit-elle au clic pour ce joueur ? */
+    /** Verrouille la ligne tant que {@code locked} est vrai (ex : niveau trop bas), avec une infobulle qui dit pourquoi. */
+    public CharacterInfoRow withLock(Predicate<LocalPlayer> locked, Function<LocalPlayer, Component> tooltip) {
+        this.lockedWhen = locked;
+        this.lockTooltip = tooltip;
+        return this;
+    }
+
+    public boolean isLocked(LocalPlayer player) {
+        return lockedWhen != null && lockedWhen.test(player);
+    }
+
+    public Component lockTooltip(LocalPlayer player) {
+        return lockTooltip != null ? lockTooltip.apply(player) : Component.empty();
+    }
+
+    /** Cette ligne réagit-elle au clic pour ce joueur ? (jamais quand elle est verrouillée) */
     public boolean isClickable(LocalPlayer player) {
-        return onClick != null && clickEnabled != null && clickEnabled.test(player);
+        return onClick != null && clickEnabled != null && clickEnabled.test(player) && !isLocked(player);
     }
 
     public void click(CharacterScreen screen) {
@@ -91,8 +113,12 @@ public final class CharacterInfoRow {
     }
 
     public void extract(GuiGraphicsExtractor g, Font font, LocalPlayer player, int x, int y, int w, int h, boolean hovered) {
-        g.fill(x, y, x + w, y + h, hovered ? COLOR_BACKGROUND_HOVER : COLOR_BACKGROUND);
-        g.fill(x, y, x + (hovered ? 2 : 1), y + h, accent); // barre d'accent : s'épaissit au survol
+        boolean locked = isLocked(player);
+        if (locked) {
+            hovered = false; // ligne verrouillée : pas de surbrillance (l'infobulle donne le prérequis)
+        }
+        g.fill(x, y, x + w, y + h, locked ? COLOR_BACKGROUND_LOCKED : hovered ? COLOR_BACKGROUND_HOVER : COLOR_BACKGROUND);
+        g.fill(x, y, x + (hovered ? 2 : 1), y + h, locked ? COLOR_ACCENT_LOCKED : accent); // barre d'accent : s'épaissit au survol
 
         int iconX = x + 5;
         int iconY = y + (h - ICON_SIZE) / 2;
@@ -101,11 +127,15 @@ public final class CharacterInfoRow {
             g.item(stack, iconX, iconY);
         } else {
             g.blit(RenderPipelines.GUI_TEXTURED, icon, iconX, iconY, 0.0F, 0.0F,
+                    ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, locked ? 0x60FFFFFF : 0xFFFFFFFF);
+        }
+        if (locked) {
+            g.blit(RenderPipelines.GUI_TEXTURED, nolan.bloxpiece.client.hud.AbilityHud.LOCK_ICON, iconX, iconY, 0.0F, 0.0F,
                     ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
         }
 
         int textY = y + (h - font.lineHeight) / 2 + 1;
-        g.text(font, label, x + 26, textY, COLOR_LABEL, true);
+        g.text(font, label, x + 26, textY, locked ? COLOR_LABEL_LOCKED : COLOR_LABEL, true);
         int labelEnd = x + 26 + font.width(label);
         if (isClickable(player)) {
             g.text(font, ">", labelEnd + 4, textY, hovered ? COLOR_CLICK_HINT_HOVER : COLOR_CLICK_HINT, true);

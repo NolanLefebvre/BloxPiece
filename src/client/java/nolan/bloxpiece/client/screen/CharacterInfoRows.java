@@ -40,8 +40,17 @@ public final class CharacterInfoRows {
 
     public static List<CharacterInfoRow> create() {
         return List.of(
-                new CharacterInfoRow(icon("pseudo"), label("pseudo"), 0xFF6FA8FF,
-                        player -> new Value(player.getName(), COLOR_VALUE)),
+                // Job (à la place du pseudo, désormais en petit en haut à droite du menu) : cliquer ouvre le choix des jobs
+                new CharacterInfoRow(icon("job"), label("job"), 0xFF6FA8FF,
+                        CharacterInfoRows::jobValue)
+                        // cliquable seulement tant qu'aucun job n'est choisi (ensuite : définitif, affiche juste le job)
+                        .withClick(Component.translatable("screen.bloxpiece.character.job_tooltip"),
+                                player -> nolan.bloxpiece.job.Jobs.get(player) == null,
+                                CharacterScreen::openJobs)
+                        // avant le niveau 5 : grisée, cadenas, pas de clic, infobulle « Niveau 5 requis... »
+                        .withLock(player -> Progression.get(player).level() < nolan.bloxpiece.job.Jobs.REQUIRED_LEVEL,
+                                player -> Component.translatable("screen.bloxpiece.character.job_locked_tooltip",
+                                        nolan.bloxpiece.job.Jobs.REQUIRED_LEVEL, Progression.get(player).level())),
 
                 new CharacterInfoRow(icon("fruit"), label("fruit"), 0xFFFF8A3D,
                         CharacterInfoRows::fruitValue)
@@ -60,6 +69,18 @@ public final class CharacterInfoRows {
                 new CharacterInfoRow(icon("level"), label("level"), COLOR_GOLD,
                         CharacterInfoRows::levelValue)
         );
+    }
+
+    private static Value jobValue(LocalPlayer player) {
+        nolan.bloxpiece.job.Job job = nolan.bloxpiece.job.Jobs.get(player);
+        if (job != null) {
+            return new Value(Component.translatable(job.nameKey()), job.color);
+        }
+        if (Progression.get(player).level() < nolan.bloxpiece.job.Jobs.REQUIRED_LEVEL) {
+            return new Value(Component.translatable("screen.bloxpiece.character.job_locked", nolan.bloxpiece.job.Jobs.REQUIRED_LEVEL),
+                    COLOR_MUTED);
+        }
+        return new Value(Component.translatable("screen.bloxpiece.character.job_choose"), COLOR_GOLD);
     }
 
     private static Value fruitValue(LocalPlayer player) {

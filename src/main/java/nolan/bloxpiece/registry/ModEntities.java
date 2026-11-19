@@ -70,6 +70,25 @@ public class ModEntities {
             .clientTrackingRange(8)
             .build(PIRATE_CAPTAIN_KEY);
 
+    // Marines (Épéiste, Fusilier) : neutres envers les joueurs, ennemis des pirates
+    public static final ResourceKey<EntityType<?>> MARINE_SWORDSMAN_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("marine_swordsman"));
+
+    public static final EntityType<nolan.bloxpiece.mob.MarineSwordsman> MARINE_SWORDSMAN =
+            EntityType.Builder.of(nolan.bloxpiece.mob.MarineSwordsman::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(MARINE_SWORDSMAN_KEY);
+
+    public static final ResourceKey<EntityType<?>> MARINE_RIFLEMAN_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("marine_rifleman"));
+
+    public static final EntityType<nolan.bloxpiece.mob.MarineRifleman> MARINE_RIFLEMAN =
+            EntityType.Builder.of(nolan.bloxpiece.mob.MarineRifleman::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(MARINE_RIFLEMAN_KEY);
+
     // Balle de pistolet à silex (Pirate Tireur, joueur) : ni invocable à la main, ni sauvegardée
     public static final ResourceKey<EntityType<?>> PIRATE_BULLET_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_bullet"));
@@ -226,6 +245,8 @@ public class ModEntities {
         register(PIRATE_GUNNER_KEY, PIRATE_GUNNER, PirateGunner.STATS.toAttributes());
         register(PIRATE_CAPTAIN_KEY, PIRATE_CAPTAIN, PirateCaptain.STATS.toAttributes()
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.6)); // difficile à repousser
+        register(MARINE_SWORDSMAN_KEY, MARINE_SWORDSMAN, nolan.bloxpiece.mob.MarineSwordsman.STATS.toAttributes());
+        register(MARINE_RIFLEMAN_KEY, MARINE_RIFLEMAN, nolan.bloxpiece.mob.MarineRifleman.STATS.toAttributes());
         Registry.register(BuiltInRegistries.ENTITY_TYPE, PIRATE_BULLET_KEY, PIRATE_BULLET);
         register(ENTEI_SUN_KEY, ENTEI_SUN, Mob.createMobAttributes());
         // Le poing est un projectile (pas un être vivant) : pas d'attributs à enregistrer
