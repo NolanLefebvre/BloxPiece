@@ -28,7 +28,7 @@ import nolan.bloxpiece.fx.AceSlashShape;
  * <ul>
  *   <li>rien pendant l'armé (l'énergie autour du lanceur vient des particules et des éclairs envoyés par le serveur) ;</li>
  *   <li>en vol : le croissant couché dans le plan du coup, la bosse courbée (tranchant rouge) vers l'avant, incliné en diagonale
- *       (AceSlashShape.ROLL, même repère que les collisions). L'orientation est celle fixée au lancer : elle ne change plus
+ *       (AceSlash.roll : l'une des deux diagonales, même repère que les collisions). L'orientation est celle fixée au lancer : elle ne change plus
  *       pendant le trajet. Il jaillit en grandissant d'un coup ; son halo cramoisi pulse ;</li>
  *   <li>traînée lumineuse : un voile rouge très diffus, étiré vers l'arrière mais ATTACHÉ à la lame (il avance avec elle) ;</li>
  *   <li>éclairs noirs et rouges qui crépitent sur la lame (redessinés tous les 2 ticks, ils la suivent) ;</li>
@@ -56,6 +56,7 @@ public class AceSlashRenderer extends EntityRenderer<AceSlash, AceSlashRenderer.
         public float fade = 1.0F;
         public int seed;
         public float scale = 1.0F;
+        public float roll = AceSlashShape.ROLL;
     }
 
     private final AceSlashModel model;
@@ -84,6 +85,7 @@ public class AceSlashRenderer extends EntityRenderer<AceSlash, AceSlashRenderer.
         state.fade = entity.fade(partialTick);
         state.seed = entity.getId();
         state.scale = entity.scale();
+        state.roll = entity.roll();
     }
 
     @Override
@@ -99,7 +101,7 @@ public class AceSlashRenderer extends EntityRenderer<AceSlash, AceSlashRenderer.
             pose.pushPose();
             pose.rotateDegrees(Axis.YP, -state.yaw);
             pose.rotateDegrees(Axis.XP, state.pitch);
-            pose.rotateDegrees(Axis.ZP, AceSlashShape.ROLL);
+            pose.rotateDegrees(Axis.ZP, state.roll); // diagonale choisie (même forme, inclinée dans un sens ou l'autre)
             pose.scale(grow * state.scale, grow * thin * state.scale, grow * state.scale);
             // la lame : corps et bords déchiquetés, puis halo cramoisi (et un second halo plus large, très diffus)
             collector.order(0).submitModelPart(this.model.core, pose, type, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null,

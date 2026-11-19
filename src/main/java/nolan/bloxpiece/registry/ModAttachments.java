@@ -128,6 +128,15 @@ public class ModAttachments {
     );
 
     /**
+     * Épée Ace : diagonale de la Lame dévastatrice (vrai = deuxième diagonale, du haut à gauche vers le bas à droite ; tirée au
+     * hasard par le serveur au début de chaque attaque). Pas sauvegardé, synchronisé avec TOUS les joueurs : chacun anime le bon geste.
+     */
+    public static final AttachmentType<Boolean> ACE_REVERSE = AttachmentRegistry.create(
+            BloxPiece.id("ace_reverse"),
+            builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
+    /**
      * Corail à Bulles : instant (temps de jeu) où la bulle d'air s'est formée autour du joueur ; absent = pas de bulle. Sauvegardé
      * (la bulle survit à une déconnexion) mais perdu à la mort, synchronisé avec TOUS les joueurs : chacun dessine la bulle et son
      * animation de formation à partir de cet instant (voir BubbleCoralLayer). Logique : BubbleCoral.

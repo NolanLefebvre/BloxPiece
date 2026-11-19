@@ -1,5 +1,7 @@
 package nolan.bloxpiece.client.mixin;
 
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -47,6 +49,9 @@ public abstract class AceSlashFirstPersonMixin {
     private static final float RAISED_ANGLE = -75.0F, STRUCK_ANGLE = 60.0F;
     private static final float RAISED_SLIDE = 0.15F, STRUCK_SLIDE = -0.42F;
     private static final float RAISED_BACK = 0.05F, STRUCK_BACK = -0.12F;
+    /** Deuxième diagonale (revers, haut gauche -> bas droite) : mêmes réglages, simulés vue caméra. */
+    private static final float RAISED_ANGLE_2 = -110.0F, STRUCK_ANGLE_2 = 50.0F;
+    private static final float RAISED_SLIDE_2 = 0.30F, STRUCK_SLIDE_2 = -0.15F;
 
     @Inject(method = "submitArmWithItem", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V",
             shift = At.Shift.AFTER, ordinal = 0), require = 0)
@@ -64,21 +69,38 @@ public abstract class AceSlashFirstPersonMixin {
         }
         // poses clés : normale, levée (avec un léger tremblement pendant la charge), frappée
         float tremble = (float) Math.sin((player.tickCount + partialTicks) * 1.7F) * 1.5F;
-        float[][] poses = {{0.0F, 0.0F, 0.0F}, {RAISED_ANGLE + tremble, RAISED_SLIDE, RAISED_BACK}, {STRUCK_ANGLE, STRUCK_SLIDE, STRUCK_BACK}};
+        boolean reverse = nolan.bloxpiece.client.AceSwing.reverse(player);
+        // poses clés : {angle dans le plan du coup, glissement de la main, recul, alignement de l'épée dans le plan (0 à 1)}
+        float[][] poses = reverse
+                // deuxième diagonale (revers) : l'épée est d'abord ramenée dans le plan du coup (pointe vers l'avant), puis levée
+                // en haut à gauche et vers l'arrière ; la frappe la ramène vers le bas à droite
+                ? new float[][] {{0.0F, 0.0F, 0.0F, 0.0F}, {RAISED_ANGLE_2 + tremble, RAISED_SLIDE_2, RAISED_BACK, 1.0F},
+                        {STRUCK_ANGLE_2, STRUCK_SLIDE_2, STRUCK_BACK, 1.0F}}
+                : new float[][] {{0.0F, 0.0F, 0.0F, 0.0F}, {RAISED_ANGLE + tremble, RAISED_SLIDE, RAISED_BACK, 0.0F},
+                        {STRUCK_ANGLE, STRUCK_SLIDE, STRUCK_BACK, 0.0F}};
         float[] from = poses[step.from()], to = poses[step.to()];
         float k = step.k();
         float angle = from[0] + (to[0] - from[0]) * k;
         float slide = from[1] + (to[1] - from[1]) * k;
         float back = from[2] + (to[2] - from[2]) * k;
+        float align = from[3] + (to[3] - from[3]) * k;
         boolean right = player.getMainArm() == HumanoidArm.RIGHT;
         float side = right ? 1.0F : -1.0F;
-        // diagonale du coup vue de la caméra (haut-droite), et normale du plan du coup (diagonale x direction du regard)
+        // direction de la levée vue de la caméra (haut-droite, ou haut-gauche pour la deuxième diagonale) ; normale du plan du
+        // coup = cette direction x direction du regard : la rotation positive mène toujours de la levée vers la frappe opposée
         double roll = Math.toRadians(-AceSlashShape.ROLL);
-        float ux = (float) Math.cos(roll) * side, uy = (float) Math.sin(roll);
+        float ux = (float) Math.cos(roll) * side * (reverse ? -1.0F : 1.0F), uy = (float) Math.sin(roll);
         Vector3f normal = new Vector3f(-uy, ux, 0.0F).normalize();
         float hx = HAND_X * side;
         pose.translate(hx + ux * slide, HAND_Y + uy * slide, HAND_Z + back);
         pose.rotateDegrees(Axis.of(normal), angle); // main gauche : axe miroir, même sens visuel
+        if (align > 0.0F) {
+            // l'épée tenue normalement pointe vers le haut, l'avant et la gauche : on la ramène d'abord droit devant (dans le
+            // plan du coup), sinon elle tournerait en cône au lieu de balayer la diagonale
+            Quaternionf toFront = new Quaternionf().rotationTo(new Vector3f(-0.30F * side, 0.75F, -0.55F).normalize(),
+                    new Vector3f(0.0F, 0.0F, -1.0F));
+            pose.mulPose(new Matrix4f().rotation(new Quaternionf().slerp(toFront, align)));
+        }
         pose.translate(-hx, -HAND_Y, -HAND_Z);
     }
 }

@@ -26,7 +26,7 @@ public class ModCommands {
         // propre permission, modifiable via un mod de permissions). Pour en ajouter une : un .then(...) de plus ici.
         //   /bloxfruit removedf [joueur]                                          -> retire le fruit (le tien sans joueur)
         //   /bloxfruit addxp <joueur> <quantité>                                  -> ajoute (ou retire si < 0) de l'XP
-        //   /bloxfruit resetcooldowns [joueur]                                    -> recharges des attaques et des Hakis
+        //   /bloxfruit resetcooldowns [joueur]                                    -> recharges des attaques, des Hakis et d'Ace
         //   /bloxfruit job set <joueur> <swordman|brawler|sniper|none>              -> impose (ou retire) le job
         //   /bloxfruit haki unlock|lock <joueur> <armament|observation|conqueror|all> -> débloque / reverrouille un Haki
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> dispatcher.register(
@@ -156,10 +156,25 @@ public class ModCommands {
         return 1;
     }
 
+    /**
+     * Épée Ace : sa recharge (Lame dévastatrice du Haki des Rois) est celle de Minecraft sur l'objet ; on l'efface aussi (le
+     * serveur prévient le client : l'icône d'Ace redevient pleine). Renvoie 1 si une recharge était en cours.
+     */
+    private static int clearAceCooldown(ServerPlayer target) {
+        net.minecraft.world.item.ItemStack ace = new net.minecraft.world.item.ItemStack(ModItems.ACE);
+        var cooldowns = target.getCooldowns();
+        if (!cooldowns.isOnCooldown(ace)) {
+            return 0;
+        }
+        cooldowns.removeCooldown(cooldowns.getCooldownGroup(ace));
+        return 1;
+    }
+
     private static int resetCooldowns(CommandSourceStack source, ServerPlayer target) {
         // Efface les recharges côté serveur (là où elles comptent vraiment) ET prévient le HUD du joueur
         // attaques du fruit ET les trois Hakis (Armement, Observation, Rois)
-        int reset = AbilityManager.clearCooldowns(target) + nolan.bloxpiece.haki.HakiManager.clearCooldowns(target);
+        int reset = AbilityManager.clearCooldowns(target) + nolan.bloxpiece.haki.HakiManager.clearCooldowns(target)
+                + clearAceCooldown(target);
         if (reset == 0) {
             source.sendFailure(Component.translatable("message.bloxpiece.resetcooldowns.none", target.getDisplayName()));
             return 0;

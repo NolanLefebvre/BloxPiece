@@ -134,14 +134,40 @@ public class PlayerModelMixin {
         // Le bras balaie LE PLAN DE LA LAME : zRot fixe = ce plan incliné de la diagonale (AceSlashShape.ROLL), seul xRot varie.
         // Levée : bras au-dessus de l'épaule droite, épée en haut à droite et vers l'arrière ; frappée : bras en bas à gauche,
         // devant. Entre les deux il passe droit devant : la lame part dans la direction du geste.
-        float plane = -(float) Math.toRadians(90.0 + nolan.bloxpiece.fx.AceSlashShape.ROLL);
+        boolean reverse = nolan.bloxpiece.client.AceSwing.reverse(player);
         float look = model.head.xRot * 0.7F; // suit un peu le regard (haut / bas)
         float tremble = (float) Math.sin(state.ageInTicks * 1.7F) * 0.03F; // l'énergie s'accumule : l'épée tremble
-        float[][] poses = {
-                {arm.xRot, arm.yRot, arm.zRot, model.body.yRot},  // pose normale de Minecraft
-                {-3.7F + look + tremble, 0.0F, plane, 0.4F},      // levée
-                {-0.6F + look, 0.0F, plane, -0.4F},               // frappée
-        };
+        float[][] poses;
+        if (!reverse) {
+            float plane = -(float) Math.toRadians(90.0 + nolan.bloxpiece.fx.AceSlashShape.ROLL);
+            poses = new float[][] {
+                    {arm.xRot, arm.yRot, arm.zRot, model.body.yRot},  // pose normale de Minecraft
+                    {-3.7F + look + tremble, 0.0F, plane, 0.4F},      // levée
+                    {-0.6F + look, 0.0F, plane, -0.4F},               // frappée
+            };
+        } else {
+            // Deuxième diagonale (tirée au hasard par le serveur) : une vraie préparation de revers, pas un miroir. Le bras droit
+            // est levé VERS L'AVANT (main devant le visage) et l'épée passe DERRIÈRE L'ÉPAULE GAUCHE, pointe en haut ; les épaules
+            // tournent vers la gauche (élan). Frappe : l'épée revient par l'avant, en haut à gauche, traverse devant le joueur et
+            // finit en bas à droite (pose intermédiaire « milieu » pour que la lame passe devant et non au-dessus de la tête).
+            // Angles calculés avec la même chaîne que le rendu (bras + Ace en main) : la lame ne traverse ni la tête ni le corps.
+            poses = new float[][] {
+                    {arm.xRot, arm.yRot, arm.zRot, model.body.yRot},   // pose normale de Minecraft
+                    {-2.2F + look + tremble, -0.2F, 1.15F, -0.35F},    // levée : main devant, lame derrière l'épaule gauche
+                    {-0.6F + look, 0.65F, -1.3F, 0.35F},               // frappée : bras en bas à droite, pointe devant à droite
+                    {-0.35F + look, -0.6F, -0.75F, 0.0F},              // milieu de la frappe : lame devant, en haut à gauche
+            };
+            if (step.from() == nolan.bloxpiece.client.AceSwing.RAISED && step.to() == nolan.bloxpiece.client.AceSwing.STRUCK) {
+                float k2 = step.k();
+                float[] a = k2 < 0.5F ? poses[1] : poses[3], b = k2 < 0.5F ? poses[3] : poses[2];
+                float kk = k2 < 0.5F ? k2 * 2.0F : (k2 - 0.5F) * 2.0F;
+                arm.xRot = a[0] + (b[0] - a[0]) * kk;
+                arm.yRot = a[1] + (b[1] - a[1]) * kk;
+                arm.zRot = a[2] + (b[2] - a[2]) * kk;
+                model.body.yRot = a[3] + (b[3] - a[3]) * kk;
+                return;
+            }
+        }
         float[] from = poses[step.from()], to = poses[step.to()];
         float k = step.k();
         float x = from[0] + (to[0] - from[0]) * k, y = from[1] + (to[1] - from[1]) * k;

@@ -21,6 +21,14 @@ public final class AceSlashShape {
     public static final double THICK = 9.0;
     /** Inclinaison de la lame (degrés) autour de l'axe du vol : du haut à droite vers le bas à gauche, vu par le lanceur. */
     public static final float ROLL = -35.0F;
+    /** Deuxième diagonale (miroir) : du haut à gauche vers le bas à droite. Le croissant est symétrique : même forme, juste
+     *  incliné dans l'autre sens autour de l'axe du vol (bosse toujours vers l'avant). */
+    public static final float ROLL_REVERSE = 35.0F;
+
+    /** Inclinaison de la diagonale choisie. */
+    public static float roll(boolean reverse) {
+        return reverse ? ROLL_REVERSE : ROLL;
+    }
     /** Points de collision le long de l'envergure. */
     public static final int SAMPLES = 17;
 

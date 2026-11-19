@@ -48,7 +48,7 @@
   "message.bloxpiece.addxp.none": "Aucun changement pour %s",
   "message.bloxpiece.resetcooldowns.success": "Recharges remises à zéro pour %1$s (%2$s)",
   "message.bloxpiece.resetcooldowns.none": "%s n'a aucune recharge en cours",
-  "message.bloxpiece.resetcooldowns.notify": "Tes attaques et tes Hakis sont prêts !",
+  "message.bloxpiece.resetcooldowns.notify": "Tes attaques, tes Hakis et Ace sont prêts !",
   "ability.bloxpiece.fire_fist.name": "Poing de feu",
   "ability.bloxpiece.fire_fist.description": "Boule de feu droit devant.",
   "ability.bloxpiece.hiken.name": "Hiken",

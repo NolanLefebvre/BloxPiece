@@ -25,6 +25,11 @@ public final class AceSwing {
     private AceSwing() {
     }
 
+    /** Deuxième diagonale (haut gauche -> bas droite) choisie pour ce coup ? */
+    public static boolean reverse(Entity entity) {
+        return Boolean.TRUE.equals(entity.getAttached(ModAttachments.ACE_REVERSE));
+    }
+
     /** Le geste en cours, ou null (pose normale de Minecraft). {@code now} = temps de jeu + fraction de tick. */
     public static Step at(Entity entity, float now) {
         Integer strike = entity.getAttached(ModAttachments.ACE_SLASH);

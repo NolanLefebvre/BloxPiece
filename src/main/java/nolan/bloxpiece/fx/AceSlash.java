@@ -82,6 +82,9 @@ public class AceSlash extends ModFxEntity {
             SynchedEntityData.defineId(AceSlash.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SCALE =
             SynchedEntityData.defineId(AceSlash.class, EntityDataSerializers.FLOAT);
+    /** Inclinaison de la lame (diagonale choisie, AceSlashShape.roll), fixée à la naissance. */
+    private static final EntityDataAccessor<Float> ROLL =
+            SynchedEntityData.defineId(AceSlash.class, EntityDataSerializers.FLOAT);
 
     /** Ticks à attendre avant le lancer (fin de la frappe) ; serveur seulement. */
     private int delay;
@@ -96,9 +99,10 @@ public class AceSlash extends ModFxEntity {
      * Frappe : l'entité naît collée au lanceur (invisible) et part dans {@code delay} ticks, à la fin du coup d'épée.
      * {@code charge} de 0 à 1 : taille du croissant (1 + {@link #MAX_SCALE_BONUS} x charge).
      */
-    public static void start(ServerLevel level, LivingEntity owner, float charge, int delay) {
+    public static void start(ServerLevel level, LivingEntity owner, float charge, int delay, float roll) {
         AceSlash slash = new AceSlash(ModEntities.ACE_SLASH, level);
         slash.managed = true;
+        slash.entityData.set(ROLL, roll);
         slash.delay = Math.max(1, delay);
         slash.entityData.set(SCALE, 1.0F + MAX_SCALE_BONUS * Math.max(0.0F, Math.min(1.0F, charge)));
         slash.setOwner(owner);
@@ -106,6 +110,11 @@ public class AceSlash extends ModFxEntity {
         slash.setYRot(owner.getYRot());
         slash.setXRot(owner.getXRot());
         level.addFreshEntity(slash);
+    }
+
+    /** Inclinaison de la lame (degrés) : la diagonale du coup. */
+    public float roll() {
+        return this.entityData.get(ROLL);
     }
 
     /** Taille du croissant (1 = normale), fixée par la charge. */
@@ -203,7 +212,7 @@ public class AceSlash extends ModFxEntity {
         AABB zone = null;
         for (int i = 0; i < samples.length; i++) {
             AceSlashShape.Sample s = samples[i];
-            Vec3 local = AceSlashShape.toWorld(s.x() * k, s.y() * k, s.z() * k, yaw, pitch, AceSlashShape.ROLL);
+            Vec3 local = AceSlashShape.toWorld(s.x() * k, s.y() * k, s.z() * k, yaw, pitch, this.roll());
             a[i] = from.add(local);
             b[i] = to.add(local);
             AABB box = new AABB(a[i], b[i]).inflate(s.radius() * k);
@@ -314,7 +323,7 @@ public class AceSlash extends ModFxEntity {
         float yaw = this.getYRot(), pitch = this.getXRot();
         for (int k = 0; k < 4; k++) {
             AceSlashShape.Sample s = samples[1 + random.nextInt(samples.length - 2)];
-            Vec3 p = this.position().add(AceSlashShape.toWorld(s.x(), s.y(), s.z(), yaw, pitch, AceSlashShape.ROLL));
+            Vec3 p = this.position().add(AceSlashShape.toWorld(s.x(), s.y(), s.z(), yaw, pitch, this.roll()));
             level.sendParticles(ModParticles.HAKI_SPARK, p.x, p.y, p.z, 2, 0.2, 0.2, 0.2, 0.05);
             if (k == 0) {
                 level.sendParticles(ModParticles.HAKI_MIST, p.x, p.y, p.z, 1, 0.3, 0.3, 0.3, 0.01);
@@ -327,5 +336,6 @@ public class AceSlash extends ModFxEntity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(LAUNCHED_AT, -1);
         builder.define(SCALE, 1.0F);
+        builder.define(ROLL, AceSlashShape.ROLL);
     }
 }

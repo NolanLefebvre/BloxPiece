@@ -48,7 +48,7 @@
   "message.bloxpiece.addxp.none": "No change for %s",
   "message.bloxpiece.resetcooldowns.success": "Cooldowns reset for %1$s (%2$s)",
   "message.bloxpiece.resetcooldowns.none": "%s has no active cooldown",
-  "message.bloxpiece.resetcooldowns.notify": "Your attacks and Haki are ready!",
+  "message.bloxpiece.resetcooldowns.notify": "Your attacks, Haki and Ace are ready!",
   "ability.bloxpiece.fire_fist.name": "Fire Fist",
   "ability.bloxpiece.fire_fist.description": "Fireball straight ahead.",
   "ability.bloxpiece.hiken.name": "Hiken",

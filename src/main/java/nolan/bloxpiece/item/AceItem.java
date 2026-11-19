@@ -5,17 +5,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
 import nolan.bloxpiece.fx.AceSlash;
-import nolan.bloxpiece.fx.HakiBolt;
 import nolan.bloxpiece.haki.HakiManager;
 import nolan.bloxpiece.haki.HakiType;
 import nolan.bloxpiece.handcuffs.Handcuffs;
@@ -32,6 +29,10 @@ import nolan.bloxpiece.registry.ModParticles;
  *   <li><b>relâchement</b> : frappe en diagonale, la lame part à la fin du coup, d'autant plus grande que la charge était longue
  *       (modérément : +30 % au maximum). Maintenu au-delà de {@link AceSlash#MAX_HOLD_TICKS}, le coup part tout seul.</li>
  * </ol>
+ * Deux diagonales, même bras droit et même épée : du haut à droite vers le bas à gauche, ou du haut à gauche vers le bas à
+ * droite (geste de revers). Le serveur en tire une au hasard (une chance sur deux) à chaque attaque, chargée ou non ; la
+ * préparation, la frappe, le croissant et les éclairs la suivent (attachment ACE_REVERSE, synchronisé).
+ * <p>
  * Réservée aux joueurs qui ont débloqué le Haki des Rois (HakiManager, le déblocage du mod) : sinon ni charge ni lancer, et un
  * message s'affiche. Vérifié par le serveur au début de la charge, pendant et au relâchement.
  * <p>
@@ -65,6 +66,9 @@ public class AceItem extends PirateSaberItem {
         // (pendant la recharge, Minecraft n'appelle même pas cette méthode : la charge ne peut pas commencer)
         if (level instanceof ServerLevel serverLevel) {
             player.setAttached(ModAttachments.ACE_CHARGE, (int) serverLevel.getGameTime());
+            // diagonale tirée au hasard PAR LE SERVEUR (une chance sur deux), dès le début : la préparation, la frappe, le
+            // croissant et les éclairs la suivent ; synchronisée avec tous les joueurs (attachment ACE_REVERSE)
+            player.setAttached(ModAttachments.ACE_REVERSE, serverLevel.getRandom().nextBoolean());
             serverLevel.playSound(null, player.getX(), player.getY() + 1.0, player.getZ(), SoundEvents.WARDEN_SONIC_CHARGE,
                     SoundSource.PLAYERS, 1.0F, 0.7F);
         }
@@ -128,103 +132,23 @@ public class AceItem extends PirateSaberItem {
         // l'épée doit d'abord être levée : relâché trop tôt, la frappe attend la fin de la levée
         int strikeStart = Math.max(now, chargeStart + (int) Math.ceil(AceSlash.RAISE_TICKS));
         entity.setAttached(ModAttachments.ACE_SLASH, strikeStart);
-        AceSlash.start(level, entity, charge(used), strikeStart - now + (int) AceSlash.STRIKE_TICKS);
+        boolean reverse = Boolean.TRUE.equals(entity.getAttached(ModAttachments.ACE_REVERSE));
+        AceSlash.start(level, entity, charge(used), strikeStart - now + (int) AceSlash.STRIKE_TICKS,
+                nolan.bloxpiece.fx.AceSlashShape.roll(reverse));
         if (entity instanceof Player player) {
             player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
         }
     }
 
-    /** Axe de la lame dans le modèle d'Ace (pixels du modèle : garde, pointe ; models/item/ace.json). */
-    private static final double[] GUARD = {4.6, 4.6}, TIP = {18.8, 23.45};
-    /** Les éclairs naissent sur la lame entre cette fraction (0 = garde) et la pointe : jamais sur la poignée ni la garde. */
-    private static final double BLADE_START = 0.2;
-
     /**
-     * Position dans le monde d'un point du modèle d'Ace (pixels du modèle, plan médian z = 8) quand l'épée est LEVÉE pendant la
-     * charge : même chaîne que le rendu (modèle du joueur, bras droit dans la pose levée de PlayerModelMixin, placement de l'objet
-     * en main, transformation « tenu en main, 3e personne » d'Ace). Les éclairs partent ainsi de la lame elle-même.
-     */
-    private static Vec3 heldPoint(LivingEntity entity, double mx, double my) {
-        double[] p = {mx / 16.0, my / 16.0, 0.5};
-        // transformation d'affichage d'Ace (3e personne, main droite), puis placement de l'objet dans la main
-        add(p, -0.5, -0.5, -0.5);
-        mul(p, 0.85, 0.85, 0.85);
-        rotZ(p, -145.0);
-        rotY(p, 90.0);
-        rotX(p, -180.0);
-        add(p, 0.0, 5.56 / 16.0, 0.05 / 16.0);
-        add(p, 1.0 / 16.0, 0.125, -0.625);
-        rotY(p, 180.0);
-        rotX(p, -90.0);
-        // bras droit levé (PlayerModelMixin : xRot -3,7 + 0,7 x regard, zRot = plan de la lame), pivot de l'épaule
-        rotX(p, Math.toDegrees(-3.7 + 0.7 * Math.toRadians(entity.getXRot())));
-        rotZ(p, -(90.0 + nolan.bloxpiece.fx.AceSlashShape.ROLL));
-        add(p, -5.0 / 16.0, 2.0 / 16.0, 0.0);
-        // modèle du joueur -> monde (comme le rendu des joueurs : retourné, échelle 0,9375, tourné selon le corps)
-        add(p, 0.0, -1.501, 0.0);
-        mul(p, -0.9375, -0.9375, 0.9375);
-        rotY(p, 180.0 - entity.yBodyRot);
-        double s = entity.getScale();
-        return entity.position().add(p[0] * s, p[1] * s, p[2] * s);
-    }
-
-    private static void add(double[] p, double x, double y, double z) {
-        p[0] += x;
-        p[1] += y;
-        p[2] += z;
-    }
-
-    private static void mul(double[] p, double x, double y, double z) {
-        p[0] *= x;
-        p[1] *= y;
-        p[2] *= z;
-    }
-
-    private static void rotX(double[] p, double deg) {
-        double a = Math.toRadians(deg), c = Math.cos(a), sn = Math.sin(a), y = p[1], z = p[2];
-        p[1] = y * c - z * sn;
-        p[2] = y * sn + z * c;
-    }
-
-    private static void rotY(double[] p, double deg) {
-        double a = Math.toRadians(deg), c = Math.cos(a), sn = Math.sin(a), x = p[0], z = p[2];
-        p[0] = x * c + z * sn;
-        p[2] = -x * sn + z * c;
-    }
-
-    private static void rotZ(double[] p, double deg) {
-        double a = Math.toRadians(deg), c = Math.cos(a), sn = Math.sin(a), x = p[0], y = p[1];
-        p[0] = x * c - y * sn;
-        p[1] = x * sn + y * c;
-    }
-
-    /**
-     * Accumulation du Haki des Rois sur l'épée levée : éclairs du Haki des Rois (entités HakiBolt, comme la première version) qui
-     * JAILLISSENT de la lame dans toutes les directions, de plus en plus nombreux et grands avec la charge, et étincelles le long
-     * de la lame. Ils naissent toujours sur la lame (de {@link #BLADE_START} à la pointe), jamais sur la poignée. Brume noire au
-     * sol et grondement qui monte ; pleine charge : un signal sonore.
+     * Accumulation du Haki des Rois, côté serveur : brume noire au sol et grondement qui montent avec la charge ; pleine charge :
+     * un signal sonore. Les éclairs qui jaillissent de la lame sont dessinés par chaque client dans le repère de l'épée
+     * (AceChargeLightning, d'après l'attachment ACE_CHARGE synchronisé : tous les joueurs les voient), pour partir exactement
+     * de la lame.
      */
     private static void chargeFx(ServerLevel level, LivingEntity entity, int used, float charge) {
         if (used < AceSlash.RAISE_TICKS) {
             return; // l'épée se lève encore
-        }
-        RandomSource random = level.getRandom();
-        Vec3 guard = heldPoint(entity, GUARD[0], GUARD[1]);
-        Vec3 axis = heldPoint(entity, TIP[0], TIP[1]).subtract(guard);
-        int sparks = 1 + Math.round(4 * charge);
-        for (int i = 0; i < sparks; i++) {
-            Vec3 p = guard.add(axis.scale(BLADE_START + random.nextDouble() * (1.0 - BLADE_START)));
-            level.sendParticles(ModParticles.HAKI_SPARK, p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0.03 + 0.05 * charge);
-        }
-        // éclairs qui jaillissent de la lame, plus fréquents, nombreux et grands avec la charge
-        if (random.nextFloat() < 0.15F + 0.65F * charge) {
-            int n = 1 + (charge > 0.6F && random.nextBoolean() ? 1 : 0);
-            for (int i = 0; i < n; i++) {
-                Vec3 p = guard.add(axis.scale(BLADE_START + random.nextDouble() * (1.0 - BLADE_START)));
-                float size = 0.22F + 0.35F * charge + random.nextFloat() * 0.1F;
-                HakiBolt.spawn(level, p, (float) (random.nextDouble() * 360.0), 20.0F + random.nextFloat() * 140.0F, -size,
-                        4 + random.nextInt(4));
-            }
         }
         if (used % 4 == 0) {
             level.sendParticles(ModParticles.HAKI_MIST, entity.getX(), entity.getY() + 0.2, entity.getZ(), 1 + Math.round(3 * charge),
