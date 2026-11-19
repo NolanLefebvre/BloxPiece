@@ -38,7 +38,9 @@ public class ArmedPirateRenderer extends HumanoidMobRenderer<ArmedHumanoid, Arme
         super.extractRenderState(entity, state, partialTick);
         state.aiming = entity.isAiming();
         state.twoHanded = entity.twoHandedWeapon();
-        state.weaponStowed = entity.stowsWeapon() && entity.getMainHandItem().isEmpty();
+        // fusil dans le dos hors combat ; menotté : rien dans le dos (arme confisquée, et la chaîne passe à cet endroit)
+        state.weaponStowed = entity.stowsWeapon() && entity.getMainHandItem().isEmpty()
+                && !nolan.bloxpiece.handcuffs.Handcuffs.isCuffed(entity);
         float sinceShot = entity.ticksSinceShot() + partialTick;
         state.recoil = sinceShot < 0.0F || sinceShot > RECOIL_TICKS ? 0.0F : 1.0F - sinceShot / RECOIL_TICKS;
         state.variant = Math.floorMod(entity.getUUID().hashCode(), this.textures.length);

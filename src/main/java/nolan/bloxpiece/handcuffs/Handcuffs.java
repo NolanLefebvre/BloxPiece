@@ -65,7 +65,7 @@ import nolan.bloxpiece.registry.ModItems;
  *       Les menottes sont détruites. À la mort, elles tombent au sol. Sans clé, elles s'ouvrent d'elles-mêmes au bout de
  *       {@link #DURATION_SECONDS} secondes (5 minutes, joueurs et mobs) ; le joueur voit le temps restant à l'écran.</li>
  *   <li>Mobs : mêmes conditions (10 % de PV ou moins, poseur dans son dos), seulement les mobs qui ont des bras (tag d'entités
- *       bloxpiece:has_arms : zombies, squelettes, piglins, pirates...). Un mob menotté a les bras dans le dos, range son arme (un
+ *       bloxpiece:has_arms : zombies, squelettes, piglins, pirates, Marines Épéiste et Fusilier...). Un mob menotté a les bras dans le dos, range son arme (un
  *       squelette range son arc), ne peut plus prendre de cible (MobMixin : aucune attaque, visée ni tir), ne peut plus infliger
  *       le moindre dégât, et s'enfuit loin des joueurs proches. La clé le libère (menottes
  *       détruites) et il reprend son arme.</li>

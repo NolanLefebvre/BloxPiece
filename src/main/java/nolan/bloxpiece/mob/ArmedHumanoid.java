@@ -17,6 +17,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
+import nolan.bloxpiece.handcuffs.Handcuffs;
+
 /**
  * Base des combattants humanoïdes armés du mod (pirates, Marines) : chaque FACTION se bat ensemble.
  *
@@ -77,8 +79,15 @@ public abstract class ArmedHumanoid extends BloxMob {
         return false;
     }
 
-    /** Arme en main en ce moment ? Toujours, sauf pour une arme qui se range : seulement avec une cible. */
+    /**
+     * Arme en main en ce moment ? Toujours, sauf pour une arme qui se range : seulement avec une cible. Jamais quand il est
+     * menotté : l'arme est confisquée par les menottes (Handcuffs la range et la rend à la libération) ; sans ce test, elle
+     * réapparaissait en main à chaque tick avant d'être rangée de nouveau.
+     */
     protected boolean wantsWeaponInHand() {
+        if (Handcuffs.isCuffed(this)) {
+            return false;
+        }
         return !this.stowsWeapon() || this.getTarget() != null || this.isAiming();
     }
 
@@ -128,6 +137,16 @@ public abstract class ArmedHumanoid extends BloxMob {
     public void tick() {
         super.tick();
         if (!this.level().isClientSide()) {
+            if (Handcuffs.isCuffed(this)) {
+                // Menotté : aucune attaque (sabre ou fusil), ni visée, ni posture de combat. Sa cible est effacée, et MobMixin
+                // l'empêche d'en reprendre une : ni MeleeAttackGoal ni GunnerAttackGoal ne peuvent donc démarrer.
+                if (this.getTarget() != null) {
+                    this.setTarget(null);
+                }
+                this.setAggressive(false);
+                this.setAiming(false);
+                return; // l'arme reste confisquée (pas de remise en main)
+            }
             ItemStack held = this.getMainHandItem();
             if (this.wantsWeaponInHand()) {
                 if (held.isEmpty()) {
