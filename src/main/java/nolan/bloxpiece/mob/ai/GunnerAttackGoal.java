@@ -48,14 +48,14 @@ public class GunnerAttackGoal extends Goal {
     private int afterShot;
     private int repath;
 
-    /** Pistolet à silex (Pirate Tireur). */
+    /** Pistolet à silex (Pirate Tireur). Dispersion (dernier réglage de précision) : 0.006. */
     public GunnerAttackGoal(ArmedHumanoid mob) {
-        this(mob, 16.0, 24.0, 15, 40, 5.0F, 2.4, 0.02, 0.7);
+        this(mob, 16.0, 24.0, 15, 40, 5.0F, 2.4, 0.006, 0.7);
     }
 
-    /** Fusil de la Marine : plus de portée et de dégâts, visée et rechargement plus longs, très précis. */
+    /** Fusil de la Marine : plus de portée et de dégâts, visée et rechargement plus longs, très précis (dispersion 0.003). */
     public static GunnerAttackGoal rifle(ArmedHumanoid mob) {
-        return new GunnerAttackGoal(mob, 22.0, 34.0, 22, 60, 8.0F, 3.2, 0.01, 1.4);
+        return new GunnerAttackGoal(mob, 22.0, 34.0, 22, 60, 8.0F, 3.2, 0.003, 1.4);
     }
 
     private GunnerAttackGoal(ArmedHumanoid mob, double maxDistance, double fireRange, int aimTicks, int reloadTicks,
@@ -194,10 +194,28 @@ public class GunnerAttackGoal extends Goal {
         return this.mob.getEyePosition().add(0.0, -0.3, 0.0).add(right.scale(0.35)).add(forward.scale(this.muzzleForward));
     }
 
+    /**
+     * Point visé : le milieu du corps de la cible (quelle que soit sa taille), là où elle sera à l'arrivée de la balle (elle
+     * avance pendant le vol : on anticipe son déplacement horizontal du dernier tick), relevé de la chute de la balle pendant
+     * ce temps (PirateBullet.GRAVITY par tick, cumulée).
+     */
+    private Vec3 aimPoint(LivingEntity target, Vec3 from) {
+        Vec3 center = new Vec3(target.getX(), target.getY(0.5), target.getZ());
+        Vec3 motion = new Vec3(target.getX() - target.xo, 0.0, target.getZ() - target.zo);
+        Vec3 aim = center;
+        double ticks = 0.0;
+        for (int i = 0; i < 3; i++) { // quelques itérations : le temps de vol dépend du point visé
+            ticks = aim.distanceTo(from) / this.bulletSpeed;
+            aim = center.add(motion.scale(ticks));
+        }
+        double drop = PirateBullet.GRAVITY * ticks * (ticks + 1.0) / 2.0;
+        return aim.add(0.0, drop, 0.0);
+    }
+
     private void shoot(LivingEntity target) {
         ServerLevel level = (ServerLevel) this.mob.level();
         Vec3 from = this.muzzle();
-        Vec3 dir = new Vec3(target.getX() - from.x, target.getY(0.5) - from.y, target.getZ() - from.z).normalize().add(
+        Vec3 dir = this.aimPoint(target, from).subtract(from).normalize().add(
                 this.mob.getRandom().nextGaussian() * this.inaccuracy,
                 this.mob.getRandom().nextGaussian() * this.inaccuracy,
                 this.mob.getRandom().nextGaussian() * this.inaccuracy);

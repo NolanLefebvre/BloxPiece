@@ -403,7 +403,8 @@ public final class Handcuffs {
         });
         // Un mob menotté ne peut infliger AUCUN dégât (coups, projectiles)
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> !fromCuffedMob(source));
-        // Mob menotté rechargé (sauvegarde, chunk) : de nouveau suivi et neutralisé
+        // Mob menotté rechargé (sauvegarde, chunk) : de nouveau suivi et neutralisé. Les pirates prisonniers de la Base de la
+        // Marine arrivent ainsi déjà menottés : leurs menottes sont écrites dans le fichier de la structure (marine_base.nbt).
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (entity instanceof Mob mob && isCuffed(mob)) {
                 CUFFED_MOBS.add(mob);

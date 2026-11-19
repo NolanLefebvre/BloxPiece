@@ -29,7 +29,8 @@ import nolan.bloxpiece.registry.ModEntities;
 public class PirateBullet extends ModFxEntity {
 
     private static final double STEP = 0.5;
-    private static final double GRAVITY = 0.012;
+    /** Chute de la balle par tick (le tireur en tient compte pour viser : GunnerAttackGoal.aimPoint). */
+    public static final double GRAVITY = 0.012;
     private static final int MAX_AGE = 50;
 
     private Vec3 velocity = Vec3.ZERO;
