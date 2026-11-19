@@ -225,7 +225,7 @@ public final class StarterVillage {
      * Point d'apparition du monde. Le nom de la méthode de Minecraft change selon les versions : plusieurs noms sont essayés
      * (sans risque : si aucun n'existe, le centre du monde est utilisé).
      */
-    static BlockPos worldSpawn(ServerLevel level) {
+    public static BlockPos worldSpawn(ServerLevel level) {
         for (Object target : new Object[] {level, level.getLevelData()}) {
             for (String name : new String[] {"getRespawnData", "getSharedSpawnPos", "getSpawnPos", "getRespawnPosition"}) {
                 try {

@@ -5,7 +5,8 @@
 	"mixins": [
 		"ServerExplosionMixin",
 		"BaseFireBlockMixin",
-		"FireBlockMixin"
+		"FireBlockMixin",
+		"StructureSpawnExclusionMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

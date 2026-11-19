@@ -25,7 +25,7 @@ import nolan.bloxpiece.worldgen.FoundationProcessor;
  *       placed_feature/seastone_ore.json ; la taille des filons : "size" dans feature/seastone_ore.json.</li>
  *   <li>Base de la Marine (structure/marine_base.nbt, 47 Marines persistants, prison souterraine avec 10 pirates menottés) : plaines, plages, savanes, prairies
  *       (tags/worldgen/biome/has_structure/marine_base.json), même rareté que les navires pirates (structure_set/marine_bases.json).
- *       Posée sur la surface, loin des villages (exclusion_zone) ; le processeur "bloxpiece:foundation" (FoundationProcessor) comble le
+ *       Posée sur la surface, loin des villages (exclusion_zone), à plus de 500 blocs du spawn, sur terrain plat, sans autre structure à moins de 8 tronçons (MarineBaseExclusion) ; le processeur "bloxpiece:foundation" (FoundationProcessor) comble le
  *       dessous et raccorde le terrain autour en pente douce.</li>
  * </ul>
  */
@@ -42,6 +42,7 @@ public class ModWorldgen {
             ResourceKey.create(Registries.STRUCTURE_PROCESSOR, BloxPiece.id("foundation")), FoundationProcessor.CODEC);
 
     public static void initialize() {
+        nolan.bloxpiece.worldgen.MarineBaseExclusion.initialize(); // pas de Base de la Marine près du spawn / du village de départ
         BiomeModifications.addFeature(BiomeSelectors.tag(BiomeTags.IS_OCEAN), GenerationStep.Decoration.UNDERGROUND_ORES, SEASTONE_ORE);
     }
 }
