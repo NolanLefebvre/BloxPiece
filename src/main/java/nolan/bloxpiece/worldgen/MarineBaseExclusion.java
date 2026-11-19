@@ -1,10 +1,12 @@
 package nolan.bloxpiece.worldgen;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -124,11 +126,35 @@ public final class MarineBaseExclusion {
         return context.chunkPos().getMiddleBlockZ() >> 4;
     }
 
+    /**
+     * Biome de la base (plaines, plages, savanes, prairies) à cet emplacement ? Lu par réflexion : le nom de l'échantillonneur de
+     * climat (ancien RandomState.sampler()) a changé en 26.3. On cherche getNoiseBiome(x, y, z, échantillonneur) sur la source de
+     * biomes, et dans RandomState la méthode sans paramètre qui fournit cet échantillonneur. Si rien n'est trouvé : supposé bon.
+     */
+    @SuppressWarnings("unchecked")
     private static boolean biomeOk(Structure.GenerationContext context, int chunkX, int chunkZ) {
         int x = (chunkX << 4) + 8, z = (chunkZ << 4) + 8;
         int y = surface(context, x, z);
-        return context.biomeSource().getNoiseBiome(QuartPos.fromBlock(x), QuartPos.fromBlock(y), QuartPos.fromBlock(z),
-                context.randomState().sampler()).is(BIOMES);
+        Object source = context.biomeSource();
+        Object state = context.randomState();
+        try {
+            for (Method noise : source.getClass().getMethods()) {
+                if (!noise.getName().equals("getNoiseBiome") || noise.getParameterCount() != 4) {
+                    continue;
+                }
+                Class<?> samplerType = noise.getParameterTypes()[3];
+                for (Method getter : state.getClass().getMethods()) {
+                    if (getter.getParameterCount() == 0 && samplerType.isAssignableFrom(getter.getReturnType())) {
+                        Object biome = noise.invoke(source, QuartPos.fromBlock(x), QuartPos.fromBlock(y), QuartPos.fromBlock(z),
+                                getter.invoke(state));
+                        return !(biome instanceof Holder<?> holder) || ((Holder<Biome>) holder).is(BIOMES);
+                    }
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // API introuvable : supposé bon
+        }
+        return true;
     }
 
     /** Spawn, village de départ et relief. */

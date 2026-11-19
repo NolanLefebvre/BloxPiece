@@ -33,9 +33,9 @@ public final class ConquerorHaki implements Haki {
     private static final int KNOCKOUT_TICKS = 20 * 8;
     private static final int COOLDOWN = 20 * 20;
 
-    /** Résistent au Haki des Rois : les boss et les supports d'armure (identifiants Minecraft). */
+    /** Résistent au Haki des Rois : les boss, Gol D. Roger et les supports d'armure (identifiants Minecraft). */
     private static final java.util.Set<String> RESISTANT = java.util.Set.of("wither", "ender_dragon", "warden", "armor_stand",
-            "elder_guardian");
+            "elder_guardian", "gol_d_roger");
 
     private final Map<UUID, Long> until = new HashMap<>();
     /** Prochaine surcharge (tick de jeu) de chaque joueur qui libère le Haki des Rois. */

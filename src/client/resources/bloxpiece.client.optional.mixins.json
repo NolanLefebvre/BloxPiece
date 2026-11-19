@@ -7,6 +7,7 @@
 		"UnconsciousPoseMixin",
 		"PlayerModelSlimAccessor",
 		"ItemInHandHakiMixin",
+		"AceSlashFirstPersonMixin",
 		"GuiItemHakiMixin"
 	],
 	"injectors": {

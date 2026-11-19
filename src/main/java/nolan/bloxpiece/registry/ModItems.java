@@ -94,6 +94,17 @@ public class ModItems {
             new Item.Properties().stacksTo(1).durability(900).attributes(PirateSaberItem.attributes(12.0, -2.7))
     );
 
+    /**
+     * Ace, le sabre légendaire de Gol D. Roger (modèle 3D : models/item/ace.json, généré par src/blockbench/make_ace.py) :
+     * 14 dégâts, 1,6 coup par seconde (comme une épée), très solide. Clic droit : attaque spéciale « Lame dévastatrice du Haki
+     * des Rois » (voir AceItem).
+     */
+    public static final Item ACE = register(
+            "ace",
+            nolan.bloxpiece.item.AceItem::new,
+            new Item.Properties().stacksTo(1).durability(3000).attributes(PirateSaberItem.attributes(14.0, -2.4))
+    );
+
     public static final Item FLINTLOCK = register(
             "flintlock",
             FlintlockItem::new,
@@ -197,7 +208,7 @@ public class ModItems {
                     // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
                     // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
                     java.util.List<Item> first = java.util.List.of(TREASURE_CHEST, FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT,
-                            PIRATE_SABER, CAPTAIN_SABER, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
+                            PIRATE_SABER, CAPTAIN_SABER, ACE, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
                             XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
                     first.forEach(entries::accept);
                     BuiltInRegistries.ITEM.stream()

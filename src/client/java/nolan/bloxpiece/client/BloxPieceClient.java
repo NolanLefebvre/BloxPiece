@@ -162,6 +162,11 @@ public class BloxPieceClient implements ClientModInitializer {
                 nolan.bloxpiece.client.entity.MarineGearModels.SWORDSMAN, "marine_swordsman", 4));
         EntityRendererRegistry.register(ModEntities.MARINE_RIFLEMAN, context -> new ArmedPirateRenderer(context,
                 nolan.bloxpiece.client.entity.MarineGearModels.RIFLEMAN, "marine_rifleman", 4));
+        // Gol D. Roger (même rendu que les pirates : équipement 3D, sabre 3D en main en combat, au fourreau sinon)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.RogerModels.ROGER,
+                nolan.bloxpiece.client.entity.RogerModels::roger);
+        EntityRendererRegistry.register(ModEntities.GOL_D_ROGER, context -> new ArmedPirateRenderer(context,
+                nolan.bloxpiece.client.entity.RogerModels.ROGER, "gol_d_roger", 1));
         ModelLayerRegistry.registerModelLayer(PirateBulletRenderer.LAYER, PirateBulletRenderer.BulletModel::createLayer);
         EntityRendererRegistry.register(ModEntities.PIRATE_BULLET, PirateBulletRenderer::new);
         // Le calque du modèle doit être enregistré AVANT le renderer qui s'en sert
@@ -241,6 +246,10 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER,
                 nolan.bloxpiece.client.haki.HakiBoltRenderer.BoltModel::createLayer);
         EntityRendererRegistry.register(ModEntities.HAKI_BOLT, nolan.bloxpiece.client.haki.HakiBoltRenderer::new);
+        // La Lame dévastatrice du Haki des Rois (épée Ace) : calque du modèle d'abord, renderer ensuite
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.AceSlashModel.LAYER,
+                nolan.bloxpiece.client.entity.AceSlashModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.ACE_SLASH, nolan.bloxpiece.client.entity.AceSlashRenderer::new);
         // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
         HealthHud.register();
 

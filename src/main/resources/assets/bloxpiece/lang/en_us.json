@@ -253,7 +253,11 @@
   "screen.bloxpiece.job.selected": "Selected",
   "screen.bloxpiece.job.pending_tooltip": "Click Confirm below (final choice)",
   "entity.bloxpiece.marine_swordsman": "Marine Swordsman",
+  "entity.bloxpiece.gol_d_roger": "Gol D. Roger",
   "entity.bloxpiece.marine_rifleman": "Marine Rifleman",
+  "item.bloxpiece.ace": "Ace",
+  "message.bloxpiece.ace_needs_conqueror": "Requires Conqueror's Haki",
+  "entity.bloxpiece.ace_slash": "Conqueror's Devastating Blade",
   "item.bloxpiece.marine_saber": "Marine Saber",
   "item.bloxpiece.marine_rifle": "Marine Rifle"
 }

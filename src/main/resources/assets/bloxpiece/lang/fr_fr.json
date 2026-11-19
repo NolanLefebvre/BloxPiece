@@ -253,7 +253,11 @@
   "screen.bloxpiece.job.selected": "Sélectionné",
   "screen.bloxpiece.job.pending_tooltip": "Clique sur Confirmer en bas (choix définitif)",
   "entity.bloxpiece.marine_swordsman": "Marine Épéiste",
+  "entity.bloxpiece.gol_d_roger": "Gol D. Roger",
   "entity.bloxpiece.marine_rifleman": "Marine Fusilier",
+  "item.bloxpiece.ace": "Ace",
+  "message.bloxpiece.ace_needs_conqueror": "Il faut avoir débloqué le Haki des Rois",
+  "entity.bloxpiece.ace_slash": "Lame dévastatrice du Haki des Rois",
   "item.bloxpiece.marine_saber": "Sabre de la Marine",
   "item.bloxpiece.marine_rifle": "Fusil de la Marine"
 }

@@ -110,6 +110,24 @@ public class ModAttachments {
     );
 
     /**
+     * Épée Ace : instant (temps de jeu) du début de la FRAPPE de la Lame dévastatrice du Haki des Rois (après la charge). Pas
+     * sauvegardé, synchronisé avec TOUS les joueurs : chacun anime le coup en diagonale et le retour (voir PlayerModelMixin).
+     */
+    public static final AttachmentType<Integer> ACE_SLASH = AttachmentRegistry.create(
+            BloxPiece.id("ace_slash"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Épée Ace : instant (temps de jeu) où le joueur a commencé à CHARGER la Lame dévastatrice (clic droit maintenu) ; retiré au
+     * lancer. Pas sauvegardé, synchronisé avec TOUS les joueurs : chacun voit l'épée levée pendant la charge (PlayerModelMixin).
+     */
+    public static final AttachmentType<Integer> ACE_CHARGE = AttachmentRegistry.create(
+            BloxPiece.id("ace_charge"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /**
      * Corail à Bulles : instant (temps de jeu) où la bulle d'air s'est formée autour du joueur ; absent = pas de bulle. Sauvegardé
      * (la bulle survit à une déconnexion) mais perdu à la mort, synchronisé avec TOUS les joueurs : chacun dessine la bulle et son
      * animation de formation à partir de cet instant (voir BubbleCoralLayer). Logique : BubbleCoral.

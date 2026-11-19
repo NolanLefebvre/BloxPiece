@@ -70,6 +70,16 @@ public class ModEntities {
             .clientTrackingRange(8)
             .build(PIRATE_CAPTAIN_KEY);
 
+    // Gol D. Roger, le Roi des Pirates : invoqué par commande (pas d'apparition naturelle). Hitbox de base ; échelle 1,1 (SCALE)
+    public static final ResourceKey<EntityType<?>> GOL_D_ROGER_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("gol_d_roger"));
+
+    public static final EntityType<nolan.bloxpiece.mob.GolDRoger> GOL_D_ROGER =
+            EntityType.Builder.of(nolan.bloxpiece.mob.GolDRoger::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(10)
+            .build(GOL_D_ROGER_KEY);
+
     // Marines (Épéiste, Fusilier) : neutres envers les joueurs, ennemis des pirates
     public static final ResourceKey<EntityType<?>> MARINE_SWORDSMAN_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("marine_swordsman"));
@@ -238,6 +248,20 @@ public class ModEntities {
             .updateInterval(1)
             .build(HAKI_BOLT_KEY);
 
+    // La Lame dévastatrice du Haki des Rois (attaque spéciale de l'épée Ace) : la vraie collision est le croissant du modèle
+    // (AceSlashShape), la taille ici n'est que nominale. Ni sauvegardée, ni invocable.
+    public static final ResourceKey<EntityType<?>> ACE_SLASH_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("ace_slash"));
+
+    public static final EntityType<nolan.bloxpiece.fx.AceSlash> ACE_SLASH =
+            EntityType.Builder.<nolan.bloxpiece.fx.AceSlash>of(nolan.bloxpiece.fx.AceSlash::new, MobCategory.MISC)
+            .sized(1.0F, 1.0F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(10)
+            .updateInterval(1)
+            .build(ACE_SLASH_KEY);
+
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
         register(TAVERN_KEEPER_KEY, TAVERN_KEEPER, nolan.bloxpiece.mob.TavernKeeper.attributes());
@@ -247,6 +271,9 @@ public class ModEntities {
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.6)); // difficile à repousser
         register(MARINE_SWORDSMAN_KEY, MARINE_SWORDSMAN, nolan.bloxpiece.mob.MarineSwordsman.STATS.toAttributes());
         register(MARINE_RIFLEMAN_KEY, MARINE_RIFLEMAN, nolan.bloxpiece.mob.MarineRifleman.STATS.toAttributes());
+        register(GOL_D_ROGER_KEY, GOL_D_ROGER, nolan.bloxpiece.mob.GolDRoger.STATS.toAttributes()
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)   // inébranlable
+                .add(Attributes.SCALE, 1.1));                // un peu plus grand que les autres (hitbox et rendu)
         Registry.register(BuiltInRegistries.ENTITY_TYPE, PIRATE_BULLET_KEY, PIRATE_BULLET);
         register(ENTEI_SUN_KEY, ENTEI_SUN, Mob.createMobAttributes());
         // Le poing est un projectile (pas un être vivant) : pas d'attributs à enregistrer
@@ -260,6 +287,7 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ICE_STATUE_KEY, ICE_STATUE);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, QUAKE_FX_KEY, QUAKE_FX);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, HAKI_BOLT_KEY, HAKI_BOLT);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, ACE_SLASH_KEY, ACE_SLASH);
     }
 
     private static <T extends LivingEntity> void register(

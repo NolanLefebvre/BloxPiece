@@ -197,6 +197,13 @@ public class HakiArmamentLayer extends RenderLayer<AvatarRenderState, PlayerMode
         if (entity == null) {
             return;
         }
+        if (entity instanceof net.minecraft.world.entity.LivingEntity ace) {
+            // épée Ace : éclairs du Haki des Rois dans la lame pendant la charge et la frappe (indépendant du Haki de l'Armement)
+            PlayerModel aceModel = this.getParentModel();
+            boolean aceRight = ace.getMainArm() == HumanoidArm.RIGHT;
+            nolan.bloxpiece.client.AceChargeLightning.renderThirdPerson(pose, collector, aceRight ? aceModel.rightArm : aceModel.leftArm,
+                    ace, aceRight, isSlim(aceModel), Minecraft.getInstance().level.getGameTime() + (state.ageInTicks - entity.tickCount));
+        }
         float[] progress = HakiClientState.armament(entity, state.ageInTicks);
         if (progress == null) {
             return;

@@ -19,13 +19,20 @@ public class HakiBolt extends ModFxEntity {
     private static final EntityDataAccessor<Integer> SEED = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> LIFE = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.INT);
+    /** Distance parcourue pendant sa vie (1 = normale ; petit = l'éclair reste presque sur place, ex : sur la lame d'Ace). */
+    private static final EntityDataAccessor<Float> DRIFT = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.FLOAT);
 
     public HakiBolt(EntityType<? extends HakiBolt> type, Level level) {
         super(type, level);
     }
 
     public static void spawn(ServerLevel level, Vec3 pos, float yaw, float pitch, float size, int life) {
+        spawn(level, pos, yaw, pitch, size, life, 1.0F);
+    }
+
+    public static void spawn(ServerLevel level, Vec3 pos, float yaw, float pitch, float size, int life, float drift) {
         HakiBolt bolt = new HakiBolt(ModEntities.HAKI_BOLT, level);
+        bolt.entityData.set(DRIFT, drift);
         bolt.managed = true;
         bolt.entityData.set(SEED, level.getRandom().nextInt(1 << 20));
         bolt.entityData.set(SIZE, size);
@@ -46,6 +53,10 @@ public class HakiBolt extends ModFxEntity {
         return this.entityData.get(SIZE);
     }
 
+    public float drift() {
+        return this.entityData.get(DRIFT);
+    }
+
     public int life() {
         return this.entityData.get(LIFE);
     }
@@ -63,5 +74,6 @@ public class HakiBolt extends ModFxEntity {
         builder.define(SEED, 0);
         builder.define(SIZE, 1.0F);
         builder.define(LIFE, 6);
+        builder.define(DRIFT, 1.0F);
     }
 }

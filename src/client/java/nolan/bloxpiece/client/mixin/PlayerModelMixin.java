@@ -56,6 +56,7 @@ public class PlayerModelMixin {
             bloxpiece$saberStrike(player, level, state);
         }
         bloxpiece$blowBubble(player, level, state);
+        bloxpiece$aceSlash(player, level, state);
         Integer buddhaPose = player.getAttached(ModAttachments.BUDDHA_POSE);
         if (buddhaPose != null) {
             bloxpiece$buddhaPose(buddhaPose, state);
@@ -110,6 +111,47 @@ public class PlayerModelMixin {
         model.rightArm.z += z;      // le bras recule puis se projette vers l'avant
         model.body.yRot = twist;    // rotation des épaules (le bras gauche garde sa pose normale)
     }
+
+    /**
+     * Épée Ace, Lame dévastatrice du Haki des Rois (geste : AceSwing, d'après les attachments ACE_CHARGE et ACE_SLASH,
+     * synchronisés avec tous les joueurs) :
+     * <ol>
+     *   <li>charge (clic droit maintenu) : le bras droit se lève en diagonale, épée en haut à droite et ramenée vers l'arrière,
+     *       épaules tournées, et reste levé (léger tremblement : l'énergie s'accumule) jusqu'au relâchement ;</li>
+     *   <li>frappe : dans la diagonale opposée, du haut à droite vers le bas à gauche, dans le plan même de la lame d'énergie
+     *       (qui part à la fin de la frappe) ;</li>
+     *   <li>retour en douceur à la pose normale.</li>
+     * </ol>
+     */
+    private void bloxpiece$aceSlash(Entity player, ClientLevel level, AvatarRenderState state) {
+        float partial = state.ageInTicks - player.tickCount;
+        nolan.bloxpiece.client.AceSwing.Step step = nolan.bloxpiece.client.AceSwing.at(player, level.getGameTime() + partial);
+        if (step == null) {
+            return;
+        }
+        PlayerModel model = (PlayerModel) (Object) this;
+        ModelPart arm = model.rightArm;
+        // Le bras balaie LE PLAN DE LA LAME : zRot fixe = ce plan incliné de la diagonale (AceSlashShape.ROLL), seul xRot varie.
+        // Levée : bras au-dessus de l'épaule droite, épée en haut à droite et vers l'arrière ; frappée : bras en bas à gauche,
+        // devant. Entre les deux il passe droit devant : la lame part dans la direction du geste.
+        float plane = -(float) Math.toRadians(90.0 + nolan.bloxpiece.fx.AceSlashShape.ROLL);
+        float look = model.head.xRot * 0.7F; // suit un peu le regard (haut / bas)
+        float tremble = (float) Math.sin(state.ageInTicks * 1.7F) * 0.03F; // l'énergie s'accumule : l'épée tremble
+        float[][] poses = {
+                {arm.xRot, arm.yRot, arm.zRot, model.body.yRot},  // pose normale de Minecraft
+                {-3.7F + look + tremble, 0.0F, plane, 0.4F},      // levée
+                {-0.6F + look, 0.0F, plane, -0.4F},               // frappée
+        };
+        float[] from = poses[step.from()], to = poses[step.to()];
+        float k = step.k();
+        float x = from[0] + (to[0] - from[0]) * k, y = from[1] + (to[1] - from[1]) * k;
+        float z = from[2] + (to[2] - from[2]) * k, twist = from[3] + (to[3] - from[3]) * k;
+        arm.xRot = x;
+        arm.yRot = y;
+        arm.zRot = z;
+        model.body.yRot = twist; // rotation des épaules
+    }
+
 
     /**
      * Corail à Bulles : pendant la formation de la bulle, le joueur porte la main droite (le corail écrasé) devant sa bouche et

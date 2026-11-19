@@ -41,5 +41,8 @@ public abstract class ItemInHandHakiMixin {
         }
         boolean right = player.getMainArm() == HumanoidArm.RIGHT;
         nolan.bloxpiece.client.haki.HakiItemCoat.renderFirstPerson(pose, collector, player, right, light);
+        // épée Ace : éclairs du Haki des Rois dans la lame pendant la charge et la frappe
+        nolan.bloxpiece.client.AceChargeLightning.renderFirstPerson(pose, collector, player, right,
+                player.level().getGameTime() + partialTicks);
     }
 }

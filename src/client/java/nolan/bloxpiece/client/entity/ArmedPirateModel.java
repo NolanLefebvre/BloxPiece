@@ -16,12 +16,16 @@ import net.minecraft.util.Mth;
  */
 public class ArmedPirateModel extends HumanoidModel<ArmedPirateRenderState> {
 
-    /** Fusil rangé dans le dos (Marine Fusilier), ou null pour les modèles qui n'en ont pas. */
+    /**
+     * Arme rangée, affichée seulement hors combat : fusil dans le dos (Marine Fusilier, « back_rifle ») ou poignée du sabre au
+     * fourreau (Gol D. Roger, « sheathed_hilt ») ; null pour les modèles qui n'en ont pas.
+     */
     private final ModelPart backRifle;
 
     public ArmedPirateModel(ModelPart root) {
         super(root);
-        this.backRifle = this.body.hasChild("back_rifle") ? this.body.getChild("back_rifle") : null;
+        this.backRifle = this.body.hasChild("back_rifle") ? this.body.getChild("back_rifle")
+                : this.body.hasChild("sheathed_hilt") ? this.body.getChild("sheathed_hilt") : null;
     }
 
     @Override

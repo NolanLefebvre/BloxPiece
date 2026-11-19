@@ -70,6 +70,7 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         public float age;
         public int life = 6;
         public boolean rising;
+        public float drift = 1.0F;
     }
 
     /** Couche de modèle : un seul prisme d'un pixel de section, long d'un pixel vers +Z (étiré à chaque tronçon). */
@@ -108,6 +109,7 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         state.seed = entity.seed();
         state.age = entity.tickCount + partialTick;
         state.life = Math.max(2, entity.life());
+        state.drift = entity.drift();
     }
 
     /** Un tracé d'éclair : points (blocs, repère de l'entité) et largeur (px) à chaque point. */
@@ -138,7 +140,7 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         float[] dir = direction(state);
         // longue portée : environ 3,5 à 5 blocs de canal, qui en plus s'éloigne du joueur pendant sa vie (jusqu'à ~7 blocs)
         float length = 5.4F * state.size;
-        float push = life01 * life01 * 2.0F;
+        float push = life01 * life01 * 2.0F * state.drift;
         float[] origin = {dir[0] * push, dir[1] * push, dir[2] * push};
 
         List<Path> paths = new ArrayList<>();
