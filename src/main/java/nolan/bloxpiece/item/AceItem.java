@@ -104,7 +104,7 @@ public class AceItem extends PirateSaberItem {
     @Override
     public boolean releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
         if (level instanceof ServerLevel serverLevel) {
-            this.strike(serverLevel, entity, stack, AceSlash.MAX_HOLD_TICKS - timeLeft);
+            strike(serverLevel, entity, stack, AceSlash.MAX_HOLD_TICKS - timeLeft);
         }
         return true;
     }
@@ -113,20 +113,20 @@ public class AceItem extends PirateSaberItem {
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
         // maintenu jusqu'au bout : le coup part tout seul (pas de charge infinie)
         if (level instanceof ServerLevel serverLevel) {
-            this.strike(serverLevel, entity, stack, AceSlash.MAX_HOLD_TICKS);
+            strike(serverLevel, entity, stack, AceSlash.MAX_HOLD_TICKS);
         }
         return stack;
     }
 
     /** Relâchement : frappe en diagonale, puis lancer de la lame à la fin du coup. Une seule fois par charge. */
-    private void strike(ServerLevel level, LivingEntity entity, ItemStack stack, int used) {
+    public static void strike(ServerLevel level, LivingEntity entity, ItemStack stack, int used) {
         Integer chargeStart = entity.getAttached(ModAttachments.ACE_CHARGE);
         if (chargeStart == null) {
             return; // déjà lancée (ou aucune charge en cours) : jamais deux attaques pour un même relâchement
         }
         entity.removeAttached(ModAttachments.ACE_CHARGE);
-        if (!HakiManager.isUnlocked(entity, HakiType.CONQUEROR)) {
-            return; // jamais de lancer sans le Haki des Rois, même au relâchement
+        if (entity instanceof Player && !HakiManager.isUnlocked(entity, HakiType.CONQUEROR)) {
+            return; // jamais de lancer sans le Haki des Rois, même au relâchement (les mobs comme Roger n'ont pas de déblocage)
         }
         int now = (int) level.getGameTime();
         // l'épée doit d'abord être levée : relâché trop tôt, la frappe attend la fin de la levée
@@ -146,6 +146,11 @@ public class AceItem extends PirateSaberItem {
      * (AceChargeLightning, d'après l'attachment ACE_CHARGE synchronisé : tous les joueurs les voient), pour partir exactement
      * de la lame.
      */
+    /** Un tick de charge, pour un mob qui charge l'attaque (Gol D. Roger) : mêmes effets que pour le joueur. */
+    public static void chargeTick(ServerLevel level, LivingEntity entity, int used) {
+        chargeFx(level, entity, used, charge(used));
+    }
+
     private static void chargeFx(ServerLevel level, LivingEntity entity, int used, float charge) {
         if (used < AceSlash.RAISE_TICKS) {
             return; // l'épée se lève encore

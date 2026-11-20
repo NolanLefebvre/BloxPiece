@@ -121,7 +121,10 @@ part('frill_right', 'right_leg', (-2, 8, -2, 4, 2, 4), inflate=0.62)            
 part('frill_left', 'left_leg', (-2, 8, -2, 4, 2, 4), inflate=0.62)
 part('boot_right', 'right_leg', (-2, 10, -2, 4, 2, 4), inflate=0.32)                             # bottes de cuir
 part('boot_left', 'left_leg', (-2, 10, -2, 4, 2, 4), inflate=0.32)
-part('scabbard', 'body', (-0.5, -2, -1, 1, 11, 2), pivot=(4.6, 9.6, 0.4), rot=(0.95, 0, -0.22))   # fourreau du sabre, côté gauche
+# fourreau d'Ace, côté gauche : allongé (11 -> 16 px, environ la longueur de la lame d'Ace en main) et moins incliné vers
+# l'arrière (0,95 -> 0,35 rad) : il descend le long de la cuisse, SOUS le manteau (sa pointe reste devant le pan arrière et
+# au-dessus des pieds). Même section, mêmes couleurs : cuir sombre, bouts dorés.
+part('scabbard', 'body', (-0.5, -2, -1, 1, 16, 2), pivot=(4.6, 9.6, 0.4), rot=(0.35, 0, -0.22))
 # poignée dorée du sabre : visible seulement quand le sabre est rangé (ArmedPirateModel, pièce « sheathed_hilt »)
 part('sheathed_hilt', 'body', (-0.5, -5, -0.5, 1, 5, 1), pivot=(4.4, 9.2, -1.6), rot=(-0.6, 0, -0.22), inflate=0.05)
 part('hilt_guard', 'sheathed_hilt', (-1.5, -0.2, -1.5, 3, 1, 3), pivot=(0, 0, 0))
@@ -602,5 +605,6 @@ if len(sys.argv) > 1:
     render(os.path.join(out, 'roger_front.png'), 0.0)
     render(os.path.join(out, 'roger_34.png'), 0.6)
     render(os.path.join(out, 'roger_back.png'), math.pi)
+    render(os.path.join(out, 'roger_profil_gauche.png'), -math.pi / 2)
     img.resize((TW * 4, TH * 4), Image.NEAREST).save(os.path.join(out, 'roger_texture.png'))
 print('ok :', len(PARTS), 'parties')

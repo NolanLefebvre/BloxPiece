@@ -56,6 +56,7 @@ public class PlayerModelMixin {
             bloxpiece$saberStrike(player, level, state);
         }
         bloxpiece$blowBubble(player, level, state);
+        bloxpiece$conquerorRelease(player, level, state);
         bloxpiece$aceSlash(player, level, state);
         Integer buddhaPose = player.getAttached(ModAttachments.BUDDHA_POSE);
         if (buddhaPose != null) {
@@ -113,6 +114,50 @@ public class PlayerModelMixin {
     }
 
     /**
+     * Activation du Haki des Rois (attachment CONQUEROR_RELEASE, synchronisé avec tous les joueurs) : courte libération de
+     * puissance, ajoutée à la pose normale.
+     * <ol>
+     *   <li>montée (0 à ConquerorShockwave.BUILD_TICKS) : le joueur se ramasse, buste un peu penché, bras tirés en arrière et
+     *       serrés le long du corps ;</li>
+     *   <li>décharge (en 3 ticks) : buste redressé, tête relevée (posture assurée), bras jetés vers l'extérieur et vers le bas ;</li>
+     *   <li>tenue brève, puis retour en douceur à la pose normale (environ 1 seconde en tout).</li>
+     * </ol>
+     */
+    private void bloxpiece$conquerorRelease(Entity player, ClientLevel level, AvatarRenderState state) {
+        Integer at = player.getAttached(ModAttachments.CONQUEROR_RELEASE);
+        if (at == null) {
+            return;
+        }
+        float t = (float) (level.getGameTime() - at) + (state.ageInTicks - player.tickCount);
+        float build = nolan.bloxpiece.fx.ConquerorShockwave.BUILD_TICKS;
+        if (t < 0.0F || t >= build + 15.0F) {
+            return;
+        }
+        // décalages ajoutés à la pose normale : {bras x, bras z (vers l'extérieur), buste x, tête x}
+        float[] gather = {0.25F, -0.15F, 0.15F, 0.1F};
+        float[] release = {-0.3F, 0.75F, -0.15F, -0.3F};
+        float[] o = new float[4];
+        for (int i = 0; i < 4; i++) {
+            if (t < build) {
+                o[i] = gather[i] * bloxpiece$smooth(t / build);
+            } else if (t < build + 3.0F) {
+                o[i] = gather[i] + (release[i] - gather[i]) * bloxpiece$smooth((t - build) / 3.0F);
+            } else if (t < build + 6.0F) {
+                o[i] = release[i];
+            } else {
+                o[i] = release[i] * (1.0F - bloxpiece$smooth((t - build - 6.0F) / 9.0F));
+            }
+        }
+        PlayerModel model = (PlayerModel) (Object) this;
+        model.rightArm.xRot += o[0];
+        model.leftArm.xRot += o[0];
+        model.rightArm.zRot += o[1];   // bras droit : positif = écarté du corps
+        model.leftArm.zRot -= o[1];    // bras gauche : miroir
+        model.body.xRot += o[2];
+        model.head.xRot += o[3];
+    }
+
+    /**
      * Épée Ace, Lame dévastatrice du Haki des Rois (geste : AceSwing, d'après les attachments ACE_CHARGE et ACE_SLASH,
      * synchronisés avec tous les joueurs) :
      * <ol>
@@ -124,58 +169,9 @@ public class PlayerModelMixin {
      * </ol>
      */
     private void bloxpiece$aceSlash(Entity player, ClientLevel level, AvatarRenderState state) {
-        float partial = state.ageInTicks - player.tickCount;
-        nolan.bloxpiece.client.AceSwing.Step step = nolan.bloxpiece.client.AceSwing.at(player, level.getGameTime() + partial);
-        if (step == null) {
-            return;
-        }
-        PlayerModel model = (PlayerModel) (Object) this;
-        ModelPart arm = model.rightArm;
-        // Le bras balaie LE PLAN DE LA LAME : zRot fixe = ce plan incliné de la diagonale (AceSlashShape.ROLL), seul xRot varie.
-        // Levée : bras au-dessus de l'épaule droite, épée en haut à droite et vers l'arrière ; frappée : bras en bas à gauche,
-        // devant. Entre les deux il passe droit devant : la lame part dans la direction du geste.
-        boolean reverse = nolan.bloxpiece.client.AceSwing.reverse(player);
-        float look = model.head.xRot * 0.7F; // suit un peu le regard (haut / bas)
-        float tremble = (float) Math.sin(state.ageInTicks * 1.7F) * 0.03F; // l'énergie s'accumule : l'épée tremble
-        float[][] poses;
-        if (!reverse) {
-            float plane = -(float) Math.toRadians(90.0 + nolan.bloxpiece.fx.AceSlashShape.ROLL);
-            poses = new float[][] {
-                    {arm.xRot, arm.yRot, arm.zRot, model.body.yRot},  // pose normale de Minecraft
-                    {-3.7F + look + tremble, 0.0F, plane, 0.4F},      // levée
-                    {-0.6F + look, 0.0F, plane, -0.4F},               // frappée
-            };
-        } else {
-            // Deuxième diagonale (tirée au hasard par le serveur) : une vraie préparation de revers, pas un miroir. Le bras droit
-            // est levé VERS L'AVANT (main devant le visage) et l'épée passe DERRIÈRE L'ÉPAULE GAUCHE, pointe en haut ; les épaules
-            // tournent vers la gauche (élan). Frappe : l'épée revient par l'avant, en haut à gauche, traverse devant le joueur et
-            // finit en bas à droite (pose intermédiaire « milieu » pour que la lame passe devant et non au-dessus de la tête).
-            // Angles calculés avec la même chaîne que le rendu (bras + Ace en main) : la lame ne traverse ni la tête ni le corps.
-            poses = new float[][] {
-                    {arm.xRot, arm.yRot, arm.zRot, model.body.yRot},   // pose normale de Minecraft
-                    {-2.2F + look + tremble, -0.2F, 1.15F, -0.35F},    // levée : main devant, lame derrière l'épaule gauche
-                    {-0.6F + look, 0.65F, -1.3F, 0.35F},               // frappée : bras en bas à droite, pointe devant à droite
-                    {-0.35F + look, -0.6F, -0.75F, 0.0F},              // milieu de la frappe : lame devant, en haut à gauche
-            };
-            if (step.from() == nolan.bloxpiece.client.AceSwing.RAISED && step.to() == nolan.bloxpiece.client.AceSwing.STRUCK) {
-                float k2 = step.k();
-                float[] a = k2 < 0.5F ? poses[1] : poses[3], b = k2 < 0.5F ? poses[3] : poses[2];
-                float kk = k2 < 0.5F ? k2 * 2.0F : (k2 - 0.5F) * 2.0F;
-                arm.xRot = a[0] + (b[0] - a[0]) * kk;
-                arm.yRot = a[1] + (b[1] - a[1]) * kk;
-                arm.zRot = a[2] + (b[2] - a[2]) * kk;
-                model.body.yRot = a[3] + (b[3] - a[3]) * kk;
-                return;
-            }
-        }
-        float[] from = poses[step.from()], to = poses[step.to()];
-        float k = step.k();
-        float x = from[0] + (to[0] - from[0]) * k, y = from[1] + (to[1] - from[1]) * k;
-        float z = from[2] + (to[2] - from[2]) * k, twist = from[3] + (to[3] - from[3]) * k;
-        arm.xRot = x;
-        arm.yRot = y;
-        arm.zRot = z;
-        model.body.yRot = twist; // rotation des épaules
+        // geste partagé avec Gol D. Roger (même squelette humanoïde) : AceSwing.applyThirdPerson
+        nolan.bloxpiece.client.AceSwing.applyThirdPerson((PlayerModel) (Object) this, player,
+                level.getGameTime() + (state.ageInTicks - player.tickCount), state.ageInTicks);
     }
 
 

@@ -26,7 +26,7 @@ import nolan.bloxpiece.registry.ModAttachments;
  * démon, explosions déclenchées par un ennemi. Jamais les dégâts de l'environnement : chute, noyade, lave, feu ou brûlure,
  * poison, faim, gel, vide.
  * Chaque esquive : animation d'esquive (le buste et la tête se penchent d'un côté, PlayerModelMixin), un souffle et un son
- * d'anticipation.
+ * d'anticipation, et un petit coût en Haki qui dépend de la puissance du coup esquivé (HakiEnergy.consumeDodge).
  */
 public final class ObservationHaki implements Haki {
 
@@ -35,6 +35,8 @@ public final class ObservationHaki implements Haki {
     private final Map<UUID, Long> until = new HashMap<>();
     /** Dernier type d'esquive joué par chaque joueur. */
     private final Map<UUID, Integer> lastVariant = new HashMap<>();
+    /** Dernière attaque esquivée facturée (tick, auteur, type de dégât) : une même attaque n'est jamais facturée deux fois. */
+    private final Map<UUID, String> lastCharged = new HashMap<>();
 
     @Override
     public HakiType type() {
@@ -162,8 +164,14 @@ public final class ObservationHaki implements Haki {
         if (previous != null && previous == pool[0]) {
             variant = pool[1];
         }
-        // (amount n'est plus utilisé pour choisir : gardé dans la signature pour d'éventuels réglages)
         this.lastVariant.put(player.getUUID(), variant);
+        // esquive réussie : elle coûte un peu de Haki, selon la puissance du coup (HakiEnergy.consumeDodge). Une même attaque
+        // qui frapperait deux fois dans le même tick (même auteur, même type de dégât) n'est facturée qu'une fois.
+        String key = player.level().getGameTime() + ":" + (source.getDirectEntity() == null ? -1 : source.getDirectEntity().getId())
+                + ":" + source.getMsgId();
+        if (!key.equals(this.lastCharged.put(player.getUUID(), key))) {
+            HakiEnergy.consumeDodge(player, amount);
+        }
         boolean right = dodgeRight(player, source);
         // animation : paquet immédiat au joueur et à tous ceux qui le voient (64 blocs)
         if (player.level() instanceof ServerLevel serverLevel) {

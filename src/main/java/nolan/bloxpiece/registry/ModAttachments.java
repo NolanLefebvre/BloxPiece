@@ -131,6 +131,15 @@ public class ModAttachments {
      * Épée Ace : diagonale de la Lame dévastatrice (vrai = deuxième diagonale, du haut à gauche vers le bas à droite ; tirée au
      * hasard par le serveur au début de chaque attaque). Pas sauvegardé, synchronisé avec TOUS les joueurs : chacun anime le bon geste.
      */
+    /**
+     * Haki des Rois : instant (temps de jeu) de la dernière activation. Pas sauvegardé, synchronisé avec TOUS les joueurs : chacun
+     * anime la libération de puissance (PlayerModelMixin) et le flash rouge (ConquerorFlash).
+     */
+    public static final AttachmentType<Integer> CONQUEROR_RELEASE = AttachmentRegistry.create(
+            BloxPiece.id("conqueror_release"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
     public static final AttachmentType<Boolean> ACE_REVERSE = AttachmentRegistry.create(
             BloxPiece.id("ace_reverse"),
             builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())

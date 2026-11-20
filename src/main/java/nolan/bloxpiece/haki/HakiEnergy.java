@@ -37,6 +37,16 @@ public final class HakiEnergy {
     public static final int MIN_TO_ACTIVATE = 50;
     /** Coût immédiat du Haki des Rois (12 %). */
     public static final int CONQUEROR_COST = 120;
+    /**
+     * Esquive du Haki de l'Observation : coût en énergie (jauge de {@link #MAX}) selon les dégâts du coup esquivé :
+     * {@link #DODGE_MIN_COST} + {@link #DODGE_COST_PER_DAMAGE} x dégâts, plafonné à {@link #DODGE_MAX_COST}.
+     * Exemples : coup faible (2) = 6 (0,6 %) ; coup normal (6) = 12 (1,2 %) ; coup puissant (15) = 25,5 (2,5 %) ;
+     * Lame dévastatrice (40) = 63 (6,3 %) ; 50 et plus = 80 (8 %, le plafond).
+     */
+    public static final float DODGE_MIN_COST = 3.0F;
+    public static final float DODGE_COST_PER_DAMAGE = 1.5F;
+    public static final float DODGE_MAX_COST = 80.0F;
+
     /** Recharge de chaque Haki coupé par une jauge vide. */
     private static final int EXHAUSTED_COOLDOWN = 20 * 5;
 
@@ -88,6 +98,16 @@ public final class HakiEnergy {
         if (type == HakiType.CONQUEROR) {
             set(player, get(player) - CONQUEROR_COST);
         }
+    }
+
+    /**
+     * Retire le coût d'une esquive réussie (voir {@link #DODGE_MIN_COST}). Si la jauge tombe à zéro, les Hakis se coupent au
+     * tick suivant (comme quand elle se vide en continu). La régénération repart du début.
+     */
+    public static void consumeDodge(ServerPlayer player, float damage) {
+        float cost = Math.min(DODGE_MAX_COST, DODGE_MIN_COST + DODGE_COST_PER_DAMAGE * Math.max(0.0F, damage));
+        LAST_USE.put(player.getUUID(), player.level().getGameTime());
+        set(player, get(player) - cost);
     }
 
     /** Poids de chaque Haki actif (le corps entier d'Armement coûte plus que le bras seul). */

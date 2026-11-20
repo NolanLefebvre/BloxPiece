@@ -262,6 +262,19 @@ public class ModEntities {
             .updateInterval(1)
             .build(ACE_SLASH_KEY);
 
+    // Activation du Haki des Rois : la séquence visuelle (onde de choc, voir ConquerorShockwave). Ni sauvegardée, ni invocable.
+    public static final ResourceKey<EntityType<?>> CONQUEROR_SHOCKWAVE_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("conqueror_shockwave"));
+
+    public static final EntityType<nolan.bloxpiece.fx.ConquerorShockwave> CONQUEROR_SHOCKWAVE =
+            EntityType.Builder.<nolan.bloxpiece.fx.ConquerorShockwave>of(nolan.bloxpiece.fx.ConquerorShockwave::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(10)
+            .updateInterval(20)
+            .build(CONQUEROR_SHOCKWAVE_KEY);
+
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
         register(TAVERN_KEEPER_KEY, TAVERN_KEEPER, nolan.bloxpiece.mob.TavernKeeper.attributes());
@@ -288,6 +301,7 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, QUAKE_FX_KEY, QUAKE_FX);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, HAKI_BOLT_KEY, HAKI_BOLT);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ACE_SLASH_KEY, ACE_SLASH);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, CONQUEROR_SHOCKWAVE_KEY, CONQUEROR_SHOCKWAVE);
     }
 
     private static <T extends LivingEntity> void register(

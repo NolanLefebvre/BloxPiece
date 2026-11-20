@@ -58,16 +58,10 @@ public final class ConquerorHaki implements Haki {
         // plus de durée limitée : libéré jusqu'à ce que la jauge de Haki soit vide (HakiEnergy) ou qu'on le coupe
         this.until.put(player.getUUID(), Long.MAX_VALUE);
         ServerLevel level = (ServerLevel) player.level();
-        Vec3 c = player.position().add(0.0, 1.0, 0.0);
-        activationBurst(level, player);
-        BuddhaHits.shake(level, c, RADIUS * 2.5, 2.5F, 18);
-        level.playSound(null, c.x, c.y, c.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.6F, 0.5F);
-        level.playSound(null, c.x, c.y, c.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.2F, 0.7F);
         risingTrails(level, player, level.getRandom(), 4);
-        // gerbe initiale : 10 longs éclairs en étoile, en diagonale tout autour du corps
-        for (int i = 0; i < 10; i++) {
-            spawnBolt(level, player, level.getRandom());
-        }
+        // séquence d'activation (montée, décharge, onde de choc, flash) : ConquerorShockwave ; geste du joueur : CONQUEROR_RELEASE
+        player.setAttached(ModAttachments.CONQUEROR_RELEASE, (int) level.getGameTime());
+        nolan.bloxpiece.fx.ConquerorShockwave.start(level, player);
     }
 
     /**
@@ -75,7 +69,7 @@ public final class ConquerorHaki implements Haki {
      * (20 à 45 degrés), dans toutes les directions autour du joueur. Long (environ 1,5 à 2,5 blocs) mais fin ; il s'élance dans sa
      * direction pendant sa courte vie (voir HakiBoltRenderer). Taille négative = éclair orienté (convention du renderer).
      */
-    private static void spawnBolt(ServerLevel level, ServerPlayer player, RandomSource random) {
+    public static void spawnBolt(ServerLevel level, ServerPlayer player, RandomSource random) {
         double a = random.nextDouble() * Math.PI * 2;                  // direction horizontale, vers l'extérieur
         double elevation = random.nextFloat() < 0.72F
                 ? 25.0 + random.nextDouble() * 40.0                         // diagonale montante
@@ -123,7 +117,7 @@ public final class ConquerorHaki implements Haki {
      *   <li>étincelles de tension rouge vif qui crépitent sur le corps.</li>
      * </ul>
      */
-    private static void activationBurst(ServerLevel level, ServerPlayer player) {
+    public static void activationBurst(ServerLevel level, ServerPlayer player) {
         RandomSource random = level.getRandom();
         double cx = player.getX(), cy = player.getY(), cz = player.getZ();
         // ondes de choc miniatures, empilées le long du corps

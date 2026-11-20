@@ -34,6 +34,13 @@ public class ArmedPirateModel extends HumanoidModel<ArmedPirateRenderState> {
         if (this.backRifle != null) {
             this.backRifle.visible = state.weaponStowed; // dans le dos hors combat, dans les mains en combat
         }
+        // épée Ace (Gol D. Roger) : même geste que le joueur pour la Lame dévastatrice (charge, frappe, retour)
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        net.minecraft.world.entity.Entity entity = level == null ? null : level.getEntity(state.entityId);
+        if (entity != null && !(state instanceof CuffedRenderState cuffedAce && cuffedAce.bloxpiece$isCuffed())) {
+            nolan.bloxpiece.client.AceSwing.applyThirdPerson(this, entity,
+                    level.getGameTime() + (state.ageInTicks - entity.tickCount), state.ageInTicks);
+        }
         if (state.aiming && !(state instanceof CuffedRenderState cuffed && cuffed.bloxpiece$isCuffed())) { // menotté : bras dans le dos
             float kick = state.recoil * state.recoil; // recul : vif au départ, puis s'amortit
             if (state.twoHanded) {

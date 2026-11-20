@@ -243,6 +243,8 @@ public class BloxPieceClient implements ClientModInitializer {
         // HUD des 3 Hakis à gauche de la hotbar, éclairs du Haki des Rois
         nolan.bloxpiece.client.haki.HakiHud.register();
         nolan.bloxpiece.client.hud.JobUnlockBanner.register(); // bannière « Job débloqué » au niveau 5
+        nolan.bloxpiece.client.hud.ConquerorFlash.register(); // flash rouge et vignettage à l'activation du Haki des Rois
+        nolan.bloxpiece.client.hud.RogerBossBar.register(); // barre de boss de Gol D. Roger
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER,
                 nolan.bloxpiece.client.haki.HakiBoltRenderer.BoltModel::createLayer);
         EntityRendererRegistry.register(ModEntities.HAKI_BOLT, nolan.bloxpiece.client.haki.HakiBoltRenderer::new);
@@ -250,6 +252,8 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.AceSlashModel.LAYER,
                 nolan.bloxpiece.client.entity.AceSlashModel::createLayer);
         EntityRendererRegistry.register(ModEntities.ACE_SLASH, nolan.bloxpiece.client.entity.AceSlashRenderer::new);
+        // L'onde de choc de l'activation du Haki des Rois (réutilise le calque des éclairs, déjà enregistré plus haut)
+        EntityRendererRegistry.register(ModEntities.CONQUEROR_SHOCKWAVE, nolan.bloxpiece.client.haki.ConquerorShockwaveRenderer::new);
         // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
         HealthHud.register();
 
@@ -309,6 +313,7 @@ public class BloxPieceClient implements ClientModInitializer {
             ClientWaterCurse.tick(client);
             LogiaClient.tick(client);
             nolan.bloxpiece.client.haki.HakiItemCoat.tick(client);
+            nolan.bloxpiece.client.hud.RogerBossBar.tick(client); // barre de boss de Gol D. Roger (zone, vie, fondu)
             nolan.bloxpiece.client.hud.JobUnlockBanner.tick(client); // revêtement du Haki sur l'objet en main (et objet lâché)
             if (client.player == null || client.getConnection() == null) {
                 return;

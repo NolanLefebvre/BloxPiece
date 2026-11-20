@@ -176,8 +176,15 @@ public class AceSlash extends ModFxEntity {
 
     private void launch(ServerLevel level, LivingEntity owner) {
         Vec3 look = owner.getLookAngle();
-        this.setYRot(owner.getYRot());
-        this.setXRot(owner.getXRot());
+        float yaw = owner.getYRot(), pitch = owner.getXRot();
+        if (owner instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() != null) {
+            // un mob (Gol D. Roger) lance droit sur sa cible (son corps n'est pas toujours exactement tourné vers elle)
+            look = mob.getTarget().getBoundingBox().getCenter().subtract(owner.getEyePosition()).normalize();
+            yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
+            pitch = (float) Math.toDegrees(-Math.asin(Math.max(-1.0, Math.min(1.0, look.y))));
+        }
+        this.setYRot(yaw);
+        this.setXRot(pitch);
         this.yRotO = this.getYRot();
         this.xRotO = this.getXRot();
         this.setPos(owner.getEyePosition().add(look.scale(LAUNCH_OFFSET)).add(0.0, -0.2, 0.0));

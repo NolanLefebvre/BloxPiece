@@ -11,8 +11,9 @@ import nolan.bloxpiece.registry.ModItems;
 /**
  * Gol D. Roger, le Roi des Pirates (modèle 3D : RogerModels). Première version : un pirate armé (même IA que les autres, voir
  * ArmedPirate : il attaque joueurs et Marines à vue) mais bien plus fort, un peu plus grand (échelle 1,1 : hitbox et rendu,
- * attribut SCALE dans ModEntities), qui ne se fait pas repousser et ne disparaît jamais au loin. Son sabre Ace au fourreau hors
- * combat, en main dès qu'il a une cible. Résiste au Haki des Rois. Invocation : /summon bloxpiece:gol_d_roger.
+ * attribut SCALE dans ModEntities), qui ne se fait pas repousser et ne disparaît jamais au loin. Son épée Ace toujours en
+ * main (fourreau vide au côté gauche) ; il la laisse tomber à sa mort (table de butin). En combat, il lance aussi la Lame dévastatrice du Haki des Rois avec Ace (même attaque
+ * que le joueur : AceSlashGoal). Résiste au Haki des Rois. Invocation : /summon bloxpiece:gol_d_roger.
  */
 public class GolDRoger extends ArmedPirate {
 
@@ -26,6 +27,9 @@ public class GolDRoger extends ArmedPirate {
 
     public GolDRoger(EntityType<? extends GolDRoger> type, Level level) {
         super(type, level);
+        // Ace tombe à sa mort par sa table de butin (loot_table/entities/gol_d_roger.json), toujours, une seule fois : l'épée
+        // tenue en main ne tombe jamais en plus (sinon elle pourrait tomber deux fois)
+        this.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
     }
 
     @Override
@@ -33,15 +37,22 @@ public class GolDRoger extends ArmedPirate {
         return STATS;
     }
 
-    /** Sabre au fourreau hors combat (la poignée dorée « sheathed_hilt » du modèle n'est affichée qu'à ce moment-là). */
+    /** Ace toujours en main, même hors combat (le fourreau reste au côté, vide). */
     @Override
     public boolean stowsWeapon() {
-        return true;
+        return false;
     }
 
     @Override
     protected ItemStack weapon() {
         return new ItemStack(ModItems.ACE); // son sabre légendaire
+    }
+
+    /** En plus de ses coups d'épée : la Lame dévastatrice du Haki des Rois avec Ace (AceSlashGoal), prioritaire quand elle part. */
+    @Override
+    protected void registerGoals() {
+        super.registerGoals();
+        this.goalSelector.addGoal(1, new nolan.bloxpiece.mob.ai.AceSlashGoal(this));
     }
 
     @Override

@@ -22,6 +22,7 @@ public class ArmedPirateRenderer extends HumanoidMobRenderer<ArmedHumanoid, Arme
 
     public ArmedPirateRenderer(EntityRendererProvider.Context context, ModelLayerLocation layer, String skin, int variants) {
         super(context, new ArmedPirateModel(context.bakeLayer(layer)), 0.5F);
+        this.addLayer(new AceLightningLayer(this)); // épée Ace (Gol D. Roger) : éclairs du Haki des Rois sur la lame
         this.textures = new Identifier[variants];
         for (int i = 0; i < variants; i++) {
             this.textures[i] = BloxPiece.id("textures/entity/" + skin + "_" + i + ".png");
@@ -44,6 +45,7 @@ public class ArmedPirateRenderer extends HumanoidMobRenderer<ArmedHumanoid, Arme
         float sinceShot = entity.ticksSinceShot() + partialTick;
         state.recoil = sinceShot < 0.0F || sinceShot > RECOIL_TICKS ? 0.0F : 1.0F - sinceShot / RECOIL_TICKS;
         state.variant = Math.floorMod(entity.getUUID().hashCode(), this.textures.length);
+        state.entityId = entity.getId();
     }
 
     @Override

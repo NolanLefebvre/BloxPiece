@@ -60,7 +60,8 @@ public final class AceChargeLightning {
             return -1.0F;
         }
         Integer charge = entity.getAttached(ModAttachments.ACE_CHARGE);
-        if (charge == null || !entity.isUsingItem() || now - charge < AceSlash.RAISE_TICKS) {
+        if (charge == null || (!entity.isUsingItem() && entity instanceof net.minecraft.world.entity.player.Player)
+                || now - charge < AceSlash.RAISE_TICKS) { // (un mob comme Roger charge sans « utiliser » l'objet)
             return -1.0F; // pas de charge, ou l'épée se lève encore
         }
         return Math.min(1.0F, (now - charge - AceSlash.RAISE_TICKS) / AceSlash.MAX_CHARGE_TICKS);

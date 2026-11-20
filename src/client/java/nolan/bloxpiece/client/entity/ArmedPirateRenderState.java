@@ -13,4 +13,6 @@ public class ArmedPirateRenderState extends HumanoidRenderState {
     public float recoil;
     /** Arme rangée (fusil dans le dos) : la pièce « back_rifle » du modèle est affichée. */
     public boolean weaponStowed;
+    /** Identifiant de l'entité (geste et éclairs de l'épée Ace : AceSwing, AceChargeLightning). */
+    public int entityId;
 }
