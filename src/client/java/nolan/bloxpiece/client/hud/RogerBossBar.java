@@ -16,7 +16,7 @@ import nolan.bloxpiece.mob.GolDRoger;
 
 /**
  * Barre de boss de Gol D. Roger, en haut de l'écran, en style « emblème central » (textures/gui/roger_bossbar.png, généré par
- * src/blockbench/ui/make_roger_bossbar.py) : une barre fine de {@link #CELLS} petits CARRÉS, coupée au centre par son Jolly
+ * src/blockbench/ui/make_roger_bossbar.py) : une barre fine, une seule rangée de {@link #CELLS} petits CARRÉS qui passe derrière son Jolly
  * Roger (crâne aux yeux rouges du Haki des Rois, grosse moustache, coiffé de son tricorne rouge et or) devant deux sabres Ace
  * croisés, avec quelques éclairs du Haki des Rois ; aux deux bouts, les pans de sa cape rouge bordés d'or et les plumes
  * blanches de son chapeau ; franges dorées sous la barre ; « Gol D. » et « Roger » en grosses lettres pixel faites main de part
@@ -24,7 +24,7 @@ import nolan.bloxpiece.mob.GolDRoger;
  * <ul>
  *   <li>Vie : la vraie vie de l'entité (getHealth / getMaxHealth), que Minecraft envoie déjà à chaque client : aucune réserve à
  *       part, aucun paquet en plus, toujours à jour (dégâts et soins). Chaque carré = 1/{@link #CELLS} de la vie, de gauche à
- *       droite à travers l'emblème ; le carré entamé se vide progressivement ; les dégâts récents restent dorés un instant.</li>
+ *       droite, derrière l'emblème ; le carré entamé se vide progressivement ; les dégâts récents restent dorés un instant.</li>
  *   <li>Zone : chaque client regarde SA distance à Roger, une fois par tick (pas à chaque image) : la barre apparaît à moins de
  *       {@link #SHOW_RADIUS} blocs et ne disparaît qu'au-delà de {@link #HIDE_RADIUS} (marge : pas de clignotement à la limite).
  *       Plusieurs Roger : seulement le plus proche (jamais deux barres pour le même boss).</li>
@@ -46,13 +46,15 @@ public final class RogerBossBar implements HudElement {
     /** Décor et carrés de vie (positions identiques au générateur make_roger_bossbar.py). */
     private static final Identifier FRAME = BloxPiece.id("textures/gui/roger_bossbar.png");
     private static final Identifier CELLS_TEX = BloxPiece.id("textures/gui/roger_bossbar_cells.png");
+    /** Le premier plan (crâne, tricorne, sabres, éclairs, capes, épaulettes), redessiné PAR-DESSUS les carrés. */
+    private static final Identifier EMBLEM = BloxPiece.id("textures/gui/roger_bossbar_emblem.png");
     private static final int FRAME_W = 360, FRAME_H = 64;
     /**
-     * Barre de vie : {@link #CELLS} carrés de {@link #CELL} px séparés de {@link #GAP} px, en deux moitiés de part et d'autre
-     * de l'emblème (gauche à partir de {@link #LEFT_X}, droite à partir de {@link #RIGHT_X}).
+     * Barre de vie : UNE rangée continue de {@link #CELLS} carrés de {@link #CELL} px séparés de {@link #GAP} px, d'un bout à
+     * l'autre ; elle passe derrière l'emblème et ses bouts sous les épaulettes (calque EMBLEM redessiné par-dessus).
      */
-    private static final int HALF = 15, CELLS = HALF * 2, CELL = 6, GAP = 1, LEFT_X = 51, RIGHT_X = 205, CELL_Y = 34;
-    private static final int BAR_X0 = LEFT_X - 4, BAR_X1 = RIGHT_X + HALF * (CELL + GAP) + 3, BAR_Y0 = CELL_Y - 2,
+    private static final int CELLS = 39, CELL = 6, GAP = 1, CELL_X = 44, CELL_Y = 34;
+    private static final int BAR_X0 = CELL_X - 2, BAR_X1 = CELL_X + CELLS * (CELL + GAP) + 1, BAR_Y0 = CELL_Y - 2,
             BAR_Y1 = CELL_Y + CELL + 2;
 
     private static GolDRoger boss;
@@ -65,6 +67,11 @@ public final class RogerBossBar implements HudElement {
     private static int clock;
 
     private RogerBossBar() {
+    }
+
+    /** La barre de Roger est-elle à l'écran (même en fondu) ? (MorganBossBar se place alors en dessous.) */
+    public static boolean showing() {
+        return fade > 0.0F || fadeOld > 0.0F;
     }
 
     public static void register() {
@@ -141,13 +148,13 @@ public final class RogerBossBar implements HudElement {
         int white = alpha(0xFFFFFFFF, a);
         // décor complet : emblème (crâne de Roger, tricorne, sabres Ace), pans de cape, plumes, nom en lettres pixel
         g.blit(RenderPipelines.GUI_TEXTURED, FRAME, 0, 0, 0.0F, 0.0F, FRAME_W, FRAME_H, FRAME_W, FRAME_H, white);
-        // carrés de vie : de gauche à droite à travers l'emblème (chacun = 1/CELLS de la vie) ; le carré entamé se vide
+        // carrés de vie : une rangée continue, de gauche à droite sous l'emblème (chacun = 1/CELLS de la vie) ; le carré entamé se vide
         // progressivement ; les dégâts récents restent dorés un instant ; sous 25 % de vie, les carrés restants palpitent
         float lifeCells = CELLS * Math.max(0.0F, Math.min(1.0F, health));
         float trailCells = CELLS * Math.max(0.0F, Math.min(1.0F, shown));
         float pulse = health < 0.25F ? 0.5F + 0.5F * (float) Math.sin(time * 0.5F) : 0.0F;
         for (int i = 0; i < CELLS; i++) {
-            int x = i < HALF ? LEFT_X + i * (CELL + GAP) : RIGHT_X + (i - HALF) * (CELL + GAP);
+            int x = CELL_X + i * (CELL + GAP);
             g.blit(RenderPipelines.GUI_TEXTURED, CELLS_TEX, x, CELL_Y, 7.0F, 0.0F, CELL, CELL, 13, 6, white); // vide
             float lifeK = Math.max(0.0F, Math.min(1.0F, lifeCells - i));
             float trailK = Math.max(0.0F, Math.min(1.0F, trailCells - i));
@@ -165,6 +172,8 @@ public final class RogerBossBar implements HudElement {
                 }
             }
         }
+        // premier plan par-dessus les carrés : la rangée passe derrière le crâne et sous les épaulettes
+        g.blit(RenderPipelines.GUI_TEXTURED, EMBLEM, 0, 0, 0.0F, 0.0F, FRAME_W, FRAME_H, FRAME_W, FRAME_H, white);
         // éclat doré qui parcourt la barre de temps en temps (bande oblique)
         float phase = (time % SHINE_PERIOD) / SHINE_TICKS;
         if (phase < 1.0F) {

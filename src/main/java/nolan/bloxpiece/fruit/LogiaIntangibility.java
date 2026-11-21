@@ -94,6 +94,9 @@ public final class LogiaIntangibility {
         if (!isLogia(player) || !isPhysical(source) || isDevilFruitAttack(source)) {
             return false;
         }
+        if (nolan.bloxpiece.haki.ArmamentHaki.pierces(source)) {
+            return false; // coup imprégné de Haki de l'Armement : il touche le corps élémentaire (le passif Logia reste actif)
+        }
         if (source.is(DamageTypeTags.IS_FALL)) {
             disperse(player, RIGHT_LEG | LEFT_LEG, player.position());
         } else {

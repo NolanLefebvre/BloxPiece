@@ -117,6 +117,40 @@ public final class ArmamentHaki implements Haki {
                 && nolan.bloxpiece.job.Jobs.is(holder, nolan.bloxpiece.job.Job.SWORDMAN);
     }
 
+    /**
+     * Ce coup est-il imprégné de Haki de l'Armement ? (contre naturel de l'intangibilité Logia : LogiaIntangibility.absorbs).
+     * Vérifié côté serveur au moment où le coup touche, d'après l'état réel du Haki de l'ATTAQUANT et l'objet qu'il tient :
+     * <ul>
+     *   <li>seulement un coup porté directement (mêlée, attaque balayée comprise), par une créature qui a le Haki actif ;</li>
+     *   <li>Haki sur tout le corps : tous ses coups ;</li>
+     *   <li>Haki sur le bras : à mains nues (poings), ou avec une arme imprégnée de Haki (métier Épéiste, {@link #isImbued}) ;
+     *       une arme non imprégnée ne l'est pas.</li>
+     * </ul>
+     * Projectiles, chutes, feu... : jamais (pas de Haki dessus dans le mod).
+     */
+    public static boolean pierces(net.minecraft.world.damagesource.DamageSource source) {
+        if (!(source.getEntity() instanceof net.minecraft.world.entity.LivingEntity attacker) || source.getDirectEntity() != attacker) {
+            return false;
+        }
+        if (!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)
+                && !source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)
+                && !source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK_NO_AGGRO)) {
+            return false;
+        }
+        if (attacker instanceof nolan.bloxpiece.mob.GolDRoger) {
+            return true; // le Roi des Pirates maîtrise le Haki de l'Armement : tous ses coups touchent les Logia
+        }
+        if (attacker instanceof nolan.bloxpiece.mob.Morgan) {
+            return true; // Morgan : ses coups de hache (classique, rotation, coup au sol) touchent aussi les Logia
+        }
+        int mode = mode(attacker);
+        if (mode == FULL_BODY) {
+            return true;
+        }
+        net.minecraft.world.item.ItemStack held = attacker.getMainHandItem();
+        return mode == ARM && (held.isEmpty() || isImbued(attacker, held));
+    }
+
     private static void setDamageBonus(ServerPlayer player, double bonus) {
         AttributeInstance attack = player.getAttribute(Attributes.ATTACK_DAMAGE);
         if (attack == null) {

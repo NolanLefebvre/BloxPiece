@@ -38,6 +38,7 @@ public class ConquerorShockwaveRenderer extends EntityRenderer<ConquerorShockwav
 
     public static class WaveState extends EntityRenderState {
         public float age = -1.0F;
+        public float scale = 1.0F;
     }
 
     private final ModelPart segment;
@@ -56,6 +57,7 @@ public class ConquerorShockwaveRenderer extends EntityRenderer<ConquerorShockwav
     public void extractRenderState(ConquerorShockwave entity, WaveState state, float partialTick) {
         super.extractRenderState(entity, state, partialTick);
         state.age = entity.waveAge(partialTick);
+        state.scale = entity.scale();
     }
 
     @Override
@@ -63,25 +65,27 @@ public class ConquerorShockwaveRenderer extends EntityRenderer<ConquerorShockwav
         float age = state.age;
         if (age >= 0.0F) {
             RenderType type = RenderTypes.entityTranslucent(TEXTURE);
+            float k = state.scale;                       // 1 = joueur ; Gol D. Roger : onde bien plus grande et plus épaisse
+            float thick = (float) Math.sqrt(k);
             float total = ConquerorShockwave.EXPAND_TICKS + ConquerorShockwave.FADE_TICKS;
             float fade = age < ConquerorShockwave.EXPAND_TICKS * 0.6F ? 1.0F : Math.max(0.0F, 1.0F - (age - ConquerorShockwave.EXPAND_TICKS * 0.6F)
                     / (total - ConquerorShockwave.EXPAND_TICKS * 0.6F));
             if (fade > 0.0F) {
-                float r = (float) ConquerorShockwave.radiusAt(age);
+                float r = (float) ConquerorShockwave.radiusAt(age) * k;
                 // anneau principal (à hauteur de taille) : coeur noir, gaine rouge vif
-                ring(pose, collector, 0, type, r, 1.0F, 6.0F, 4.0F, argb(0.95F * fade, 0x050001));
-                ring(pose, collector, 1, type, r, 1.0F, 12.0F, 9.0F, argb(0.45F * fade, 0xFF1A1A));
+                ring(pose, collector, 0, type, r, 1.0F, 6.0F * thick, 4.0F * thick, argb(0.95F * fade, 0x050001));
+                ring(pose, collector, 1, type, r, 1.0F, 12.0F * thick, 9.0F * thick, argb(0.45F * fade, 0xFF1A1A));
                 // anneaux secondaires rouge sombre, partis après
-                float r2 = (float) ConquerorShockwave.radiusAt(age - 2.0F) * 0.85F;
+                float r2 = (float) ConquerorShockwave.radiusAt(age - 2.0F) * 0.85F * k;
                 if (r2 > 0.3F) {
                     ring(pose, collector, 1, type, r2, 0.6F, 7.0F, 5.0F, argb(0.4F * fade, 0x8A0010));
                 }
-                float r3 = (float) ConquerorShockwave.radiusAt(age - 4.0F) * 0.65F;
+                float r3 = (float) ConquerorShockwave.radiusAt(age - 4.0F) * 0.65F * k;
                 if (r3 > 0.3F) {
                     ring(pose, collector, 1, type, r3, 1.5F, 5.0F, 4.0F, argb(0.35F * fade, 0x5A000A));
                 }
                 // mur d'air repoussé au front de l'onde, et voile pâle qui ondule juste derrière (distorsion)
-                ring(pose, collector, 2, type, r, 1.0F, 2.0F, 34.0F, argb(0.12F * fade, 0xB0101A));
+                ring(pose, collector, 2, type, r, 1.0F, 2.0F * thick, 34.0F * thick, argb(0.12F * fade, 0xB0101A));
                 float wobble = 0.15F * (float) Math.sin(age * 1.9F);
                 ring(pose, collector, 2, type, Math.max(0.2F, r - 0.6F), 1.0F + wobble, 3.0F, 26.0F, argb(0.06F * fade, 0xFFE0E0));
                 // anneau au ras du sol
@@ -116,7 +120,7 @@ public class ConquerorShockwaveRenderer extends EntityRenderer<ConquerorShockwav
 
     @Override
     protected AABB getBoundingBoxForCulling(ConquerorShockwave entity, float partialTick) {
-        return entity.getBoundingBox().inflate(ConquerorShockwave.MAX_RADIUS + 2.0);
+        return entity.getBoundingBox().inflate(ConquerorShockwave.MAX_RADIUS * entity.scale() + 2.0);
     }
 
     private static int argb(float alpha, int rgb) {

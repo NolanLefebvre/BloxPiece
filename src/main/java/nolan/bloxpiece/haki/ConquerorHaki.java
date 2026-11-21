@@ -30,7 +30,7 @@ import nolan.bloxpiece.registry.ModAttachments;
 public final class ConquerorHaki implements Haki {
 
     static final double RADIUS = 12.0;
-    private static final int KNOCKOUT_TICKS = 20 * 8;
+    public static final int KNOCKOUT_TICKS = 20 * 8;
     private static final int COOLDOWN = 20 * 20;
 
     /** Résistent au Haki des Rois : les boss, Gol D. Roger et les supports d'armure (identifiants Minecraft). */
@@ -69,7 +69,7 @@ public final class ConquerorHaki implements Haki {
      * (20 à 45 degrés), dans toutes les directions autour du joueur. Long (environ 1,5 à 2,5 blocs) mais fin ; il s'élance dans sa
      * direction pendant sa courte vie (voir HakiBoltRenderer). Taille négative = éclair orienté (convention du renderer).
      */
-    public static void spawnBolt(ServerLevel level, ServerPlayer player, RandomSource random) {
+    public static void spawnBolt(ServerLevel level, LivingEntity player, RandomSource random) {
         double a = random.nextDouble() * Math.PI * 2;                  // direction horizontale, vers l'extérieur
         double elevation = random.nextFloat() < 0.72F
                 ? 25.0 + random.nextDouble() * 40.0                         // diagonale montante
@@ -117,7 +117,7 @@ public final class ConquerorHaki implements Haki {
      *   <li>étincelles de tension rouge vif qui crépitent sur le corps.</li>
      * </ul>
      */
-    public static void activationBurst(ServerLevel level, ServerPlayer player) {
+    public static void activationBurst(ServerLevel level, LivingEntity player) {
         RandomSource random = level.getRandom();
         double cx = player.getX(), cy = player.getY(), cz = player.getZ();
         // ondes de choc miniatures, empilées le long du corps
@@ -217,11 +217,15 @@ public final class ConquerorHaki implements Haki {
             if (resists(target)) {
                 continue;
             }
+            // Morgan a la volonté d'un niveau 10 : seul un joueur de niveau supérieur l'endort
+            if (target instanceof nolan.bloxpiece.mob.Morgan && level(player) <= nolan.bloxpiece.mob.Morgan.CONQUEROR_LEVEL) {
+                continue;
+            }
             Unconscious.knockOut(target, KNOCKOUT_TICKS);
         }
     }
 
-    private static int level(ServerPlayer player) {
+    public static int level(ServerPlayer player) {
         return nolan.bloxpiece.progression.Progression.get(player).level();
     }
 
@@ -238,10 +242,10 @@ public final class ConquerorHaki implements Haki {
         BuddhaHits.shake(level, loser.position(), RADIUS, 1.5F, 10);
     }
 
-    private static boolean resists(LivingEntity target) {
+    public static boolean resists(LivingEntity target) {
         // par identifiant (les noms des constantes Java changent selon les versions de Minecraft)
         String id = BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).getPath();
-        if (RESISTANT.contains(id) || target instanceof TavernKeeper) {
+        if (RESISTANT.contains(id) || target instanceof TavernKeeper || target instanceof nolan.bloxpiece.mob.Rayleigh) {
             return true;
         }
         if (target instanceof ServerPlayer p && (p.isCreative() || p.isSpectator()

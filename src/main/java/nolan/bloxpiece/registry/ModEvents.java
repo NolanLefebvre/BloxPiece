@@ -44,6 +44,9 @@ import nolan.bloxpiece.handcuffs.Handcuffs;
 
 public class ModEvents {
 
+    /** Joueurs qui viennent de réapparaître : ticks avant de leur renvoyer leur vie pleine (voir AFTER_RESPAWN). */
+    private static final java.util.Map<java.util.UUID, Integer> RESPAWN_HEAL = new java.util.HashMap<>();
+
     public static void initialize() {
         // Menottes : mains liées (aucune action possible sauf la clé), menottes rendues à la mort
         Handcuffs.initialize();
@@ -187,8 +190,25 @@ public class ModEvents {
             if (!alive) {
                 LevelScaling.applyHealth(newPlayer);
                 newPlayer.setHealth(newPlayer.getMaxHealth());
+                // le client reçoit la vie AVANT le nouveau maximum (attribut envoyé après) : il la bloquait à 20 PV (1re barre).
+                // On la renvoie 2 ticks plus tard, une fois le maximum connu du client : toutes les barres sont pleines.
+                RESPAWN_HEAL.put(newPlayer.getUUID(), 2);
             }
         });
+        ServerTickEvents.END_SERVER_TICK.register(server -> RESPAWN_HEAL.entrySet().removeIf(e -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(e.getKey());
+            if (player == null) {
+                return true;
+            }
+            if (e.getValue() > 1) {
+                e.setValue(e.getValue() - 1);
+                return false;
+            }
+            LevelScaling.applyHealth(player);
+            player.setHealth(player.getMaxHealth());
+            player.resetSentInfo(); // force l'envoi de la vie au client
+            return true;
+        }));
 
         // Évite de garder des projectiles d'un ancien monde en mémoire
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {

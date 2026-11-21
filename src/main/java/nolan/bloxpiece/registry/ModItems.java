@@ -66,6 +66,18 @@ public class ModItems {
             new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
     );
 
+    public static final Item KAME_FRUIT = register(
+            "kame_kame_no_mi",
+            properties -> new DevilFruitItem(properties, Fruits.KAME),
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet
+    );
+
+    public static final Item GORO_FRUIT = register(
+            "goro_goro_no_mi",
+            properties -> new DevilFruitItem(properties, Fruits.GORO),
+            new Item.Properties().food(FRUIT_FOOD, FRUIT_CONSUMABLE).rarity(Rarity.EPIC) // nom en violet ; modèle 3D
+    );
+
     public static final Item ICE_FRUIT = register(
             "hie_hie_no_mi",
             properties -> new DevilFruitItem(properties, Fruits.ICE),
@@ -103,6 +115,23 @@ public class ModItems {
             "ace",
             nolan.bloxpiece.item.AceItem::new,
             new Item.Properties().stacksTo(1).durability(3000).attributes(PirateSaberItem.attributes(14.0, -2.4))
+    );
+
+    /**
+     * Épées des bandits : modèles 3D originaux (fauchon rustique du Bandit, grand dao à garde en S du Chef :
+     * models/item/bandit_sword.json et bandit_chief_sword.json, générés par src/blockbench/bandit_swords/make_bandit_swords.py). Mêmes dégâts que les épées qu'ils avaient avant : fer pour le
+     * Bandit (6), diamant pour le Chef (7), 1,6 coup par seconde.
+     */
+    public static final Item BANDIT_SWORD = register(
+            "bandit_sword",
+            PirateSaberItem::new,
+            new Item.Properties().stacksTo(1).durability(250).attributes(PirateSaberItem.attributes(6.0, -2.4))
+    );
+
+    public static final Item BANDIT_CHIEF_SWORD = register(
+            "bandit_chief_sword",
+            PirateSaberItem::new,
+            new Item.Properties().stacksTo(1).durability(1200).attributes(PirateSaberItem.attributes(7.0, -2.4))
     );
 
     public static final Item FLINTLOCK = register(
@@ -207,8 +236,8 @@ public class ModItems {
                 .displayItems((context, entries) -> {
                     // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
                     // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
-                    java.util.List<Item> first = java.util.List.of(TREASURE_CHEST, FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT,
-                            PIRATE_SABER, CAPTAIN_SABER, ACE, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
+                    java.util.List<Item> first = java.util.List.of(TREASURE_CHEST, FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT, KAME_FRUIT, GORO_FRUIT,
+                            PIRATE_SABER, CAPTAIN_SABER, ACE, BANDIT_SWORD, BANDIT_CHIEF_SWORD, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
                             XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
                     first.forEach(entries::accept);
                     BuiltInRegistries.ITEM.stream()

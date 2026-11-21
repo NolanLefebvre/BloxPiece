@@ -50,6 +50,12 @@ public class AbilityManager {
             return;
         }
 
+        // Visiteur dans la dimension de poche d'un autre joueur : aucun pouvoir (rien ne doit abîmer ses constructions)
+        if (KameVisits.isGuestIn(player, player.level())) {
+            player.sendSystemMessage(Component.translatable("message.bloxpiece.kame.visit_no_powers"), true);
+            return;
+        }
+
         // Évanoui (Haki des Rois) : rien ne part
         if (nolan.bloxpiece.haki.Unconscious.is(player)) {
             return;

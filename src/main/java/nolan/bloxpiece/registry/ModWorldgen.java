@@ -23,6 +23,10 @@ import nolan.bloxpiece.worldgen.FoundationProcessor;
  *       plancher océanique (heightmap OCEAN_FLOOR_WG) : il remplace le sable, le gravier, l'argile ou la roche de surface, donc
  *       il est toujours exposé à l'eau et se repère en nageant. Pour changer la rareté : "chance" et "count" dans
  *       placed_feature/seastone_ore.json ; la taille des filons : "size" dans feature/seastone_ore.json.</li>
+ *   <li>Camp de bandits (structure/bandit_camp.nbt, généré par src/blockbench/structures/make_bandit_camp.py ; 5 pirates en bandits,
+ *       9 coffres et tonneaux à butin) : plaines, prairies, savanes ; assez rare (structure_set/bandit_camps.json : un emplacement
+ *       possible tous les 26 tronçons environ, 10 au moins entre deux) ; terrain plat et sec seulement (BanditCampExclusion) ;
+ *       raccord au terrain par Minecraft (terrain_adaptation « beard_thin »).</li>
  *   <li>Base de la Marine (structure/marine_base.nbt, 47 Marines persistants, prison souterraine avec 10 pirates menottés) : plaines, plages, savanes, prairies
  *       (tags/worldgen/biome/has_structure/marine_base.json), même rareté que les navires pirates (structure_set/marine_bases.json).
  *       Posée sur la surface, loin des villages (exclusion_zone), à plus de 500 blocs du spawn, sur terrain plat, sans autre structure à moins de 8 tronçons (MarineBaseExclusion) ; le processeur "bloxpiece:foundation" (FoundationProcessor) comble le

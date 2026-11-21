@@ -26,7 +26,8 @@ public abstract class HideFirstPersonHandMixin {
     @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true, require = 0)
     private void bloxpiece$hideHand(CallbackInfo info) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null && (player.getAttached(ModAttachments.HIDE_HAND_ITEM) != null || Handcuffs.isCuffed(player))) {
+        if (player != null && (player.getAttached(ModAttachments.HIDE_HAND_ITEM) != null || Handcuffs.isCuffed(player)
+                || player.getAttached(ModAttachments.KAME_RETRACT) != null)) { // Kame Kame no Mi : bras rentrés dans la carapace
             info.cancel();
         }
     }

@@ -22,7 +22,9 @@ public enum FruitRarity {
             "bloxpiece:hie_hie_no_mi", RARE,
             "bloxpiece:mera_mera_no_mi", LEGENDARY,
             "bloxpiece:hito_hito_no_mi_model_daibutsu", LEGENDARY,
-            "bloxpiece:gura_gura_no_mi", MYTHIC
+            "bloxpiece:gura_gura_no_mi", MYTHIC,
+            "bloxpiece:kame_kame_no_mi", RARE,
+            "bloxpiece:goro_goro_no_mi", MYTHIC
     );
 
     public final String id;

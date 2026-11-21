@@ -69,6 +69,9 @@ public abstract class LivingEntityRendererMixin {
                     context.bakeLayer(nolan.bloxpiece.client.haki.HakiEyeTrailLayer.LAYER),
                     context.bakeLayer(ModelLayers.PLAYER), context.bakeLayer(ModelLayers.PLAYER)); // (même maillage : sûr d'exister)
             this.layers.add(eyeTrail);
+            // Kame Kame no Mi : la carapace (ne dessine rien sans carapace)
+            this.layers.add(new nolan.bloxpiece.client.entity.KameShellLayer(parent,
+                    context.bakeLayer(nolan.bloxpiece.client.entity.KameShellModel.LAYER)));
         } else if (model instanceof HumanoidModel) {
             // Mobs humanoïdes (zombies, squelettes, piglins, pirates...) : menottes aux poignets s'ils sont menottés
             this.layers.add(new MobHandcuffsLayer((RenderLayerParent) (Object) this, context.bakeLayer(HandcuffsLayer.LAYER)));

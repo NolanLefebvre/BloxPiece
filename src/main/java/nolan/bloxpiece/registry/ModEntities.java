@@ -44,6 +44,16 @@ public class ModEntities {
             .clientTrackingRange(8)
             .build(TAVERN_KEEPER_KEY);
 
+    // PNJ : Silvers Rayleigh, devant la taverne du village de départ (invulnérable, immobile, dialogue au clic droit ; futures quêtes)
+    public static final ResourceKey<EntityType<?>> SILVERS_RAYLEIGH_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("silvers_rayleigh"));
+
+    public static final EntityType<nolan.bloxpiece.mob.Rayleigh> SILVERS_RAYLEIGH =
+            EntityType.Builder.of(nolan.bloxpiece.mob.Rayleigh::new, MobCategory.CREATURE)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(10)
+            .build(SILVERS_RAYLEIGH_KEY);
+
     // Pirates armés (épéiste, tireur, capitaine). L'ancien pirate de base sans équipement a été supprimé.
     public static final ResourceKey<EntityType<?>> PIRATE_SWORDSMAN_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("pirate_swordsman"));
@@ -79,6 +89,47 @@ public class ModEntities {
             .sized(0.6F, 1.95F)
             .clientTrackingRange(10)
             .build(GOL_D_ROGER_KEY);
+
+    // Morgan « main de hache », capitaine de la Marine : 3 blocs de haut (modèle conçu à cette taille), invoqué par commande
+    public static final ResourceKey<EntityType<?>> MORGAN_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("morgan"));
+
+    public static final EntityType<nolan.bloxpiece.mob.Morgan> MORGAN =
+            EntityType.Builder.of(nolan.bloxpiece.mob.Morgan::new, MobCategory.MONSTER)
+            .sized(1.4F, 3.0F)
+            .clientTrackingRange(10)
+            .build(MORGAN_KEY);
+
+    // Impact du coup de hache au sol de Morgan (effet visuel propre à Morgan, voir MorganQuake). Ni sauvegardé, ni invocable.
+    public static final ResourceKey<EntityType<?>> MORGAN_QUAKE_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("morgan_quake"));
+
+    public static final EntityType<nolan.bloxpiece.fx.MorganQuake> MORGAN_QUAKE =
+            EntityType.Builder.<nolan.bloxpiece.fx.MorganQuake>of(nolan.bloxpiece.fx.MorganQuake::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(10)
+            .updateInterval(20)
+            .build(MORGAN_QUAKE_KEY);
+
+    // Bandits du camp de bandits et leur chef (un par camp) : posés par la structure du camp, invocables aussi
+    public static final ResourceKey<EntityType<?>> BANDIT_KEY = ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("bandit"));
+
+    public static final EntityType<nolan.bloxpiece.mob.Bandit> BANDIT =
+            EntityType.Builder.of(nolan.bloxpiece.mob.Bandit::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(BANDIT_KEY);
+
+    public static final ResourceKey<EntityType<?>> BANDIT_CHIEF_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("bandit_chief"));
+
+    public static final EntityType<nolan.bloxpiece.mob.BanditChief> BANDIT_CHIEF =
+            EntityType.Builder.of(nolan.bloxpiece.mob.BanditChief::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(8)
+            .build(BANDIT_CHIEF_KEY);
 
     // Marines (Épéiste, Fusilier) : neutres envers les joueurs, ennemis des pirates
     public static final ResourceKey<EntityType<?>> MARINE_SWORDSMAN_KEY =
@@ -236,6 +287,84 @@ public class ModEntities {
             .build(QUAKE_FX_KEY);
 
     // Haki des Rois : éclairs 3D rouge et noir (visuel). Ni invocable à la main, ni sauvegardé.
+    // Goro Goro no Mi : un éclair bleu (visuel, voir GoroBolt). Ni sauvegardé, ni invocable.
+    public static final ResourceKey<EntityType<?>> GORO_BOLT_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("goro_bolt"));
+
+    public static final EntityType<nolan.bloxpiece.fx.GoroBolt> GORO_BOLT =
+            EntityType.Builder.<nolan.bloxpiece.fx.GoroBolt>of(nolan.bloxpiece.fx.GoroBolt::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(20)
+            .build(GORO_BOLT_KEY);
+
+    // Goro Goro no Mi : nuage d'orage (Mamaragan, El Thor ; visuel, voir GoroCloud). Ni sauvegardé, ni invocable.
+    public static final ResourceKey<EntityType<?>> GORO_CLOUD_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("goro_cloud"));
+
+    public static final EntityType<nolan.bloxpiece.fx.GoroCloud> GORO_CLOUD =
+            EntityType.Builder.<nolan.bloxpiece.fx.GoroCloud>of(nolan.bloxpiece.fx.GoroCloud::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(1)
+            .build(GORO_CLOUD_KEY);
+
+    // Goro Goro no Mi : sphère électrique du Raigo (visuel, voir GoroOrb). Ni sauvegardé, ni invocable.
+    public static final ResourceKey<EntityType<?>> GORO_ORB_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("goro_orb"));
+
+    public static final EntityType<nolan.bloxpiece.fx.GoroOrb> GORO_ORB =
+            EntityType.Builder.<nolan.bloxpiece.fx.GoroOrb>of(nolan.bloxpiece.fx.GoroOrb::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(1)
+            .build(GORO_ORB_KEY);
+
+    // Goro Goro no Mi : onde de choc au sol (visuel, voir GoroWave). Ni sauvegardée, ni invocable.
+    public static final ResourceKey<EntityType<?>> GORO_WAVE_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("goro_wave"));
+
+    public static final EntityType<nolan.bloxpiece.fx.GoroWave> GORO_WAVE =
+            EntityType.Builder.<nolan.bloxpiece.fx.GoroWave>of(nolan.bloxpiece.fx.GoroWave::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(20)
+            .build(GORO_WAVE_KEY);
+
+    // Goro Goro no Mi : colonne de foudre géante d'El Thor (visuel, voir GoroColumn). Ni sauvegardée, ni invocable.
+    public static final ResourceKey<EntityType<?>> GORO_COLUMN_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("goro_column"));
+
+    public static final EntityType<nolan.bloxpiece.fx.GoroColumn> GORO_COLUMN =
+            EntityType.Builder.<nolan.bloxpiece.fx.GoroColumn>of(nolan.bloxpiece.fx.GoroColumn::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(20)
+            .build(GORO_COLUMN_KEY);
+
+    // Goro Goro no Mi : électrisation d'une cible par le Mamaragan (visuel, voir GoroShock). Ni sauvegardée, ni invocable.
+    public static final ResourceKey<EntityType<?>> GORO_SHOCK_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("goro_shock"));
+
+    public static final EntityType<nolan.bloxpiece.fx.GoroShock> GORO_SHOCK =
+            EntityType.Builder.<nolan.bloxpiece.fx.GoroShock>of(nolan.bloxpiece.fx.GoroShock::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(1)
+            .build(GORO_SHOCK_KEY);
+
     public static final ResourceKey<EntityType<?>> HAKI_BOLT_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("haki_bolt"));
 
@@ -275,13 +404,34 @@ public class ModEntities {
             .updateInterval(20)
             .build(CONQUEROR_SHOCKWAVE_KEY);
 
+    // Carapace vide du Kame Kame no Mi, posée dans le monde pendant que son propriétaire est dans sa poche : SAUVEGARDÉE avec le
+    // monde (elle l'attend), jamais invoquée à la main.
+    public static final ResourceKey<EntityType<?>> KAME_SHELL_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("kame_shell"));
+
+    public static final EntityType<nolan.bloxpiece.fx.KameShellEntity> KAME_SHELL =
+            EntityType.Builder.<nolan.bloxpiece.fx.KameShellEntity>of(nolan.bloxpiece.fx.KameShellEntity::new, MobCategory.MISC)
+            .sized(0.9F, 0.5F)
+            .noSummon()
+            .clientTrackingRange(8)
+            .updateInterval(10)
+            .build(KAME_SHELL_KEY);
+
     public static void initialize() {
         // Un nouveau mob : une ligne ici (type + attributs issus de ses stats)
         register(TAVERN_KEEPER_KEY, TAVERN_KEEPER, nolan.bloxpiece.mob.TavernKeeper.attributes());
+        register(SILVERS_RAYLEIGH_KEY, SILVERS_RAYLEIGH, nolan.bloxpiece.mob.Rayleigh.attributes());
         register(PIRATE_SWORDSMAN_KEY, PIRATE_SWORDSMAN, PirateSwordsman.STATS.toAttributes());
         register(PIRATE_GUNNER_KEY, PIRATE_GUNNER, PirateGunner.STATS.toAttributes());
         register(PIRATE_CAPTAIN_KEY, PIRATE_CAPTAIN, PirateCaptain.STATS.toAttributes()
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.6)); // difficile à repousser
+        register(MORGAN_KEY, MORGAN, nolan.bloxpiece.mob.Morgan.STATS.toAttributes()
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.8)   // massif
+                .add(Attributes.ATTACK_KNOCKBACK, 1.2));     // le coup de hache repousse la cible
+        register(BANDIT_KEY, BANDIT, nolan.bloxpiece.mob.Bandit.STATS.toAttributes());
+        register(BANDIT_CHIEF_KEY, BANDIT_CHIEF, nolan.bloxpiece.mob.BanditChief.STATS.toAttributes()
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.5)   // dur à repousser
+                .add(Attributes.SCALE, 1.1));                // un peu plus grand que ses hommes
         register(MARINE_SWORDSMAN_KEY, MARINE_SWORDSMAN, nolan.bloxpiece.mob.MarineSwordsman.STATS.toAttributes());
         register(MARINE_RIFLEMAN_KEY, MARINE_RIFLEMAN, nolan.bloxpiece.mob.MarineRifleman.STATS.toAttributes());
         register(GOL_D_ROGER_KEY, GOL_D_ROGER, nolan.bloxpiece.mob.GolDRoger.STATS.toAttributes()
@@ -302,6 +452,14 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, HAKI_BOLT_KEY, HAKI_BOLT);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, ACE_SLASH_KEY, ACE_SLASH);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, CONQUEROR_SHOCKWAVE_KEY, CONQUEROR_SHOCKWAVE);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, MORGAN_QUAKE_KEY, MORGAN_QUAKE);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_BOLT_KEY, GORO_BOLT);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_CLOUD_KEY, GORO_CLOUD);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_ORB_KEY, GORO_ORB);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_WAVE_KEY, GORO_WAVE);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_COLUMN_KEY, GORO_COLUMN);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_SHOCK_KEY, GORO_SHOCK);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, KAME_SHELL_KEY, KAME_SHELL);
     }
 
     private static <T extends LivingEntity> void register(

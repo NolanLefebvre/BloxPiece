@@ -47,6 +47,9 @@ public class PlayerModelMixin {
             return;
         }
         bloxpiece$logiaParts(player);
+        // Kame Kame no Mi : membres qui rentrent dans la carapace (et en ressortent)
+        nolan.bloxpiece.client.KamePose.apply((PlayerModel) (Object) this, player,
+                level.getGameTime() + (state.ageInTicks - player.tickCount));
         bloxpiece$hakiDodge(player, state);
         if (Handcuffs.isCuffed(player)) {
             bloxpiece$cuffedPose();
@@ -61,6 +64,18 @@ public class PlayerModelMixin {
         Integer buddhaPose = player.getAttached(ModAttachments.BUDDHA_POSE);
         if (buddhaPose != null) {
             bloxpiece$buddhaPose(buddhaPose, state);
+            return;
+        }
+        if (player.getAttached(ModAttachments.RAIGO_CHARGING) != null) {
+            // Raigo (Goro Goro no Mi) : les deux bras levés à la verticale, mains écartées vers la boule, qui tremblent
+            PlayerModel model = (PlayerModel) (Object) this;
+            float shake = (float) Math.sin(state.ageInTicks * 1.3F) * 0.05F;
+            model.rightArm.xRot = -3.05F + shake;
+            model.rightArm.yRot = 0.0F;
+            model.rightArm.zRot = 0.32F;
+            model.leftArm.xRot = -3.05F - shake;
+            model.leftArm.yRot = 0.0F;
+            model.leftArm.zRot = -0.32F;
             return;
         }
         if (player.getAttached(ModAttachments.ENTEI_CHARGING) == null) {
@@ -124,37 +139,9 @@ public class PlayerModelMixin {
      * </ol>
      */
     private void bloxpiece$conquerorRelease(Entity player, ClientLevel level, AvatarRenderState state) {
-        Integer at = player.getAttached(ModAttachments.CONQUEROR_RELEASE);
-        if (at == null) {
-            return;
-        }
-        float t = (float) (level.getGameTime() - at) + (state.ageInTicks - player.tickCount);
-        float build = nolan.bloxpiece.fx.ConquerorShockwave.BUILD_TICKS;
-        if (t < 0.0F || t >= build + 15.0F) {
-            return;
-        }
-        // décalages ajoutés à la pose normale : {bras x, bras z (vers l'extérieur), buste x, tête x}
-        float[] gather = {0.25F, -0.15F, 0.15F, 0.1F};
-        float[] release = {-0.3F, 0.75F, -0.15F, -0.3F};
-        float[] o = new float[4];
-        for (int i = 0; i < 4; i++) {
-            if (t < build) {
-                o[i] = gather[i] * bloxpiece$smooth(t / build);
-            } else if (t < build + 3.0F) {
-                o[i] = gather[i] + (release[i] - gather[i]) * bloxpiece$smooth((t - build) / 3.0F);
-            } else if (t < build + 6.0F) {
-                o[i] = release[i];
-            } else {
-                o[i] = release[i] * (1.0F - bloxpiece$smooth((t - build - 6.0F) / 9.0F));
-            }
-        }
-        PlayerModel model = (PlayerModel) (Object) this;
-        model.rightArm.xRot += o[0];
-        model.leftArm.xRot += o[0];
-        model.rightArm.zRot += o[1];   // bras droit : positif = écarté du corps
-        model.leftArm.zRot -= o[1];    // bras gauche : miroir
-        model.body.xRot += o[2];
-        model.head.xRot += o[3];
+        // posture partagée avec Gol D. Roger : ConquerorPose (joueur : tenue brève, 3 ticks, retour en 9)
+        nolan.bloxpiece.client.ConquerorPose.apply((PlayerModel) (Object) this, player,
+                level.getGameTime() + (state.ageInTicks - player.tickCount), 3.0F, 9.0F);
     }
 
     /**

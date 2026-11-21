@@ -7,9 +7,10 @@ plumes blanches de son chapeau ; quelques éclairs noirs et rouges du Haki des R
 grosses lettres pixel dessinées à la main, de part et d'autre de l'emblème.
 Pixel art, 1 texel = 1 pixel d'interface.
   - assets/bloxpiece/textures/gui/roger_bossbar.png       : décor complet (360 x 64)
+  - assets/bloxpiece/textures/gui/roger_bossbar_emblem.png : l'emblème seul, redessiné par-dessus les carrés (360 x 64)
   - assets/bloxpiece/textures/gui/roger_bossbar_cells.png : carrés de vie (plein, vide), 13 x 6
   - aperçu si un dossier est passé : python3 make_roger_bossbar.py <dossier>
-Les positions (FRAME_W, CELL_Y, LEFT_X, RIGHT_X...) doivent rester identiques à RogerBossBar.java.
+Les positions (FRAME_W, CELLS, CELL_X, CELL_Y...) doivent rester identiques à RogerBossBar.java.
 """
 import math, os, random, sys
 from PIL import Image
@@ -19,10 +20,11 @@ OUT = os.path.normpath(os.path.join(HERE, '..', '..', 'main', 'resources', 'asse
 
 FRAME_W, FRAME_H = 360, 64
 CX = FRAME_W // 2
-HALF_CELLS, CELL, GAP = 15, 6, 1                  # 15 carrés de chaque côté de l'emblème
+CELLS, CELL, GAP = 39, 6, 1                       # UNE seule rangée continue de carrés, d'un bout à l'autre
 CELL_Y = 34
-LEFT_X = CX - 25 - HALF_CELLS * (CELL + GAP) + GAP   # premier carré de gauche
-RIGHT_X = CX + 25                                    # premier carré de droite
+CELL_X = CX - (CELLS * (CELL + GAP) - GAP) // 2      # premier carré (44) ; dernier carré : CELL_X + 38 x 7 (310..315)
+CELL_END = CELL_X + CELLS * (CELL + GAP) - GAP       # 316 (exclu)
+LEFT_ATTACH, RIGHT_ATTACH = CELL_X + 2, CELL_END - 3 # les épaulettes recouvrent les bouts de la rangée
 EMBLEM_Y = 36                                        # centre du crâne
 
 T = (0, 0, 0, 0)
@@ -95,10 +97,31 @@ def merge(base, edge=OUTL):
     px = img.load()
 
 
+# ---------------------------------------------------------------- 2) la barre fine : tube doré, logements des carrés
+base = layer()
+for x in range(CELL_X - 2, CELL_END + 2):
+    for y in range(CELL_Y - 2, CELL_Y + CELL + 2):
+        put(x, y, INK if CELL_Y - 1 <= y <= CELL_Y + CELL else GOLD_D)
+    put(x, CELL_Y - 2, GOLD_L)
+    put(x, CELL_Y + CELL + 1, GOLD_XD)
+for i in range(CELLS):
+    sx = CELL_X + i * (CELL + GAP)
+    for y in range(CELL_Y, CELL_Y + CELL):
+        for x in range(sx, sx + CELL):
+            put(x, y, (46, 12, 16, 255))
+# franges dorées qui pendent sous la barre, par touffes
+for fx in list(range(CELL_X + 14, CX - 30, 18)) + list(range(CX + 36, CELL_END - 12, 18)):
+    for k in range(-2, 3):
+        ln = 5 - abs(k)
+        for j in range(ln):
+            put(fx + k, CELL_Y + CELL + 2 + j, GOLD if j < ln - 1 else GOLD_D)
+merge(base)
+
+PRE_EMBLEM = img.copy()   # tout ce qui est dessiné après (capes, plumes, sabres, crâne, chapeau, éclairs) passe DEVANT les carrés
 # ---------------------------------------------------------------- 1) les pans de la cape aux deux bouts (comme des ailes)
 base = layer()
 for side in (-1, 1):
-    ex = LEFT_X - 8 if side < 0 else RIGHT_X + HALF_CELLS * (CELL + GAP) + 7   # attache au bout de la barre
+    ex = LEFT_ATTACH if side < 0 else RIGHT_ATTACH   # attache au bout de la barre (recouvre le bout de la rangée)
     for k in range(4):                               # 4 pans de cape qui s'évasent vers l'extérieur et le bas
         ang = 0.12 + k * 0.32
         ln = 40 - k * 5
@@ -119,7 +142,7 @@ merge(base)
 # plumes blanches du chapeau, qui jaillissent vers le haut et l'extérieur aux deux bouts
 base = layer()
 for side in (-1, 1):
-    ex = LEFT_X - 8 if side < 0 else RIGHT_X + HALF_CELLS * (CELL + GAP) + 7
+    ex = LEFT_ATTACH if side < 0 else RIGHT_ATTACH
     for f, (ang, ln) in enumerate(((1.15, 22), (1.45, 19), (0.85, 16))):
         for i in range(ln):
             t = i / ln
@@ -129,26 +152,6 @@ for side in (-1, 1):
             blob(x, y, max(0.6, 2.4 * (1 - t) + 0.5), WHITE if f != 1 else WHITE_D)
             if i % 3 == 1 and i < ln - 3:
                 put(x + side * 1.5, y + 1, WHITE_D)
-merge(base)
-
-# ---------------------------------------------------------------- 2) la barre fine : tube doré, logements des carrés
-base = layer()
-for x in range(LEFT_X - 4, RIGHT_X + HALF_CELLS * (CELL + GAP) + 3):
-    for y in range(CELL_Y - 2, CELL_Y + CELL + 2):
-        put(x, y, INK if CELL_Y - 1 <= y <= CELL_Y + CELL else GOLD_D)
-    put(x, CELL_Y - 2, GOLD_L)
-    put(x, CELL_Y + CELL + 1, GOLD_XD)
-for i in range(HALF_CELLS):
-    for sx in (LEFT_X + i * (CELL + GAP), RIGHT_X + i * (CELL + GAP)):
-        for y in range(CELL_Y, CELL_Y + CELL):
-            for x in range(sx, sx + CELL):
-                put(x, y, (46, 12, 16, 255))
-# franges dorées qui pendent sous la barre, par touffes
-for fx in list(range(LEFT_X + 10, CX - 30, 18)) + list(range(CX + 36, RIGHT_X + HALF_CELLS * 7 - 6, 18)):
-    for k in range(-2, 3):
-        ln = 5 - abs(k)
-        for j in range(ln):
-            put(fx + k, CELL_Y + CELL + 2 + j, GOLD if j < ln - 1 else GOLD_D)
 merge(base)
 
 # ---------------------------------------------------------------- 4) deux sabres Ace croisés derrière le crâne
@@ -227,6 +230,16 @@ for side in (-1, 1):
             x, y = nx, ny
 merge(base, (110, 10, 20, 255))
 
+# le premier plan seul (pixels ajoutés depuis PRE_EMBLEM : capes, plumes, emblème), en calque à part : le jeu le redessine
+# par-dessus les carrés de vie (ils passent derrière le crâne et sous les épaulettes)
+emblem = Image.new('RGBA', (FRAME_W, FRAME_H), T)
+ep, pp = emblem.load(), PRE_EMBLEM.load()
+for y in range(FRAME_H):
+    for x in range(FRAME_W):
+        if px[x, y] != pp[x, y] and px[x, y][3]:
+            ep[x, y] = px[x, y]
+emblem.save(os.path.join(OUT, 'roger_bossbar_emblem.png'))
+
 # ---------------------------------------------------------------- 7) le nom, en grosses lettres pixel faites main
 GLYPHS = {
     'G': [".####.", "##..##", "##....", "##.###", "##..##", "##..##", ".####."],
@@ -256,8 +269,8 @@ def word(text, cx, top):
 
 
 base = layer()
-word('Gol D.', (LEFT_X + CX - 25) // 2, 22)
-word('Roger', (RIGHT_X + RIGHT_X + HALF_CELLS * 7) // 2, 22)
+word('Gol D.', (CELL_X + CX - 25) // 2, 22)
+word('Roger', (CX + 25 + CELL_END) // 2, 22)
 outline(OUTL)
 shadow = img.copy()                                    # ombre portée d'un pixel
 sp = shadow.load()
@@ -294,14 +307,15 @@ if len(sys.argv) > 1:
     out = sys.argv[1]
     os.makedirs(out, exist_ok=True)
     frame = img.copy()
-    life = 0.62 * HALF_CELLS * 2
-    for i in range(HALF_CELLS * 2):
-        x = LEFT_X + i * 7 if i < HALF_CELLS else RIGHT_X + (i - HALF_CELLS) * 7
+    life = 0.62 * CELLS
+    for i in range(CELLS):
+        x = CELL_X + i * (CELL + GAP)
         frame.alpha_composite(cells.crop((7, 0, 13, 6)), (x, CELL_Y))
         w = int(6 * max(0.0, min(1.0, life - i)))
         if w > 0:
             frame.alpha_composite(cells.crop((0, 0, w, 6)), (x, CELL_Y))
+    frame.alpha_composite(emblem)
     prev = Image.new('RGBA', (FRAME_W + 40, FRAME_H + 20), (120, 116, 112, 255))
     prev.alpha_composite(frame, (20, 10))
     prev.resize((prev.width * 3, prev.height * 3), Image.NEAREST).save(os.path.join(out, 'roger_bossbar_apercu.png'))
-print('ok', LEFT_X, RIGHT_X)
+print('ok', CELL_X, CELL_END)

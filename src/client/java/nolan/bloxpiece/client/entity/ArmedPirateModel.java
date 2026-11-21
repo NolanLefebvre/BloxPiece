@@ -38,8 +38,11 @@ public class ArmedPirateModel extends HumanoidModel<ArmedPirateRenderState> {
         net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
         net.minecraft.world.entity.Entity entity = level == null ? null : level.getEntity(state.entityId);
         if (entity != null && !(state instanceof CuffedRenderState cuffedAce && cuffedAce.bloxpiece$isCuffed())) {
-            nolan.bloxpiece.client.AceSwing.applyThirdPerson(this, entity,
-                    level.getGameTime() + (state.ageInTicks - entity.tickCount), state.ageInTicks);
+            float now = level.getGameTime() + (state.ageInTicks - entity.tickCount);
+            // Gol D. Roger : posture de libération du Haki des Rois, tenue pendant toute sa libération (RogerConquerorGoal)
+            nolan.bloxpiece.client.ConquerorPose.apply(this, entity, now,
+                    nolan.bloxpiece.mob.ai.RogerConquerorGoal.DURATION - 30.0F, 15.0F);
+            nolan.bloxpiece.client.AceSwing.applyThirdPerson(this, entity, now, state.ageInTicks);
         }
         if (state.aiming && !(state instanceof CuffedRenderState cuffed && cuffed.bloxpiece$isCuffed())) { // menotté : bras dans le dos
             float kick = state.recoil * state.recoil; // recul : vif au départ, puis s'amortit

@@ -43,6 +43,9 @@ public class WaterCurse implements Weakness {
         if (BuddhaTransformAbility.isActive(player)) {
             BuddhaTransformAbility.reset(player);
         }
+        // Kame Kame no Mi : la carapace disparaît aussitôt (fin du bonus d'armure), une carapace tournoyante ou une rétraction
+        // vers la poche est interrompue (les membres ressortent)
+        nolan.bloxpiece.ability.Kame.cancelPowers(player);
         // Immergé : l'aspiration vers le fond est appliquée côté CLIENT (ClientWaterCurse), car c'est le client qui calcule les
         // déplacements de son propre joueur ; une vitesse imposée par le serveur serait aussitôt écrasée par sa nage.
     }

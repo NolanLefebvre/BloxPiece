@@ -149,6 +149,7 @@ public final class Handcuffs {
         if (BuddhaTransformAbility.isActive(target)) {
             BuddhaTransformAbility.reset(target);
         }
+        nolan.bloxpiece.ability.Kame.cancelPowers(target); // Kame Kame no Mi : plus de carapace
         ServerLevel level = (ServerLevel) target.level();
         level.playSound(null, target.getX(), target.getY() + 1.0, target.getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.3F, 1.8F);
         level.playSound(null, target.getX(), target.getY() + 1.0, target.getZ(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 0.6F, 1.6F);
@@ -362,6 +363,10 @@ public final class Handcuffs {
             updateSpeed(player, suppressed);
             if ((suppressed || isCuffed(player)) && BuddhaTransformAbility.isActive(player)) {
                 BuddhaTransformAbility.reset(player); // détransformé sur-le-champ
+            }
+            if (suppressed || isCuffed(player)) {
+                // Kame Kame no Mi : carapace retirée, carapace tournoyante ou rétraction interrompue
+                nolan.bloxpiece.ability.Kame.cancelPowers(player);
             }
         }
     }

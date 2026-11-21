@@ -59,6 +59,11 @@ public class GuraShimaYurashiAbility implements Ability {
     /** Puissance du cratère central (4 = TNT), de l'appui court à la pleine charge. */
     private static final float MIN_CRATER = 6.0F;
     private static final float MAX_CRATER = 11.0F;
+    /** Blocs projetés en l'air au choc des deux vagues : minimum, et en plus à pleine charge. */
+    private static final int IMPACT_DEBRIS_MIN = 25;
+    private static final int IMPACT_DEBRIS_EXTRA = 35;
+    /** Part des blocs de surface projetés en l'air au passage des vagues (avant : 0,55). */
+    private static final float WAVE_LAUNCH_CHANCE = 0.18F;
     /** Hauteur de la zone pulvérisée par le choc, en fraction de la hauteur des vagues (1 = jusqu'à leur crête). */
     private static final double BLAST_HEIGHT_RATIO = 1.0;
 
@@ -414,7 +419,9 @@ public class GuraShimaYurashiAbility implements Ability {
                     continue; // îlots de terrain intacts au milieu de la tranchée
                 }
                 Vec3 p = line.add(w.forward.scale(j + (random.nextDouble() - 0.5) * 0.8));
-                Vec3 launch = random.nextFloat() < 0.55F
+                // une partie seulement des blocs de surface est arrachée et projetée (entités qui volent : coûteuses) ; les autres
+                // sont simplement brisés (avec leur gerbe de fragments)
+                Vec3 launch = random.nextFloat() < WAVE_LAUNCH_CHANCE
                         ? dir.scale(0.15 + random.nextDouble() * 0.45).add(w.forward.scale((random.nextDouble() - 0.5) * 0.6))
                                 .add(0.0, 0.5 + random.nextDouble() * 1.0, 0.0)
                         : null;
@@ -484,7 +491,9 @@ public class GuraShimaYurashiAbility implements Ability {
                 GuraTerrain.blast(level, player, c.add(Math.cos(a) * r, h, Math.sin(a) * r), columnPower * 0.75F);
             }
         }
-        GuraTerrain.debris(level, c, radius * 1.1, 80 + (int) (100 * w.over), 1.3 + 0.6 * w.over);
+        // blocs projetés au choc : 25 à 60 selon la charge (avant : 80 à 180), chacun étant une entité qui vole puis retombe :
+        // beaucoup moins de calcul (et d'images perdues) au moment de l'impact
+        GuraTerrain.debris(level, c, radius * 1.1, IMPACT_DEBRIS_MIN + (int) (IMPACT_DEBRIS_EXTRA * w.over), 1.3 + 0.6 * w.over);
 
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, c.x, c.y + 1.0, c.z, 4, radius * 0.2, 1.0, radius * 0.2, 0.0);
         for (int i = 0; i < 96; i++) {

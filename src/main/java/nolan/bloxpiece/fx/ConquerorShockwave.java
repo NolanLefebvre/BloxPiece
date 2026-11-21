@@ -3,6 +3,8 @@ package nolan.bloxpiece.fx;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -10,6 +12,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -39,20 +42,33 @@ public class ConquerorShockwave extends ModFxEntity {
     public static final double MAX_RADIUS = 16.0;
     public static final int LIFE = BUILD_TICKS + EXPAND_TICKS + FADE_TICKS;
 
-    private ServerPlayer owner;
+    private LivingEntity owner;
+    /** Taille de l'onde (1 = activation du joueur ; Gol D. Roger : bien plus grande). Synchronisée pour le rendu. */
+    private static final EntityDataAccessor<Float> SCALE = SynchedEntityData.defineId(ConquerorShockwave.class,
+            EntityDataSerializers.FLOAT);
 
     public ConquerorShockwave(EntityType<? extends ConquerorShockwave> type, Level level) {
         super(type, level);
     }
 
     public static void start(ServerLevel level, ServerPlayer player) {
+        start(level, player, 1.0F);
+    }
+
+    /** Activation amplifiée (Gol D. Roger) : onde, éclairs du front et décharge {@code scale} fois plus grands. */
+    public static void start(ServerLevel level, LivingEntity player, float scale) {
         ConquerorShockwave wave = new ConquerorShockwave(ModEntities.CONQUEROR_SHOCKWAVE, level);
         wave.managed = true;
+        wave.entityData.set(SCALE, scale);
         wave.owner = player;
         wave.setPos(player.getX(), player.getY(), player.getZ());
         level.addFreshEntity(wave);
         level.playSound(null, player.getX(), player.getY() + 1.0, player.getZ(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS,
                 1.2F, 0.6F);
+    }
+
+    public float scale() {
+        return this.entityData.get(SCALE);
     }
 
     /** Âge de l'onde depuis la décharge (négatif pendant la montée). */
@@ -84,13 +100,14 @@ public class ConquerorShockwave extends ModFxEntity {
             this.detonate(level, random);
         } else if (t < BUILD_TICKS + EXPAND_TICKS) {
             // éclairs qui accompagnent le front de l'onde
-            double radius = radiusAt(t - BUILD_TICKS);
-            for (int i = 0; i < 2; i++) {
+            float k = this.scale();
+            double radius = radiusAt(t - BUILD_TICKS) * k;
+            for (int i = 0; i < Math.round(2 * k); i++) {
                 double a = random.nextDouble() * Math.PI * 2.0;
-                Vec3 p = this.position().add(Math.cos(a) * radius, 0.3 + random.nextDouble() * 1.2, Math.sin(a) * radius);
+                Vec3 p = this.position().add(Math.cos(a) * radius, 0.3 + random.nextDouble() * 1.2 * k, Math.sin(a) * radius);
                 float yaw = (float) Math.toDegrees(Math.atan2(Math.cos(a), Math.sin(a)));
-                HakiBolt.spawn(level, p, yaw, 40.0F + random.nextFloat() * 60.0F, -(0.35F + random.nextFloat() * 0.25F),
-                        4 + random.nextInt(3));
+                HakiBolt.spawn(level, p, yaw, 40.0F + random.nextFloat() * 60.0F, -(0.35F + random.nextFloat() * 0.25F) * k,
+                        4 + random.nextInt(3), k, k <= 1.0F ? 1.0F : 1.0F + 0.5F * (k - 1.0F));
                 level.sendParticles(ModParticles.HAKI_SPARK, p.x, p.y, p.z, 2, 0.2, 0.2, 0.2, 0.1);
             }
         }
@@ -107,7 +124,7 @@ public class ConquerorShockwave extends ModFxEntity {
         // son grave et puissant, tremblement léger, éclairs qui jaillissent du corps (comme avant), éclats et pression au sol
         level.playSound(null, c.x, c.y, c.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.8F, 0.45F);
         level.playSound(null, c.x, c.y, c.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.3F, 0.6F);
-        BuddhaHits.shake(level, c, MAX_RADIUS * 2.0, 1.6F, 14);
+        BuddhaHits.shake(level, c, MAX_RADIUS * 2.0 * this.scale(), 1.6F, 14);
         ConquerorHaki.activationBurst(level, this.owner);
         for (int i = 0; i < 12; i++) {
             ConquerorHaki.spawnBolt(level, this.owner, random);
@@ -134,6 +151,6 @@ public class ConquerorShockwave extends ModFxEntity {
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        // aucune donnée synchronisée : tout se déduit de l'âge de l'entité
+        builder.define(SCALE, 1.0F); // le reste se déduit de l'âge de l'entité
     }
 }

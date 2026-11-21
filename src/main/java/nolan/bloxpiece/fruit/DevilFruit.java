@@ -50,6 +50,8 @@ public class DevilFruit {
             case "buddha" -> "hito_hito_no_mi_model_daibutsu";
             case "ice" -> "hie_hie_no_mi";
             case "gura" -> "gura_gura_no_mi";
+            case "kame" -> "kame_kame_no_mi";
+            case "goro" -> "goro_goro_no_mi";
             default -> fruitId + "_no_mi";
         };
     }

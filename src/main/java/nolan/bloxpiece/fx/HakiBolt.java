@@ -21,6 +21,8 @@ public class HakiBolt extends ModFxEntity {
     private static final EntityDataAccessor<Integer> LIFE = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.INT);
     /** Distance parcourue pendant sa vie (1 = normale ; petit = l'éclair reste presque sur place, ex : sur la lame d'Ace). */
     private static final EntityDataAccessor<Float> DRIFT = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.FLOAT);
+    /** Épaisseur (1 = normale, celle du joueur ; plus grand = éclairs géants de Gol D. Roger). */
+    private static final EntityDataAccessor<Float> WIDTH = SynchedEntityData.defineId(HakiBolt.class, EntityDataSerializers.FLOAT);
 
     public HakiBolt(EntityType<? extends HakiBolt> type, Level level) {
         super(type, level);
@@ -31,8 +33,14 @@ public class HakiBolt extends ModFxEntity {
     }
 
     public static void spawn(ServerLevel level, Vec3 pos, float yaw, float pitch, float size, int life, float drift) {
+        spawn(level, pos, yaw, pitch, size, life, drift, 1.0F);
+    }
+
+    /** Éclair amplifié : {@code width} multiplie son épaisseur (même rendu, mêmes couleurs). */
+    public static void spawn(ServerLevel level, Vec3 pos, float yaw, float pitch, float size, int life, float drift, float width) {
         HakiBolt bolt = new HakiBolt(ModEntities.HAKI_BOLT, level);
         bolt.entityData.set(DRIFT, drift);
+        bolt.entityData.set(WIDTH, width);
         bolt.managed = true;
         bolt.entityData.set(SEED, level.getRandom().nextInt(1 << 20));
         bolt.entityData.set(SIZE, size);
@@ -57,6 +65,10 @@ public class HakiBolt extends ModFxEntity {
         return this.entityData.get(DRIFT);
     }
 
+    public float width() {
+        return this.entityData.get(WIDTH);
+    }
+
     public int life() {
         return this.entityData.get(LIFE);
     }
@@ -75,5 +87,6 @@ public class HakiBolt extends ModFxEntity {
         builder.define(SIZE, 1.0F);
         builder.define(LIFE, 6);
         builder.define(DRIFT, 1.0F);
+        builder.define(WIDTH, 1.0F);
     }
 }

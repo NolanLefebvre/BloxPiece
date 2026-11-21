@@ -6,7 +6,8 @@
 		"ServerExplosionMixin",
 		"BaseFireBlockMixin",
 		"FireBlockMixin",
-		"StructureSpawnExclusionMixin"
+		"StructureSpawnExclusionMixin",
+		"IceMeltMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

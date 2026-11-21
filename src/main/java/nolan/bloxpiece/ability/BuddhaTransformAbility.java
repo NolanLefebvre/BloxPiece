@@ -91,6 +91,21 @@ public class BuddhaTransformAbility implements Ability {
     /** Un seul identifiant pour tous les modificateurs de la transformation (un par attribut). */
     private static final Identifier MODIFIER_ID = BloxPiece.id("buddha_form");
 
+    /**
+     * Bonus de la forme géante, à taille maximale (proportionnels à la croissance) : ils compensent en partie la cible bien plus
+     * grosse qu'il devient, sans la supprimer. Ajustables ici.
+     */
+    /** Armure en plus (une plastron de fer : 6) : légère réduction des dégâts reçus. */
+    public static final double BONUS_ARMOR = 4.0;
+    /** Robustesse d'armure en plus (protège surtout des gros coups). */
+    public static final double BONUS_TOUGHNESS = 2.0;
+    /** Vie maximale : +25 % (de toute sa vie, bonus de niveau compris). */
+    public static final double BONUS_MAX_HEALTH = 0.25;
+    /** Résistance au recul en plus (1 = immunité, jamais atteinte : +0,4). */
+    public static final double BONUS_KNOCKBACK_RESISTANCE = 0.4;
+    /** Dégâts au corps à corps : +20 % (se combine avec le Haki de l'Armement). */
+    public static final double BONUS_ATTACK_DAMAGE = 0.20;
+
     /** État serveur d'un joueur transformé ou en cours de transformation. */
     private static final class Form {
         float progress;        // 0 = taille normale, 1 = taille maximale
@@ -390,6 +405,18 @@ public class BuddhaTransformAbility implements Ability {
         set(player, Attributes.BLOCK_INTERACTION_RANGE, 1.5 * extra, Operation.ADD_VALUE);    // les yeux sont bien plus haut
         set(player, Attributes.ENTITY_INTERACTION_RANGE, 1.0 * extra, Operation.ADD_VALUE);
         set(player, Attributes.SAFE_FALL_DISTANCE, 1.0 * extra, Operation.ADD_VALUE);
+        // Bonus de combat, proportionnels à la croissance (0 à taille normale, plein à taille maximale) : même identifiant de
+        // modificateur que le reste (mis à jour, jamais cumulé, retiré par strip), par-dessus la base et les autres bonus (Haki,
+        // niveau, armure...), synchronisés par Minecraft
+        double f = extra / (MAX_SCALE - 1.0);
+        set(player, Attributes.ARMOR, BONUS_ARMOR * f, Operation.ADD_VALUE);
+        set(player, Attributes.ARMOR_TOUGHNESS, BONUS_TOUGHNESS * f, Operation.ADD_VALUE);
+        set(player, Attributes.MAX_HEALTH, BONUS_MAX_HEALTH * f, Operation.ADD_MULTIPLIED_TOTAL);
+        set(player, Attributes.KNOCKBACK_RESISTANCE, BONUS_KNOCKBACK_RESISTANCE * f, Operation.ADD_VALUE);
+        set(player, Attributes.ATTACK_DAMAGE, BONUS_ATTACK_DAMAGE * f, Operation.ADD_MULTIPLIED_TOTAL);
+        if (player.getHealth() > player.getMaxHealth()) {
+            player.setHealth(player.getMaxHealth()); // en rétrécissant, la vie ne dépasse jamais le nouveau maximum
+        }
         // Caméra 3e personne : distance totale (taille x attribut) de 4 à CAMERA_GIANT blocs, sans exagérer l'éloignement
         AttributeInstance camera = player.getAttribute(Attributes.CAMERA_DISTANCE);
         if (camera != null) {
@@ -409,11 +436,15 @@ public class BuddhaTransformAbility implements Ability {
     private static void strip(ServerPlayer player) {
         for (Holder<Attribute> attribute : java.util.List.of(Attributes.SCALE, Attributes.STEP_HEIGHT, Attributes.JUMP_STRENGTH,
                 Attributes.MOVEMENT_SPEED, Attributes.BLOCK_INTERACTION_RANGE, Attributes.ENTITY_INTERACTION_RANGE,
-                Attributes.SAFE_FALL_DISTANCE, Attributes.CAMERA_DISTANCE)) {
+                Attributes.SAFE_FALL_DISTANCE, Attributes.CAMERA_DISTANCE, Attributes.ARMOR, Attributes.ARMOR_TOUGHNESS,
+                Attributes.MAX_HEALTH, Attributes.KNOCKBACK_RESISTANCE, Attributes.ATTACK_DAMAGE)) {
             AttributeInstance instance = player.getAttribute(attribute);
             if (instance != null) {
                 instance.removeModifier(MODIFIER_ID);
             }
+        }
+        if (player.getHealth() > player.getMaxHealth()) {
+            player.setHealth(player.getMaxHealth()); // vie bonus retirée : jamais plus de vie que le maximum normal
         }
     }
 

@@ -72,6 +72,29 @@ public class Fruits {
                     new GuraShimaYurashiAbility()   // touche 4 : Shima Yurashi (ultime, à charger)
             )));
 
+    // Fruit de la Tortue (Kame Kame no Mi) : 3 pouvoirs autour de sa carapace. Malédiction de l'eau, pas d'immunité.
+    public static final DevilFruit KAME = register(new DevilFruit(
+            "kame",
+            new WaterCurse(),
+            false,
+            List.of(
+                    new nolan.bloxpiece.ability.KameShellAbility(),  // touche 1 : la carapace pousse (bonus d'armure)
+                    new nolan.bloxpiece.ability.KamePocketAbility(), // touche 2 : dimension de poche (et retour)
+                    new nolan.bloxpiece.ability.KameSpinAbility()    // touche 3 : carapace tournoyante
+            )));
+
+    // Fruit de la Foudre (Goro Goro no Mi, le fruit d'Ener) : 4 attaques électriques bleues. Malédiction de l'eau, pas d'immunité.
+    public static final DevilFruit GORO = register(new DevilFruit(
+            "goro",
+            new WaterCurse(),
+            false,
+            List.of(
+                    new nolan.bloxpiece.ability.GoroMamaraganAbility(), // touche 1 : Mamaragan (nuage, foudre sur toute la zone)
+                    new nolan.bloxpiece.ability.GoroKariAbility(),      // touche 2 : Kari (pluie de foudre sur la zone visée)
+                    new nolan.bloxpiece.ability.GoroElThorAbility(),    // touche 3 : El Thor (colonne de foudre géante, cratère)
+                    new nolan.bloxpiece.ability.GoroRaigoAbility()      // touche 4 : Raigo (ultime, à charger)
+            )));
+
     private static DevilFruit register(DevilFruit fruit) {
         REGISTRY.put(fruit.id(), fruit);
         return fruit;

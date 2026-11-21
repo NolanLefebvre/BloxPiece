@@ -57,11 +57,18 @@ public class DialogueScreen extends Screen {
     private int buttonW;
 
     public DialogueScreen(String npc) {
+        this(npc, "");
+    }
+
+    /** {@code speech} : première réplique (suffixe de clé), vide pour l'accueil habituel. */
+    public DialogueScreen(String npc, String speech) {
         super(Component.translatable("npc.bloxpiece." + npc + ".name"));
         this.npc = npc;
-        this.topics = List.of(
-                topic("fruit"), topic("mastery"), topic("village"), topic("start"));
-        this.speech = Component.translatable(key("greeting"));
+        // sujets propres à chaque PNJ (Silvers Rayleigh : le futur système de quêtes passera par « quests »)
+        this.topics = nolan.bloxpiece.mob.Rayleigh.NPC_ID.equals(npc)
+                ? List.of(topic("quests"), topic("haki"), topic("roger"), topic("who"))
+                : List.of(topic("fruit"), topic("mastery"), topic("village"), topic("start"));
+        this.speech = Component.translatable(key(speech == null || speech.isEmpty() ? "greeting" : speech));
     }
 
     private String key(String suffix) {

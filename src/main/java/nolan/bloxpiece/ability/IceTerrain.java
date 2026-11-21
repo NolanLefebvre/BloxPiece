@@ -256,6 +256,11 @@ public final class IceTerrain {
         }
     }
 
+    /** Ce bloc est-il de la glace posée par une attaque (elle ne doit pas fondre : IceMeltMixin) ? */
+    public static boolean isFrozen(BlockPos pos) {
+        return BLOCKS.containsKey(pos);
+    }
+
     /** Restaure immédiatement tout le terrain gelé (arrêt du serveur). */
     public static void clear() {
         BLOCKS.forEach(IceTerrain::restore);

@@ -15,13 +15,15 @@ import nolan.bloxpiece.registry.ModAttachments;
 /**
  * Activation du Haki des Rois, à l'écran : au moment de la décharge (ConquerorShockwave.BUILD_TICKS après l'activation), un flash
  * rouge sombre très bref, puis un vignettage rouge discret sur les bords qui s'efface. Pour tout joueur proche de celui qui
- * l'active (attachment CONQUEROR_RELEASE, synchronisé), plus faible avec la distance.
+ * l'active (attachment CONQUEROR_RELEASE, synchronisé), plus faible avec la distance ; aussi pour la libération de Gol D.
+ * Roger, visible de bien plus loin.
  */
 public final class ConquerorFlash implements HudElement {
 
     private static final float FLASH_TICKS = 4.0F;
     private static final float VIGNETTE_TICKS = 14.0F;
     private static final double RANGE = 24.0;
+    private static final double BOSS_RANGE = 48.0;
 
     private ConquerorFlash() {
     }
@@ -38,17 +40,22 @@ public final class ConquerorFlash implements HudElement {
         }
         float now = mc.level.getGameTime() + deltaTracker.getGameTimeDeltaPartialTick(false);
         float strength = 0.0F, age = 0.0F;
-        for (Player p : mc.level.players()) {
+        // joueurs, et Gol D. Roger (sa libération se voit bien plus loin : BOSS_RANGE)
+        java.util.List<net.minecraft.world.entity.LivingEntity> sources = new java.util.ArrayList<>(mc.level.players());
+        sources.addAll(mc.level.getEntitiesOfClass(nolan.bloxpiece.mob.GolDRoger.class,
+                mc.player.getBoundingBox().inflate(BOSS_RANGE)));
+        for (net.minecraft.world.entity.LivingEntity p : sources) {
             Integer at = p.getAttached(ModAttachments.CONQUEROR_RELEASE);
             if (at == null) {
                 continue;
             }
             float a = now - at - ConquerorShockwave.BUILD_TICKS;
             double distance = p.distanceTo(mc.player);
-            if (a < 0.0F || a > VIGNETTE_TICKS || distance > RANGE) {
+            double range = p instanceof Player ? RANGE : BOSS_RANGE;
+            if (a < 0.0F || a > VIGNETTE_TICKS || distance > range) {
                 continue;
             }
-            float s = (float) (1.0 - distance / RANGE);
+            float s = (float) (1.0 - distance / range);
             if (s > strength) {
                 strength = s;
                 age = a;

@@ -37,8 +37,11 @@ public class BloxPiece implements ModInitializer {
         ModSpawns.initialize();
         ModWorldgen.initialize(); // minerai de Granite Marin au fond des océans
         StarterVillage.initialize(); // village pirate de départ, au spawn d'un monde neuf
+        nolan.bloxpiece.village.RayleighPlacement.initialize(); // Silvers Rayleigh, devant la taverne du village
         nolan.bloxpiece.village.SafeZone.initialize(); // zone sécurisée du village : invulnérabilité, blocs intouchables
         nolan.bloxpiece.haki.HakiManager.initialize(); // Haki de l'Armement, de l'Observation et des Rois
+        nolan.bloxpiece.ability.Goro.initialize(); // Goro Goro no Mi : attaques en cours, paralysie
+        nolan.bloxpiece.ability.Kame.initialize(); // Kame Kame no Mi : carapace, dimension de poche, carapace tournoyante
         ModNetworking.initialize();
         ModCommands.initialize();
         ModEvents.initialize();

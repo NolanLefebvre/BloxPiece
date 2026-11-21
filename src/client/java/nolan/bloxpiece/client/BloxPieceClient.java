@@ -55,6 +55,10 @@ import nolan.bloxpiece.registry.ModParticles;
 
 public class BloxPieceClient implements ClientModInitializer {
 
+    // (déclarée AVANT les touches : les champs statiques sont initialisés dans l'ordre du fichier)
+    /** Catégorie « BloxPiece » dans Options > Contrôles : toutes les touches du mod y sont regroupées. */
+    private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(nolan.bloxpiece.BloxPiece.id("main"));
+
     // Les mêmes touches pour tous les fruits : c'est le serveur qui décide quelle attaque lancer.
     // Pour changer les touches par défaut, modifie les SDL_SCANCODE_* (le joueur peut aussi les changer dans Options > Contrôles).
     private static final KeyMapping[] ABILITY_KEYS = {
@@ -131,7 +135,7 @@ public class BloxPieceClient implements ClientModInitializer {
 
     private static KeyMapping registerKey(String translationKey, int scancode) {
         return KeyMappingHelper.registerKeyMapping(
-                new KeyMapping(translationKey, InputConstants.Type.KEYBOARD, scancode, KeyMapping.Category.MISC));
+                new KeyMapping(translationKey, InputConstants.Type.KEYBOARD, scancode, CATEGORY));
     }
 
     @Override
@@ -144,6 +148,27 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.TavernKeeperModel.LAYER,
                 nolan.bloxpiece.client.entity.TavernKeeperModel::createLayer);
         EntityRendererRegistry.register(ModEntities.TAVERN_KEEPER, nolan.bloxpiece.client.entity.TavernKeeperRenderer::new);
+        // Bandits et chef des bandits (même rendu que les pirates : équipement 3D, arme en main ; BanditModels, make_bandits.py)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.BanditModels.BANDIT,
+                nolan.bloxpiece.client.entity.BanditModels::bandit);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.BanditModels.CHIEF,
+                nolan.bloxpiece.client.entity.BanditModels::chief);
+        EntityRendererRegistry.register(ModEntities.BANDIT, context -> new ArmedPirateRenderer(context,
+                nolan.bloxpiece.client.entity.BanditModels.BANDIT, "bandit", 4));
+        EntityRendererRegistry.register(ModEntities.BANDIT_CHIEF, context -> new ArmedPirateRenderer(context,
+                nolan.bloxpiece.client.entity.BanditModels.CHIEF, "bandit_chief", 1));
+        // Morgan « main de hache » (3 blocs de haut : MorganModels, généré par make_morgan.py ; animations : MorganModel)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.MorganModels.MORGAN,
+                nolan.bloxpiece.client.entity.MorganModels::morgan);
+        EntityRendererRegistry.register(ModEntities.MORGAN, nolan.bloxpiece.client.entity.MorganRenderer::new);
+        // effets de Morgan : cube unité (traînée de la rotation, impact au sol) et impact au sol (MorganQuake)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.MorganFx.LAYER,
+                nolan.bloxpiece.client.entity.MorganFx::createLayer);
+        EntityRendererRegistry.register(ModEntities.MORGAN_QUAKE, nolan.bloxpiece.client.entity.MorganQuakeRenderer::new);
+        // Silvers Rayleigh (même construction que Gol D. Roger : RayleighModels, généré par make_silvers_rayleigh.py)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.RayleighModels.RAYLEIGH,
+                nolan.bloxpiece.client.entity.RayleighModels::rayleigh);
+        EntityRendererRegistry.register(ModEntities.SILVERS_RAYLEIGH, nolan.bloxpiece.client.entity.RayleighRenderer::new);
         ModelLayerRegistry.registerModelLayer(PirateGearModels.SWORDSMAN, PirateGearModels::swordsman);
         ModelLayerRegistry.registerModelLayer(PirateGearModels.GUNNER, PirateGearModels::gunner);
         EntityRendererRegistry.register(ModEntities.PIRATE_SWORDSMAN,
@@ -245,15 +270,27 @@ public class BloxPieceClient implements ClientModInitializer {
         nolan.bloxpiece.client.hud.JobUnlockBanner.register(); // bannière « Job débloqué » au niveau 5
         nolan.bloxpiece.client.hud.ConquerorFlash.register(); // flash rouge et vignettage à l'activation du Haki des Rois
         nolan.bloxpiece.client.hud.RogerBossBar.register(); // barre de boss de Gol D. Roger
+        nolan.bloxpiece.client.hud.MorganBossBar.register(); // barre de boss de Morgan
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER,
                 nolan.bloxpiece.client.haki.HakiBoltRenderer.BoltModel::createLayer);
         EntityRendererRegistry.register(ModEntities.HAKI_BOLT, nolan.bloxpiece.client.haki.HakiBoltRenderer::new);
+        // Goro Goro no Mi : éclairs bleus, nuage d'orage, sphère du Raigo (même prisme unité que les éclairs du Haki des Rois)
+        EntityRendererRegistry.register(ModEntities.GORO_BOLT, nolan.bloxpiece.client.goro.GoroBoltRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GORO_CLOUD, nolan.bloxpiece.client.goro.GoroCloudRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GORO_ORB, nolan.bloxpiece.client.goro.GoroOrbRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GORO_WAVE, nolan.bloxpiece.client.goro.GoroWaveRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GORO_COLUMN, nolan.bloxpiece.client.goro.GoroColumnRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GORO_SHOCK, nolan.bloxpiece.client.goro.GoroShockRenderer::new);
         // La Lame dévastatrice du Haki des Rois (épée Ace) : calque du modèle d'abord, renderer ensuite
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.AceSlashModel.LAYER,
                 nolan.bloxpiece.client.entity.AceSlashModel::createLayer);
         EntityRendererRegistry.register(ModEntities.ACE_SLASH, nolan.bloxpiece.client.entity.AceSlashRenderer::new);
         // L'onde de choc de l'activation du Haki des Rois (réutilise le calque des éclairs, déjà enregistré plus haut)
         EntityRendererRegistry.register(ModEntities.CONQUEROR_SHOCKWAVE, nolan.bloxpiece.client.haki.ConquerorShockwaveRenderer::new);
+        // Kame Kame no Mi : modèle de la carapace (sur le joueur et posée dans le monde)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.KameShellModel.LAYER,
+                nolan.bloxpiece.client.entity.KameShellModel::createLayer);
+        EntityRendererRegistry.register(ModEntities.KAME_SHELL, nolan.bloxpiece.client.entity.KameShellRenderer::new);
         // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
         HealthHud.register();
 
@@ -277,7 +314,7 @@ public class BloxPieceClient implements ClientModInitializer {
         // Coffre au Trésor : ouverture de la roulette, puis fruit tiré par le serveur au clic sur OUVRIR (il le donne lui-même)
         // PNJ : fenêtre de dialogue (clic droit sur le Tavernier)
         ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.OpenDialoguePayload.TYPE, (payload, context) ->
-                Minecraft.getInstance().gui.setScreen(new nolan.bloxpiece.client.screen.DialogueScreen(payload.npc())));
+                Minecraft.getInstance().gui.setScreen(new nolan.bloxpiece.client.screen.DialogueScreen(payload.npc(), payload.speech())));
         ClientPlayNetworking.registerGlobalReceiver(OpenRoulettePayload.TYPE, (payload, context) -> {
             Minecraft mc = Minecraft.getInstance();
             String id = payload.fruitItemId();
@@ -314,6 +351,7 @@ public class BloxPieceClient implements ClientModInitializer {
             LogiaClient.tick(client);
             nolan.bloxpiece.client.haki.HakiItemCoat.tick(client);
             nolan.bloxpiece.client.hud.RogerBossBar.tick(client); // barre de boss de Gol D. Roger (zone, vie, fondu)
+            nolan.bloxpiece.client.hud.MorganBossBar.tick(client); // barre de boss de Morgan
             nolan.bloxpiece.client.hud.JobUnlockBanner.tick(client); // revêtement du Haki sur l'objet en main (et objet lâché)
             if (client.player == null || client.getConnection() == null) {
                 return;

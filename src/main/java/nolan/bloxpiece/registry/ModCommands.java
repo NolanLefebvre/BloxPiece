@@ -30,14 +30,14 @@ public class ModCommands {
         //   /bloxfruit job set <joueur> <swordman|brawler|sniper|none>              -> impose (ou retire) le job
         //   /bloxfruit haki unlock|lock <joueur> <armament|observation|conqueror|all> -> débloque / reverrouille un Haki
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> dispatcher.register(
-                Commands.literal("bloxfruit")
-                        .requires(PermissionPredicates.require(BloxPiece.id("command/bloxfruit"), PermissionLevel.GAMEMASTERS))
+                Commands.literal("bloxfruit") // ouvert à tous : chaque commande d'administration demande elle-même les droits admin
                         .then(Commands.literal("removedf")
                                 .requires(PermissionPredicates.require(BloxPiece.id("command/removedf"), PermissionLevel.GAMEMASTERS))
                                 .executes(context -> removeFruit(context.getSource(), context.getSource().getPlayerOrException()))
                                 .then(Commands.argument("joueur", player())
                                         .executes(context -> removeFruit(context.getSource(), getPlayer(context, "joueur")))))
                         .then(Commands.literal("addxp")
+                                .requires(PermissionPredicates.require(BloxPiece.id("command/addxp"), PermissionLevel.GAMEMASTERS))
                                 .then(Commands.argument("joueur", player())
                                         .then(Commands.argument("quantite", IntegerArgumentType.integer())
                                                 .executes(context -> addXp(
@@ -45,12 +45,23 @@ public class ModCommands {
                                                         getPlayer(context, "joueur"),
                                                         IntegerArgumentType.getInteger(context, "quantite"))))))
                         .then(Commands.literal("resetcooldowns")
+                                .requires(PermissionPredicates.require(BloxPiece.id("command/resetcooldowns"), PermissionLevel.GAMEMASTERS))
                                 .executes(context -> resetCooldowns(context.getSource(), context.getSource().getPlayerOrException()))
                                 .then(Commands.argument("joueur", player())
                                         .executes(context -> resetCooldowns(context.getSource(), getPlayer(context, "joueur")))))
                         .then(Commands.literal("job")
                                 .requires(PermissionPredicates.require(BloxPiece.id("command/job"), PermissionLevel.GAMEMASTERS))
                                 .then(jobChoices(Commands.literal("set"))))
+                        // Kame Kame no Mi : réponse aux demandes d'entrée (boutons du chat), sortie d'un visiteur
+                        .then(Commands.literal("kame")
+                                .then(Commands.literal("accept").then(Commands.argument("joueur", player())
+                                        .executes(context -> nolan.bloxpiece.ability.KameVisits.answer(
+                                                context.getSource().getPlayerOrException(), getPlayer(context, "joueur"), true))))
+                                .then(Commands.literal("refuse").then(Commands.argument("joueur", player())
+                                        .executes(context -> nolan.bloxpiece.ability.KameVisits.answer(
+                                                context.getSource().getPlayerOrException(), getPlayer(context, "joueur"), false))))
+                                .then(Commands.literal("leave").executes(context -> nolan.bloxpiece.ability.KameVisits.leave(
+                                        context.getSource().getPlayerOrException()))))
                         .then(Commands.literal("haki")
                                 .requires(PermissionPredicates.require(BloxPiece.id("command/haki"), PermissionLevel.GAMEMASTERS))
                                 .then(hakiTypes(Commands.literal("unlock"), true))

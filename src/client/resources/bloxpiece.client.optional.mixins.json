@@ -8,7 +8,8 @@
 		"PlayerModelSlimAccessor",
 		"ItemInHandHakiMixin",
 		"AceSlashFirstPersonMixin",
-		"GuiItemHakiMixin"
+		"GuiItemHakiMixin",
+		"ObservationGlowMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

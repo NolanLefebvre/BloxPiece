@@ -71,6 +71,7 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         public int life = 6;
         public boolean rising;
         public float drift = 1.0F;
+        public float width = 1.0F;
     }
 
     /** Couche de modèle : un seul prisme d'un pixel de section, long d'un pixel vers +Z (étiré à chaque tronçon). */
@@ -110,6 +111,7 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         state.age = entity.tickCount + partialTick;
         state.life = Math.max(2, entity.life());
         state.drift = entity.drift();
+        state.width = entity.width();
     }
 
     /** Un tracé d'éclair : points (blocs, repère de l'entité) et largeur (px) à chaque point. */
@@ -180,15 +182,15 @@ public class HakiBoltRenderer extends EntityRenderer<HakiBolt, HakiBoltRenderer.
         // 1) coeur NOIR OPAQUE, épais : dessiné en premier, il reste bien noir (avant, il était enfermé dans la gaine rouge
         //    presque opaque, qui le recouvrait entièrement). En s'éteignant, il s'amincit (un opaque ne peut pas s'estomper).
         for (Path p : paths) {
-            drawPath(pose, collector, 0, coreType, p, CORE_SCALE * (0.35F + 0.65F * fade), argb(1.0F, CORE_COLOR));
+            drawPath(pose, collector, 0, coreType, p, CORE_SCALE * (0.35F + 0.65F * fade) * state.width, argb(1.0F, CORE_COLOR));
         }
         // 2) gaine rouge vif, translucide : par-dessus le noir elle ne fait qu'un voile sombre, sur les bords (où il n'y a plus
         //    de noir derrière) elle brille en rouge éclatant -> liseré rouge net autour d'un corps noir
         for (Path p : paths) {
-            drawPath(pose, collector, 1, glowType, p, SHEATH_SCALE, argb(Math.min(1.0F, 0.42F * intensity), SHEATH_COLOR));
+            drawPath(pose, collector, 1, glowType, p, SHEATH_SCALE * state.width, argb(Math.min(1.0F, 0.42F * intensity), SHEATH_COLOR));
         }
         // 3) halo rouge diffus (canal principal seulement)
-        drawPath(pose, collector, 2, glowType, main, HAZE_SCALE, argb(0.12F * intensity, HAZE_COLOR));
+        drawPath(pose, collector, 2, glowType, main, HAZE_SCALE * state.width, argb(0.12F * intensity, HAZE_COLOR));
         super.submit(state, pose, collector, camera);
     }
 

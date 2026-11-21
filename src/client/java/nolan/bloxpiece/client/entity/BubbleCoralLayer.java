@@ -144,6 +144,9 @@ public class BubbleCoralLayer extends RenderLayer<AvatarRenderState, PlayerModel
         if (entity == null || state.isInvisible) {
             return;
         }
+        if (entity.getAttached(nolan.bloxpiece.registry.ModAttachments.KAME_RETRACT) != null) {
+            return; // Kame Kame no Mi : rentré dans sa carapace (poche, carapace tournoyante) : pas de bulle sur un corps caché
+        }
         float t = formation(entity, state.ageInTicks - (float) Math.floor(state.ageInTicks));
         if (t < 0.0F) {
             return;

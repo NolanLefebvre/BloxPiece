@@ -28,8 +28,9 @@ public class ModAttachments {
     /** Job du joueur (identifiant de nolan.bloxpiece.job.Job), choisi dès le niveau 5. Sauvegardé, gardé à la mort. */
     public static final AttachmentType<String> PLAYER_JOB = AttachmentRegistry.create(
             BloxPiece.id("job"),
+            // envoyé à TOUS les joueurs : leur client doit savoir qui est Épéiste pour dessiner le Haki sur son arme
             builder -> builder.persistent(Codec.STRING).copyOnDeath()
-                    .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
+                    .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.all())
     );
 
     /**
@@ -69,6 +70,16 @@ public class ModAttachments {
      */
     public static final AttachmentType<Boolean> ENTEI_CHARGING = AttachmentRegistry.create(
             BloxPiece.id("entei_charging"),
+            builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Vrai tant que le joueur charge le Raigo (Goro Goro no Mi) : les DEUX bras se lèvent vers la boule électrique. Pas
+     * sauvegardé, synchronisé avec tous les joueurs qui le voient (pose visible chez tout le monde). Posé et retiré par
+     * GoroRaigoAbility (fin de charge, tir, annulation).
+     */
+    public static final AttachmentType<Boolean> RAIGO_CHARGING = AttachmentRegistry.create(
+            BloxPiece.id("raigo_charging"),
             builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
     );
 
@@ -140,6 +151,65 @@ public class ModAttachments {
             builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
     );
 
+    // ------------------------------------------------------------------ Kame Kame no Mi (fruit de la Tortue)
+    /**
+     * Carapace portée : positif = instant (temps de jeu) où elle a commencé à pousser ; négatif = moins l'instant où elle a
+     * commencé à rentrer (retrait) ; absent = pas de carapace. Sauvegardé (elle reste au retour du joueur), synchronisé avec
+     * TOUS les joueurs : chacun la voit pousser, rester et rentrer (KameShellLayer).
+     */
+    public static final AttachmentType<Integer> KAME_SHELL = AttachmentRegistry.create(
+            BloxPiece.id("kame_shell"),
+            builder -> builder.persistent(Codec.INT).syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /** Rétraction dans la carapace : instant de début (temps de jeu). Synchronisé avec tous (membres qui rentrent). */
+    public static final AttachmentType<Integer> KAME_RETRACT = AttachmentRegistry.create(
+            BloxPiece.id("kame_retract"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /** Type de rétraction : 1 = vers la dimension de poche (lente), 2 = carapace tournoyante (rapide), 3 = sortie des membres. */
+    public static final AttachmentType<Integer> KAME_RETRACT_KIND = AttachmentRegistry.create(
+            BloxPiece.id("kame_retract_kind"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_INT, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Joueur dans sa dimension de poche : où l'attend sa carapace posée dans le monde (« dimension;x;y;z;uuid de la carapace »).
+     * Sauvegardé (il peut se déconnecter dans sa poche), jamais envoyé aux clients.
+     */
+    public static final AttachmentType<String> KAME_RETURN = AttachmentRegistry.create(
+            BloxPiece.id("kame_return"),
+            builder -> builder.persistent(Codec.STRING)
+    );
+
+    /**
+     * Visiteur dans la dimension de poche d'un autre joueur (KameVisits) : « uuid de l'hôte;dimension;x;y;z » du point de retour
+     * sûr près de la carapace. Sauvegardé (reconnexion), jamais envoyé aux clients.
+     */
+    public static final AttachmentType<String> KAME_VISIT = AttachmentRegistry.create(
+            BloxPiece.id("kame_visit"),
+            builder -> builder.persistent(Codec.STRING)
+    );
+
+    /** Numéro de la parcelle personnelle du joueur dans la dimension de poche (attribué une fois pour toutes). */
+    public static final AttachmentType<Integer> KAME_PLOT = AttachmentRegistry.create(
+            BloxPiece.id("kame_plot"),
+            builder -> builder.persistent(Codec.INT).copyOnDeath()
+    );
+
+    /** Monde principal : nombre de parcelles déjà attribuées (la suivante prend ce numéro). */
+    public static final AttachmentType<Integer> KAME_PLOT_COUNT = AttachmentRegistry.create(
+            BloxPiece.id("kame_plot_count"),
+            builder -> builder.persistent(Codec.INT)
+    );
+
+    /** Carapace posée dans le monde (KameShellEntity) : UUID de son propriétaire. Sauvegardé avec l'entité. */
+    public static final AttachmentType<String> KAME_SHELL_OWNER = AttachmentRegistry.create(
+            BloxPiece.id("kame_shell_owner"),
+            builder -> builder.persistent(Codec.STRING)
+    );
+
     public static final AttachmentType<Boolean> ACE_REVERSE = AttachmentRegistry.create(
             BloxPiece.id("ace_reverse"),
             builder -> builder.syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.all())
@@ -198,6 +268,21 @@ public class ModAttachments {
     public static final AttachmentType<Boolean> VILLAGE_COMPASS_GIVEN = AttachmentRegistry.create(
             BloxPiece.id("village_compass_given"),
             builder -> builder.persistent(Codec.BOOL).copyOnDeath()
+    );
+
+    /**
+     * Kit de départ du Tavernier déjà reçu par ce joueur (TavernKeeper) : sauvegardé avec le joueur (donc par UUID et par
+     * monde), gardé à la mort ; une seule fois par joueur.
+     */
+    public static final AttachmentType<Boolean> STARTER_KIT_GIVEN = AttachmentRegistry.create(
+            BloxPiece.id("starter_kit_given"),
+            builder -> builder.persistent(Codec.BOOL).copyOnDeath()
+    );
+
+    /** Camp d'un bandit : l'endroit où il est apparu (ArmedBandit : il ne s'en éloigne pas trop). Sauvegardé avec lui. */
+    public static final AttachmentType<net.minecraft.core.BlockPos> BANDIT_HOME = AttachmentRegistry.create(
+            BloxPiece.id("bandit_home"),
+            builder -> builder.persistent(net.minecraft.core.BlockPos.CODEC)
     );
 
     public static void initialize() {
