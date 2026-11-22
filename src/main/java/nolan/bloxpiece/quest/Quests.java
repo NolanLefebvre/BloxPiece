@@ -131,6 +131,12 @@ public final class Quests {
     }
 
     /** Le joueur récupère la récompense de la quête n° {@code index} (vérifié ici : terminée et pas encore récupérée). */
+    /**
+     * Chance (%) de recevoir en plus un Race Reroll Token en récupérant une quête journalière, selon sa difficulté (1 facile,
+     * 2 moyenne, 3 difficile, 4 objectif maximal : QuestType.difficulty). Rare, jamais garanti.
+     */
+    public static final int[] RACE_TOKEN_CHANCE = {2, 4, 7, 12};
+
     public static void claim(ServerPlayer player, int index) {
         QuestData data = ensure(player);
         if (index < 0 || index >= data.daily().size()) {
@@ -150,6 +156,17 @@ public final class Quests {
             give(player, type.crystal(quest.target()));
         }
         give(player, quest.reward());
+        // récompense rare en plus : un Race Reroll Token, plus probable pour les quêtes difficiles (la quête est déjà marquée
+        // « récupérée » ci-dessus : un deuxième clic, une reconnexion ou un paquet répété ne peuvent plus rien donner)
+        int difficulty = type != null ? Math.max(1, Math.min(4, type.difficulty(quest.target()))) : 1;
+        if (player.getRandom().nextInt(100) < RACE_TOKEN_CHANCE[difficulty - 1]) {
+            ItemStack token = new ItemStack(nolan.bloxpiece.registry.ModItems.RACE_REROLL_TOKEN);
+            if (!player.getInventory().add(token) && !token.isEmpty()) {
+                player.spawnAtLocation((ServerLevel) player.level(), token);
+            }
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.bloxpiece.quest.race_token")
+                    .withStyle(net.minecraft.ChatFormatting.GOLD));
+        }
         player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
         player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.2F);
     }

@@ -189,6 +189,10 @@ public class ModItems {
     public static final Item HANDCUFF_KEY = register("handcuff_key", HandcuffKeyItem::new,
             new Item.Properties().stacksTo(1));
 
+    // Race Reroll Token : dans le menu Race (bouton Reroll), il est consommé pour tirer une NOUVELLE race (voir RaceManager)
+    public static final Item RACE_REROLL_TOKEN = register("race_reroll_token", Item::new,
+            new Item.Properties().stacksTo(16).rarity(Rarity.RARE));
+
     /** Onglet créatif du mod : tous les objets BloxPiece, séparés des objets vanilla. */
     public static final ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(Registries.CREATIVE_MODE_TAB, BloxPiece.id("bloxpiece"));
 

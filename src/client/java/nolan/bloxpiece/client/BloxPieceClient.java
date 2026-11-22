@@ -68,6 +68,9 @@ public class BloxPieceClient implements ClientModInitializer {
             registerKey("key.bloxpiece.ability_4", SDLScancode.SDL_SCANCODE_V)
     };
 
+    // Une seule touche pour BASCULER les touches d'attaque entre le fruit du démon et la race (le serveur décide : RaceAbilities)
+    private static final KeyMapping TOGGLE_ATTACK_SET_KEY = registerKey("key.bloxpiece.toggle_attack_set", SDLScancode.SDL_SCANCODE_Y);
+
     /** Touches d'attaque enfoncées au tick précédent : pour prévenir le serveur quand l'une est relâchée (attaques à charge). */
     private static final boolean[] KEY_WAS_DOWN = new boolean[ABILITY_KEYS.length];
 
@@ -127,6 +130,11 @@ public class BloxPieceClient implements ClientModInitializer {
 
     // Menu du personnage (modifiable dans Options > Contrôles)
     private static final KeyMapping CHARACTER_KEY = registerKey("key.bloxpiece.character", SDLScancode.SDL_SCANCODE_G);
+
+    /** Touche du menu du personnage (les pages du menu, dont le menu Race ouvert depuis l'inventaire, se ferment avec elle). */
+    public static KeyMapping characterKey() {
+        return CHARACTER_KEY;
+    }
 
     /** Touche de l'attaque de ce slot (le HUD en affiche le nom), ou null si ce slot n'a pas de touche. */
     public static KeyMapping abilityKey(int slot) {
@@ -192,6 +200,10 @@ public class BloxPieceClient implements ClientModInitializer {
                 nolan.bloxpiece.client.entity.RogerModels::roger);
         EntityRendererRegistry.register(ModEntities.GOL_D_ROGER, context -> new ArmedPirateRenderer(context,
                 nolan.bloxpiece.client.entity.RogerModels.ROGER, "gol_d_roger", 1));
+        // Ener (même construction que Silvers Rayleigh : EnerModels, généré par make_ener.py ; animations : EnerModel)
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.EnerModels.ENER,
+                nolan.bloxpiece.client.entity.EnerModels::ener);
+        EntityRendererRegistry.register(ModEntities.ENER, nolan.bloxpiece.client.entity.EnerRenderer::new);
         ModelLayerRegistry.registerModelLayer(PirateBulletRenderer.LAYER, PirateBulletRenderer.BulletModel::createLayer);
         EntityRendererRegistry.register(ModEntities.PIRATE_BULLET, PirateBulletRenderer::new);
         // Le calque du modèle doit être enregistré AVANT le renderer qui s'en sert
@@ -293,6 +305,27 @@ public class BloxPieceClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.KAME_SHELL, nolan.bloxpiece.client.entity.KameShellRenderer::new);
         // Barre de vie à une seule rangée de cœurs colorés par palier de 20 PV (et barre d'armure juste au-dessus)
         HealthHud.register();
+
+        // Race Cyborg : bras mécanique (couche du joueur), boulet, dôme hexagonal, Radical Beam
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.cyborg.CyborgArmModels.ARM,
+                nolan.bloxpiece.client.cyborg.CyborgArmModels::arm);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.cyborg.CyborgCannonballRenderer.LAYER,
+                nolan.bloxpiece.client.cyborg.CyborgCannonballRenderer::createLayer);
+        EntityRendererRegistry.register(ModEntities.CYBORG_CANNONBALL, nolan.bloxpiece.client.cyborg.CyborgCannonballRenderer::new);
+        EntityRendererRegistry.register(ModEntities.CYBORG_SHIELD, nolan.bloxpiece.client.cyborg.CyborgShieldRenderer::new);
+        EntityRendererRegistry.register(ModEntities.CYBORG_BEAM, nolan.bloxpiece.client.cyborg.CyborgBeamRenderer::new);
+
+        // Reroll de race : le serveur a tiré la race ; le menu Race (s'il est ouvert) joue la roulette jusqu'à elle
+        ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.RaceRollResultPayload.TYPE, (payload, context) -> {
+            if (context.client().gui.screen() instanceof nolan.bloxpiece.client.screen.RaceScreen screen) {
+                screen.startRoll(nolan.bloxpiece.race.Races.get(payload.race()));
+            }
+        });
+        // Party : état du groupe du joueur (page Party du menu), remplacé à chaque changement côté serveur
+        ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.PartySyncPayload.TYPE, (payload, context) ->
+                nolan.bloxpiece.client.screen.ClientParty.set(payload));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+                nolan.bloxpiece.client.screen.ClientParty.clear());
 
         // Le serveur nous indique les recharges en cours (affichage uniquement)
         ClientPlayNetworking.registerGlobalReceiver(CooldownPayload.TYPE, (payload, context) -> {
@@ -399,6 +432,10 @@ public class BloxPieceClient implements ClientModInitializer {
                     ClientPlayNetworking.send(new UseAbilityPayload(slot, false)); // touche relâchée
                 }
                 KEY_WAS_DOWN[slot] = down;
+            }
+            // bascule fruit / race (les touches d'attaque restent les mêmes)
+            while (TOGGLE_ATTACK_SET_KEY.consumeClick()) {
+                ClientPlayNetworking.send(nolan.bloxpiece.network.ToggleAttackSetPayload.INSTANCE);
             }
         });
     }

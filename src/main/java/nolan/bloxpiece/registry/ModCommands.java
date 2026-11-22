@@ -52,6 +52,21 @@ public class ModCommands {
                         .then(Commands.literal("job")
                                 .requires(PermissionPredicates.require(BloxPiece.id("command/job"), PermissionLevel.GAMEMASTERS))
                                 .then(jobChoices(Commands.literal("set"))))
+                        // Party : réponse aux invitations (boutons du chat), invitation par pseudo, départ (tout vérifié par Parties)
+                        .then(Commands.literal("party")
+                                .then(Commands.literal("accept").then(Commands.argument("party", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                        .executes(context -> partyAnswer(context.getSource().getPlayerOrException(),
+                                                com.mojang.brigadier.arguments.StringArgumentType.getString(context, "party"), true))))
+                                .then(Commands.literal("refuse").then(Commands.argument("party", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                        .executes(context -> partyAnswer(context.getSource().getPlayerOrException(),
+                                                com.mojang.brigadier.arguments.StringArgumentType.getString(context, "party"), false))))
+                                .then(Commands.literal("invite").then(Commands.argument("joueur", player())
+                                        .executes(context -> nolan.bloxpiece.party.Parties.invite(
+                                                context.getSource().getPlayerOrException(), getPlayer(context, "joueur")))))
+                                .then(Commands.literal("create").executes(context -> nolan.bloxpiece.party.Parties.create(
+                                        context.getSource().getPlayerOrException())))
+                                .then(Commands.literal("leave").executes(context -> nolan.bloxpiece.party.Parties.leave(
+                                        context.getSource().getPlayerOrException()))))
                         // Kame Kame no Mi : réponse aux demandes d'entrée (boutons du chat), sortie d'un visiteur
                         .then(Commands.literal("kame")
                                 .then(Commands.literal("accept").then(Commands.argument("joueur", player())
@@ -183,9 +198,9 @@ public class ModCommands {
 
     private static int resetCooldowns(CommandSourceStack source, ServerPlayer target) {
         // Efface les recharges côté serveur (là où elles comptent vraiment) ET prévient le HUD du joueur
-        // attaques du fruit ET les trois Hakis (Armement, Observation, Rois)
-        int reset = AbilityManager.clearCooldowns(target) + nolan.bloxpiece.haki.HakiManager.clearCooldowns(target)
-                + clearAceCooldown(target);
+        // attaques du fruit, attaques de la RACE (toutes, quel que soit le mode fruit / race choisi) ET les trois Hakis
+        int reset = AbilityManager.clearCooldowns(target) + nolan.bloxpiece.race.RaceAbilities.clearCooldowns(target)
+                + nolan.bloxpiece.haki.HakiManager.clearCooldowns(target) + clearAceCooldown(target);
         if (reset == 0) {
             source.sendFailure(Component.translatable("message.bloxpiece.resetcooldowns.none", target.getDisplayName()));
             return 0;
@@ -197,5 +212,16 @@ public class ModCommands {
         source.sendSuccess(() -> Component.translatable(
                 "message.bloxpiece.resetcooldowns.success", target.getDisplayName(), reset), true);
         return reset;
+    }
+
+    /** /bloxfruit party accept|refuse <id> : identifiant invalide = invitation introuvable (message d'expiration). */
+    private static int partyAnswer(ServerPlayer player, String id, boolean accept) {
+        java.util.UUID party;
+        try {
+            party = java.util.UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            party = null;
+        }
+        return nolan.bloxpiece.party.Parties.answer(player, party, accept);
     }
 }

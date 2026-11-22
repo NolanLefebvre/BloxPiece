@@ -354,7 +354,7 @@ public final class Kame {
         Map<Integer, Long> hits = HITS.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
         long now = level.getGameTime();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(0.7, 0.2, 0.7),
-                e -> e != player && e.isAlive() && !e.isSpectator())) {
+                e -> e != player && e.isAlive() && !e.isSpectator() && !nolan.bloxpiece.party.Parties.allies(e, player))) { // Party épargnée
             Long last = hits.get(target.getId());
             if (last != null && now - last < SPIN_HIT_COOLDOWN) {
                 continue;

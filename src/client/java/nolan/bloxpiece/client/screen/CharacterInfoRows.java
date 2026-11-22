@@ -60,11 +60,16 @@ public final class CharacterInfoRows {
                                 player -> Fruits.get(player.getAttached(ModAttachments.FRUIT)) != null,
                                 CharacterScreen::openAbilities),
 
+                // Race : son icône et son nom ; infobulle = courte description ; clic = menu Race (bonus, attaques, reroll).
+                // Relue à chaque image depuis la race synchronisée : à jour tout de suite après un reroll.
                 new CharacterInfoRow(icon("race"), label("race"), 0xFF4FD1B5,
                         player -> {
                             Race race = Races.of(player);
                             return new Value(Component.translatable(race.translationKey()), race.color());
-                        }),
+                        })
+                        .withIconTexture(player -> Races.of(player).icon())
+                        .withClick(Component.translatable("screen.bloxpiece.race.open"), player -> true, CharacterScreen::openRace)
+                        .withTooltip(player -> Component.translatable(Races.of(player).descriptionKey())),
 
                 new CharacterInfoRow(icon("level"), label("level"), COLOR_GOLD,
                         CharacterInfoRows::levelValue)

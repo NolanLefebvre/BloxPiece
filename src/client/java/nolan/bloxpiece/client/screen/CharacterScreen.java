@@ -52,6 +52,9 @@ public class CharacterScreen extends BloxPanelScreen {
     // Bouton "Haki" à côté du bouton "Quêtes", même style
     private static final int HAKI_X = QUESTS_X + QUESTS_W + 6;
     private static final int HAKI_W = 70;
+    // Bouton "Party" à côté du bouton "Haki", même style
+    private static final int PARTY_X = HAKI_X + HAKI_W + 6;
+    private static final int PARTY_W = 70;
 
     // Pseudo inscrit dans la bordure du haut
     private static final int NAME_TAG_MAX = 110;
@@ -83,6 +86,7 @@ public class CharacterScreen extends BloxPanelScreen {
         drawExperience(g, font, player, mx, my, mouseX, mouseY, dt);
         drawQuestsButton(g, font, mx, my);
         drawButton(g, font, mx, my, HAKI_X, QUESTS_Y, HAKI_W, QUESTS_H, Component.translatable("screen.bloxpiece.haki.button"));
+        drawButton(g, font, mx, my, PARTY_X, QUESTS_Y, PARTY_W, QUESTS_H, Component.translatable("screen.bloxpiece.party.button"));
     }
 
     /** Bouton du bas du menu (même style que « Quêtes »). */
@@ -133,6 +137,11 @@ public class CharacterScreen extends BloxPanelScreen {
             this.minecraft.gui.setScreen(new HakiScreen(this, closeKey));
             return true;
         }
+        if (inside(mx, my, PARTY_X, QUESTS_Y, PARTY_W, QUESTS_H)) {
+            playClickSound();
+            this.minecraft.gui.setScreen(new PartyScreen(this, closeKey));
+            return true;
+        }
         int y = ROWS_Y;
         for (CharacterInfoRow row : rows) {
             if (inside(mx, my, ROWS_X, y, ROWS_W, ROW_H)) {
@@ -159,6 +168,12 @@ public class CharacterScreen extends BloxPanelScreen {
     void openJobs() {
         playClickSound();
         this.minecraft.gui.setScreen(new JobScreen(this, closeKey));
+    }
+
+    /** Ouvre le menu Race (appelé par la ligne "race"). */
+    void openRace() {
+        playClickSound();
+        this.minecraft.gui.setScreen(new RaceScreen(this, closeKey));
     }
 
     /** Ouvre la page des attaques du fruit (appelé par la ligne "fruit"). */
@@ -214,7 +229,7 @@ public class CharacterScreen extends BloxPanelScreen {
             if (hovered && row.isLocked(player)) {
                 g.setTooltipForNextFrame(font, row.lockTooltip(player), screenMouseX, screenMouseY);
             } else if (hovered && row.isClickable(player)) {
-                g.setTooltipForNextFrame(font, row.clickTooltip(), screenMouseX, screenMouseY);
+                g.setTooltipForNextFrame(font, row.clickTooltip(player), screenMouseX, screenMouseY);
             }
             // clic sur une ligne verrouillée : le prérequis s'affiche 1,5 s, discrètement, en rouge, à droite de la ligne
             if (row == lockedClicked && System.currentTimeMillis() - lockedClickAt < 1500L) {

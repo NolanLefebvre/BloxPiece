@@ -440,7 +440,8 @@ public class HikenFist extends Projectile {
                 owner == null ? DamageTypes.UNATTRIBUTED_FIREBALL : DamageTypes.FIREBALL, this, owner);
         AABB zone = new AABB(point, point).inflate(BLAST_RADIUS);
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, zone,
-                e -> e != owner && e.isAlive() && !e.isSpectator() && !(e instanceof EnteiSun));
+                e -> e != owner && e.isAlive() && !e.isSpectator() && !(e instanceof EnteiSun)
+                        && !nolan.bloxpiece.party.Parties.allies(e, owner)); // membres de la Party du lanceur épargnés
         for (LivingEntity target : targets) {
             AABB box = target.getBoundingBox();
             double distance = closestPoint(box, point).distanceTo(point);

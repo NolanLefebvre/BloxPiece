@@ -31,7 +31,8 @@ import nolan.bloxpiece.fruit.WaterCurse;
 import nolan.bloxpiece.handcuffs.Seastone;
 
 /**
- * HUD des attaques : 4 cases à droite de la hotbar (Z, X, C, V par défaut).
+ * HUD des attaques : 4 cases à droite de la hotbar (Z, X, C, V par défaut). Elles montrent l'ensemble d'attaques que ces touches
+ * lancent : le fruit du démon, ou la RACE (joueur sans fruit, ou touche « Basculer fruit / race » : voir drawRace).
  * - aucun fruit : les 4 cases restent vides
  * - un fruit : chaque case affiche l'icône de l'attaque (fond semi-transparent) et sa touche en bas à droite
  * - attaque en recharge : icône assombrie + temps restant en secondes (à la place de la touche), qui disparaît à la fin
@@ -108,6 +109,12 @@ public class AbilityHud implements HudElement {
             return;
         }
 
+        // Ensemble d'attaques des touches : la RACE (sans fruit, ou après la touche « Basculer fruit / race »), sinon le fruit.
+        // Même règle que le serveur (RaceAbilities.raceMode) : les cases montrent toujours ce que les touches lancent.
+        if (nolan.bloxpiece.race.RaceAbilities.raceMode(player)) {
+            drawRace(graphics, mc, player, level);
+            return;
+        }
         DevilFruit fruit = Fruits.get(player.getAttached(ModAttachments.FRUIT));
         if (fruit == null) {
             return; // pas de fruit : aucune case, aucun titre
@@ -146,6 +153,60 @@ public class AbilityHud implements HudElement {
                 COLOR_LABEL, COLOR_LABEL_ACCENT);
     }
 
+    /**
+     * Mode RACE : les attaques de la race du joueur sur les mêmes cases et les mêmes touches (au plus MAX_ABILITIES), le nom de
+     * la race au-dessus. Icône : celle de l'attaque (textures/gui/race/attack/&lt;id&gt;.png), sinon celle de la race. Recharge :
+     * celle envoyée par le serveur (clé « race:&lt;id&gt; »). Attaque « À venir » : icône éteinte, sans touche. Menotté : cadenas
+     * turquoise (le serveur refuse). L'eau et le Granite Marin ne bloquent pas les attaques de race.
+     */
+    private void drawRace(GuiGraphicsExtractor graphics, Minecraft mc, LocalPlayer player, ClientLevel level) {
+        nolan.bloxpiece.race.Race race = nolan.bloxpiece.race.Races.of(player);
+        java.util.List<nolan.bloxpiece.race.RaceAttack> attacks = race.attacks();
+        int count = Math.min(DevilFruit.MAX_ABILITIES, attacks.size());
+        if (count == 0) {
+            return;
+        }
+        long now = level.getGameTime();
+        int guiWidth = graphics.guiWidth();
+        int idealX = firstSlotX(mc, player, guiWidth);
+        int fit = Mth.clamp((guiWidth - idealX - SCREEN_MARGIN + GAP) / (SLOT_SIZE + GAP), 1, count);
+        int rows = (count + fit - 1) / fit;
+        int columns = (count + rows - 1) / rows;
+        int totalWidth = columns * SLOT_SIZE + (columns - 1) * GAP;
+        int x0 = Math.min(idealX, guiWidth - totalWidth - SCREEN_MARGIN);
+        int bottomY = graphics.guiHeight() - 20;
+        boolean cuffed = nolan.bloxpiece.handcuffs.Handcuffs.isCuffed(player);
+        for (int slot = 0; slot < count; slot++) {
+            nolan.bloxpiece.race.RaceAttack attack = attacks.get(slot);
+            int x = x0 + (slot % columns) * (SLOT_SIZE + GAP);
+            int y = bottomY - (slot / columns) * (SLOT_SIZE + GAP);
+            Identifier icon = raceIcon(attack, race);
+            if (!attack.implemented()) {
+                // « À venir » : icône éteinte, aucune touche (rien ne part)
+                graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKGROUND);
+                graphics.blit(RenderPipelines.GUI_TEXTURED, icon, x + 1, y + 1, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE,
+                        (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
+                graphics.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_EMPTY);
+                continue;
+            }
+            drawSlotWith(graphics, mc.font, player, x, y, attack.ability(), icon, nolan.bloxpiece.race.RaceAbilities.cooldownKey(attack),
+                    cuffed, false, now, keyLabel(mc.font, slot));
+        }
+        int slotsTop = bottomY - (rows - 1) * (SLOT_SIZE + GAP);
+        String name = Component.translatable(race.translationKey()).getString();
+        HudLabel.draw(graphics, mc.font, name, x0, totalWidth, slotsTop, Math.min(idealX, x0), guiWidth - SCREEN_MARGIN,
+                COLOR_LABEL, COLOR_LABEL_ACCENT);
+    }
+
+    private static final Map<Identifier, Boolean> RACE_ICON_EXISTS = new HashMap<>();
+
+    /** Icône d'une attaque de race, ou celle de la race si l'attaque n'a pas encore d'icône. */
+    public static Identifier raceIcon(nolan.bloxpiece.race.RaceAttack attack, nolan.bloxpiece.race.Race race) {
+        boolean exists = RACE_ICON_EXISTS.computeIfAbsent(attack.icon(),
+                id -> Minecraft.getInstance().getResourceManager().getResource(id).isPresent());
+        return exists ? attack.icon() : race.icon();
+    }
+
     /** Nom de la touche de l'attaque de ce slot (ex : "Z"), raccourci pour tenir dans la case. */
     private static String keyLabel(Font font, int slot) {
         KeyMapping key = BloxPieceClient.abilityKey(slot);
@@ -170,20 +231,30 @@ public class AbilityHud implements HudElement {
 
     private static void drawSlot(GuiGraphicsExtractor g, Font font, LocalPlayer player, int x, int y,
                                  DevilFruit fruit, Ability ability, long now, String keyLabel) {
-        g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKGROUND);
-
         // Pas de fruit, ou pas d'attaque sur cette touche : case vide
         if (fruit == null || ability == null) {
+            g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKGROUND);
             g.outline(x, y, SLOT_SIZE, SLOT_SIZE, COLOR_BORDER_EMPTY);
             return;
         }
-
         String key = AbilityManager.cooldownKey(fruit, ability);
+        drawSlotWith(g, font, player, x, y, ability, iconTexture(key, fruit, ability), key, Seastone.suppresses(player),
+                WaterCurse.touchesWater(player), now, keyLabel);
+    }
+
+    /**
+     * Une case d'attaque (fruit ou race) : icône, recharge, cadenas de niveau, blocages. {@code seastone} : cadenas turquoise
+     * (Granite Marin / menottes) ; {@code water} : goutte barrée (fruits seulement).
+     */
+    private static void drawSlotWith(GuiGraphicsExtractor g, Font font, LocalPlayer player, int x, int y, Ability ability,
+                                     Identifier icon, String key, boolean seastone, boolean water, long now, String keyLabel) {
+        g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKGROUND);
+
 
         // Granite Marin (menotté, ou objet en Granite Marin sur soi) : toutes les attaques sont bloquées. Cadenas turquoise enchaîné,
         // distinct du cadenas gris des attaques pas encore débloquées par le niveau.
-        if (Seastone.suppresses(player)) {
-            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+        if (seastone) {
+            g.blit(RenderPipelines.GUI_TEXTURED, icon, x + 1, y + 1,
                     0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
             g.fill(x + 1, y + 1, x + 1 + ICON_SIZE, y + 1 + ICON_SIZE, COLOR_SEASTONE_VEIL);
             g.blit(RenderPipelines.GUI_TEXTURED, SEASTONE_LOCK_ICON, x + 1, y + 1,
@@ -195,7 +266,7 @@ public class AbilityHud implements HudElement {
         // Attaque verrouillée : icône très atténuée en fond, cadenas par-dessus (comme dans la page des attaques).
         // Le serveur refuse de toute façon de la lancer.
         if (!ability.isUnlockedFor(player)) {
-            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+            g.blit(RenderPipelines.GUI_TEXTURED, icon, x + 1, y + 1,
                     0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
             g.blit(RenderPipelines.GUI_TEXTURED, LOCK_ICON, x + 1, y + 1,
                     0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, 0xFFFFFFFF);
@@ -204,8 +275,8 @@ public class AbilityHud implements HudElement {
         }
 
         // Dans l'eau (pieds compris) : tous les pouvoirs sont bloqués par le serveur. Icône atténuée, voile bleu, goutte barrée.
-        if (WaterCurse.touchesWater(player)) { // une bulle du Corail à Bulles isole de l'eau
-            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+        if (water) { // une bulle du Corail à Bulles isole de l'eau
+            g.blit(RenderPipelines.GUI_TEXTURED, icon, x + 1, y + 1,
                     0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (ICON_ALPHA_LOCKED << 24) | 0xFFFFFF);
             g.fill(x + 1, y + 1, x + 1 + ICON_SIZE, y + 1 + ICON_SIZE, COLOR_WATER_VEIL);
             g.blit(RenderPipelines.GUI_TEXTURED, WATER_ICON, x + 1, y + 1,
@@ -219,7 +290,7 @@ public class AbilityHud implements HudElement {
 
         // Icône de l'attaque en arrière-plan, avec transparence
         int alpha = cooling ? ICON_ALPHA_COOLDOWN : ICON_ALPHA_READY;
-        g.blit(RenderPipelines.GUI_TEXTURED, iconTexture(key, fruit, ability), x + 1, y + 1,
+        g.blit(RenderPipelines.GUI_TEXTURED, icon, x + 1, y + 1,
                 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, (alpha << 24) | 0xFFFFFF);
 
         if (cooling) {

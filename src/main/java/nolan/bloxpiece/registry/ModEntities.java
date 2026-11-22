@@ -90,6 +90,15 @@ public class ModEntities {
             .clientTrackingRange(10)
             .build(GOL_D_ROGER_KEY);
 
+    // Ener, le « dieu » de la foudre : invoqué par commande (pas d'apparition naturelle). Hitbox de base ; échelle 1,15 (SCALE)
+    public static final ResourceKey<EntityType<?>> ENER_KEY = ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("ener"));
+
+    public static final EntityType<nolan.bloxpiece.mob.Ener> ENER =
+            EntityType.Builder.of(nolan.bloxpiece.mob.Ener::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(10)
+            .build(ENER_KEY);
+
     // Morgan « main de hache », capitaine de la Marine : 3 blocs de haut (modèle conçu à cette taille), invoqué par commande
     public static final ResourceKey<EntityType<?>> MORGAN_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("morgan"));
@@ -365,6 +374,45 @@ public class ModEntities {
             .updateInterval(1)
             .build(GORO_SHOCK_KEY);
 
+    // Race Cyborg : cyborg_cannonball (entité d'effet, ni sauvegardée ni invocable)
+    public static final ResourceKey<EntityType<?>> CYBORG_CANNONBALL_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("cyborg_cannonball"));
+
+    public static final EntityType<nolan.bloxpiece.fx.CyborgCannonball> CYBORG_CANNONBALL =
+            EntityType.Builder.<nolan.bloxpiece.fx.CyborgCannonball>of(nolan.bloxpiece.fx.CyborgCannonball::new, MobCategory.MISC)
+            .sized(0.6F, 0.6F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(1)
+            .build(CYBORG_CANNONBALL_KEY);
+
+    // Race Cyborg : cyborg_shield (entité d'effet, ni sauvegardée ni invocable)
+    public static final ResourceKey<EntityType<?>> CYBORG_SHIELD_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("cyborg_shield"));
+
+    public static final EntityType<nolan.bloxpiece.fx.CyborgShield> CYBORG_SHIELD =
+            EntityType.Builder.<nolan.bloxpiece.fx.CyborgShield>of(nolan.bloxpiece.fx.CyborgShield::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(12)
+            .updateInterval(1)
+            .build(CYBORG_SHIELD_KEY);
+
+    // Race Cyborg : cyborg_beam (entité d'effet, ni sauvegardée ni invocable)
+    public static final ResourceKey<EntityType<?>> CYBORG_BEAM_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("cyborg_beam"));
+
+    public static final EntityType<nolan.bloxpiece.fx.CyborgBeam> CYBORG_BEAM =
+            EntityType.Builder.<nolan.bloxpiece.fx.CyborgBeam>of(nolan.bloxpiece.fx.CyborgBeam::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(16)
+            .updateInterval(1)
+            .build(CYBORG_BEAM_KEY);
+
     public static final ResourceKey<EntityType<?>> HAKI_BOLT_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("haki_bolt"));
 
@@ -437,6 +485,9 @@ public class ModEntities {
         register(GOL_D_ROGER_KEY, GOL_D_ROGER, nolan.bloxpiece.mob.GolDRoger.STATS.toAttributes()
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)   // inébranlable
                 .add(Attributes.SCALE, 1.1));                // un peu plus grand que les autres (hitbox et rendu)
+        register(ENER_KEY, ENER, nolan.bloxpiece.mob.Ener.STATS.toAttributes()
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.8)   // difficile à repousser
+                .add(Attributes.SCALE, 1.15));               // grand et élancé (hitbox et rendu)
         Registry.register(BuiltInRegistries.ENTITY_TYPE, PIRATE_BULLET_KEY, PIRATE_BULLET);
         register(ENTEI_SUN_KEY, ENTEI_SUN, Mob.createMobAttributes());
         // Le poing est un projectile (pas un être vivant) : pas d'attributs à enregistrer
@@ -460,6 +511,9 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_COLUMN_KEY, GORO_COLUMN);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, GORO_SHOCK_KEY, GORO_SHOCK);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, KAME_SHELL_KEY, KAME_SHELL);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_CANNONBALL_KEY, CYBORG_CANNONBALL);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_SHIELD_KEY, CYBORG_SHIELD);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_BEAM_KEY, CYBORG_BEAM);
     }
 
     private static <T extends LivingEntity> void register(

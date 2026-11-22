@@ -1,0 +1,18 @@
+{
+  "structures": [
+    {
+      "structure": "bloxpiece:roger_arena",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 34,
+    "separation": 14,
+    "salt": 48261937,
+    "exclusion_zone": {
+      "other_set": "minecraft:villages",
+      "chunk_count": 6
+    }
+  }
+}

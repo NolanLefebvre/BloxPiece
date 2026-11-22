@@ -234,7 +234,8 @@ public class AceSlash extends ModFxEntity {
     private void hitEntities(ServerLevel level, AABB zone, AceSlashShape.Sample[] samples, Vec3[] a, Vec3[] b) {
         Entity owner = this.getOwner();
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, zone,
-                e -> e != owner && e.isAlive() && !e.isSpectator() && !this.hit.contains(e.getId()));
+                e -> e != owner && e.isAlive() && !e.isSpectator() && !this.hit.contains(e.getId())
+                        && !nolan.bloxpiece.party.Parties.allies(e, owner)); // membres de la Party du lanceur épargnés
         if (targets.isEmpty()) {
             return;
         }

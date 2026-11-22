@@ -40,6 +40,8 @@ public final class CharacterInfoRow {
     private final int accent;
     private final Function<LocalPlayer, Value> value;
     private @Nullable Function<LocalPlayer, ItemStack> itemIcon;
+    private @Nullable Function<LocalPlayer, Identifier> iconTexture;
+    private @Nullable Function<LocalPlayer, Component> dynamicTooltip;
 
     // Ligne cliquable (facultatif) : quand actif, un clic dessus déclenche l'action
     private @Nullable Predicate<LocalPlayer> clickEnabled;
@@ -65,6 +67,18 @@ public final class CharacterInfoRow {
     /** Affiche un item à la place de l'icône quand il y en a un (sinon l'icône normale reste affichée). */
     public CharacterInfoRow withItemIcon(Function<LocalPlayer, ItemStack> itemIcon) {
         this.itemIcon = itemIcon;
+        return this;
+    }
+
+    /** Icône qui dépend du joueur (ex : l'icône de SA race) à la place de l'icône fixe. */
+    public CharacterInfoRow withIconTexture(Function<LocalPlayer, Identifier> iconTexture) {
+        this.iconTexture = iconTexture;
+        return this;
+    }
+
+    /** Infobulle qui dépend du joueur (ex : description de sa race), à la place de l'infobulle fixe du clic. */
+    public CharacterInfoRow withTooltip(Function<LocalPlayer, Component> tooltip) {
+        this.dynamicTooltip = tooltip;
         return this;
     }
 
@@ -112,6 +126,11 @@ public final class CharacterInfoRow {
         return clickTooltip != null ? clickTooltip : Component.empty();
     }
 
+    /** Infobulle au survol pour ce joueur : l'infobulle propre au joueur si la ligne en a une, sinon celle du clic. */
+    public Component clickTooltip(LocalPlayer player) {
+        return dynamicTooltip != null ? dynamicTooltip.apply(player) : clickTooltip();
+    }
+
     public void extract(GuiGraphicsExtractor g, Font font, LocalPlayer player, int x, int y, int w, int h, boolean hovered) {
         boolean locked = isLocked(player);
         if (locked) {
@@ -126,7 +145,7 @@ public final class CharacterInfoRow {
         if (!stack.isEmpty()) {
             g.item(stack, iconX, iconY);
         } else {
-            g.blit(RenderPipelines.GUI_TEXTURED, icon, iconX, iconY, 0.0F, 0.0F,
+            g.blit(RenderPipelines.GUI_TEXTURED, iconTexture != null ? iconTexture.apply(player) : icon, iconX, iconY, 0.0F, 0.0F,
                     ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE, locked ? 0x60FFFFFF : 0xFFFFFFFF);
         }
         if (locked) {

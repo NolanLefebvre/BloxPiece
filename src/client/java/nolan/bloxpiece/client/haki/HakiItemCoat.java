@@ -32,8 +32,10 @@ import nolan.bloxpiece.haki.ArmamentHaki;
  * répand sur l'objet avec la même encre organique que sur le corps (cellules d'un pixel, tache de bruit à grappes, nervures
  * devant le front, reflets d'acier), puis reflue de la même façon quand le Haki est retiré.
  *
- * La forme exacte de l'objet est lue dans sa texture (assets/&lt;mod&gt;/textures/item/&lt;id&gt;.png) : seuls ses pixels visibles sont
- * recouverts, sur ses deux faces, juste au-dessus de sa surface. Sa position dans la main reprend le placement de Minecraft (couche
+ * Arme en 3D (modèle à « elements » : Ace, épées des bandits, sabres...) : sa LAME est lue dans son modèle et recouverte sur
+ * toutes ses faces (HakiShell : convention "#blade" / "bloxpiece_part", valable pour toute future arme), jamais la poignée.
+ * Objet plat : sa forme exacte est lue dans sa texture (assets/&lt;mod&gt;/textures/item/&lt;id&gt;.png) : seuls ses pixels visibles sont
+ * recouverts, sur ses deux faces ET ses tranches, juste au-dessus de sa surface. Sa position dans la main reprend le placement de Minecraft (couche
  * des objets en main + transformation « tenu en main » de son modèle). Objets en 3D (blocs, bouclier, trident...) ou sans
  * texture plate : pas de revêtement visuel (le bonus de dégâts s'applique quand même, voir ArmamentHaki).
  * Changement d'objet ou de case : le nouvel objet se recouvre à son tour depuis la main.
@@ -46,8 +48,11 @@ public final class HakiItemCoat {
     /** Décalage des plaques au-dessus des faces de l'objet (px) : pas de clignotement avec l'objet lui-même. */
     private static final float LIFT = 0.07F;
 
-    /** Forme d'un objet : pixels visibles (16 x 16), objet tenu « comme un outil » (modèle handheld) ou non. */
-    private record Mask(boolean[][] solid, boolean handheld, boolean rod, float maxDistance) {
+    /**
+     * Forme d'un objet : pixels visibles (16 x 16), objet tenu « comme un outil » (modèle handheld) ou non ; ou, pour une arme en
+     * 3D, sa LAME lue dans son modèle ({@code shell}, voir HakiShell : toutes les faces de la lame, jamais la poignée).
+     */
+    private record Mask(boolean[][] solid, boolean handheld, boolean rod, float maxDistance, HakiShell.Shell shell) {
     }
 
     /** Revêtement de l'objet d'une entité : objet, début, retrait (-1 = pas de retrait) et couverture au retrait. */
@@ -80,6 +85,11 @@ public final class HakiItemCoat {
     private static Optional<Mask> loadMask(Item item) {
         try {
             Identifier key = BuiltInRegistries.ITEM.getKey(item);
+            // arme en 3D (modèle à « elements ») : sa lame, toutes faces (convention commune : HakiShell)
+            Optional<HakiShell.Shell> shell = HakiShell.load(key);
+            if (shell.isPresent()) {
+                return Optional.of(new Mask(null, false, false, shell.get().maxDistance(), shell.get()));
+            }
             Identifier texture = Identifier.fromNamespaceAndPath(key.getNamespace(), "textures/item/" + key.getPath() + ".png");
             var resource = Minecraft.getInstance().getResourceManager().getResource(texture);
             if (resource.isEmpty()) {
@@ -122,7 +132,7 @@ public final class HakiItemCoat {
                     rod = text.contains("handheld_rod");
                 }
             }
-            return Optional.of(new Mask(solid, handheld, rod, max));
+            return Optional.of(new Mask(solid, handheld, rod, max, null));
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -139,8 +149,8 @@ public final class HakiItemCoat {
             return;
         }
         Optional<Mask> m = mask(coat.item());
-        if (m.isEmpty()) {
-            return;
+        if (m.isEmpty() || m.get().shell() != null) {
+            return; // arme en 3D : pas d'icône plate à recouvrir
         }
         float now = coat.releaseStart() >= 0.0F
                 ? coat.coverAtRelease() * (1.0F - HakiArmamentLayer.flow((age - coat.releaseStart()) / RELEASE_TICKS))
@@ -194,8 +204,9 @@ public final class HakiItemCoat {
         return coat.coverAtRelease() * (1.0F - HakiArmamentLayer.flow(t));
     }
 
-    /** Couleurs (ARGB, 0 = rien) des 16 x 16 pixels de l'objet à cet instant, et sa forme. */
-    private record Frame(int[][] colors, Mask mask) {
+    /** Couleurs (ARGB, 0 = rien) des 16 x 16 pixels de l'objet à cet instant (objet plat), ou de chaque cellule de la lame (arme
+     * en 3D : {@code shellColors}), et sa forme. */
+    private record Frame(int[][] colors, int[] shellColors, Mask mask) {
     }
 
     /**
@@ -220,7 +231,33 @@ public final class HakiItemCoat {
         if (cover <= 0.0F) {
             return null;
         }
-        return new Frame(colors(mask, cover, seedOf(entity, held), !active, age), mask);
+        int seed = seedOf(entity, held);
+        if (mask.shell() != null) {
+            return new Frame(null, shellColors(mask, cover, seed, !active, age), mask);
+        }
+        return new Frame(colors(mask, cover, seed, !active, age), null, mask);
+    }
+
+    /** Couleur de chaque cellule de la lame d'une arme en 3D : même encre, même propagation depuis la main que sur un objet plat. */
+    private static int[] shellColors(Mask mask, float cover, int seed, boolean releasing, float age) {
+        float shimmer = 0.5F + 0.5F * Mth.sin(age * 0.25F);
+        float motion = releasing ? 1.0F : 1.0F - Mth.clamp(cover / (mask.maxDistance() + 4.5F), 0.0F, 1.0F);
+        java.util.List<HakiShell.Cell> cells = mask.shell().cells();
+        int[] colors = new int[cells.size()];
+        for (int i = 0; i < colors.length; i++) {
+            HakiShell.Cell c = cells.get(i);
+            float u = c.u(), v = c.v();
+            float blob = HakiArmamentLayer.noise(u, v, 3.0F, 1 << 20, seed) - 0.5F;
+            float fine = HakiArmamentLayer.noise(u, v, 1.5F, 1 << 20, seed + 17) - 0.5F;
+            float breathe = 0.25F * motion * Mth.sin(age * 0.6F + u * 0.7F + v * 0.5F);
+            float delay = c.along() + 4.2F * blob + 1.3F * fine + breathe;
+            float ink = Mth.clamp((cover - delay) / 0.9F + 0.5F, 0.0F, 1.0F);
+            float ridge = 1.0F - Math.abs(2.0F * HakiArmamentLayer.noise(u * 1.3F, v * 0.7F, 2.0F, 1 << 20, seed + 31) - 1.0F);
+            colors[i] = HakiArmamentLayer.cellColor(ink, cover - delay, ridge, HakiArmamentLayer.hash(c.grain(), 0, seed + 5),
+                    c.along(), cover, 1000.0F, !releasing && motion > 0.0F, 0.0F, shimmer, 0, 1.0F,
+                    Mth.clamp(1.0F - v / 32.0F, 0.0F, 1.0F), u + v, age);
+        }
+        return colors;
     }
 
     /** Couleurs des 16 x 16 pixels pour une couverture donnée (même encre que sur le corps). */
@@ -274,6 +311,13 @@ public final class HakiItemCoat {
         pose.translate((right ? 1.0F : -1.0F) / 16.0F, 0.125F, -0.625F);
         // 2) transformation « tenu en main, 3e personne » du modèle de l'objet (miroir pour la main gauche)
         float side = right ? 1.0F : -1.0F;
+        if (mask.shell() != null) {
+            // arme en 3D : transformation « tenu en main, 3e personne » de SON modèle, puis sa lame
+            (right ? mask.shell().thirdRight() : mask.shell().thirdLeft()).apply(pose, !right);
+            HakiShell.draw(pose, collector, mask.shell(), frame.shellColors(), light);
+            pose.popPose();
+            return;
+        }
         if (mask.rod()) {
             pose.translate(0.0F, 4.0F / 16.0F, 2.5F / 16.0F);
             rotate(pose, 0.0F, 90.0F * side, 55.0F * side);
@@ -306,6 +350,14 @@ public final class HakiItemCoat {
         }
         float side = right ? 1.0F : -1.0F;
         pose.pushPose();
+        if (frame.mask().shell() != null) {
+            // arme en 3D : transformation « tenu en main, 1re personne » de SON modèle, puis sa lame
+            HakiShell.Shell shell = frame.mask().shell();
+            (right ? shell.firstRight() : shell.firstLeft()).apply(pose, !right);
+            HakiShell.draw(pose, collector, shell, frame.shellColors(), light);
+            pose.popPose();
+            return;
+        }
         // transformation « tenu en main, 1re personne » (identique pour les outils et les objets plats)
         pose.translate(side * 1.13F / 16.0F, 3.2F / 16.0F, 1.13F / 16.0F);
         rotate(pose, 0.0F, (frame.mask().rod() ? 90.0F : -90.0F) * side, 25.0F * side);
@@ -337,8 +389,8 @@ public final class HakiItemCoat {
         lastIconY = y;
         lastIconAge = age;
         Frame frame = inHand ? frame(player, age) : released(stack, age);
-        if (frame == null) {
-            return;
+        if (frame == null || frame.colors() == null) {
+            return; // arme en 3D : son icône n'est pas recouverte (pas de forme plate)
         }
         for (int py = 0; py < 16; py++) {
             for (int px = 0; px < 16; px++) {
@@ -362,7 +414,7 @@ public final class HakiItemCoat {
             return null;
         }
         float cover = rel.coverAtRelease() * (1.0F - HakiArmamentLayer.flow(Math.max(0.0F, t)));
-        return cover <= 0.0F ? null : new Frame(colors(rel.mask(), cover, rel.seed(), true, age), rel.mask());
+        return cover <= 0.0F ? null : new Frame(colors(rel.mask(), cover, rel.seed(), true, age), null, rel.mask());
     }
 
     private static ItemStack lastIconStack;
@@ -370,7 +422,10 @@ public final class HakiItemCoat {
     private static int lastIconY;
     private static float lastIconAge = -1.0F;
 
-    /** Une cellule par pixel recouvert, sur les deux faces de l'objet plat (1 px d'épaisseur, centré), juste au-dessus de lui. */
+    /**
+     * Objet plat : une cellule par pixel recouvert sur ses deux faces (1 px d'épaisseur, centré), juste au-dessus de lui, plus ses
+     * tranches (bords du pixel qui donnent sur le vide).
+     */
     private static void cells(PoseStack pose, SubmitNodeCollector collector, Frame frame, int light) {
         pose.translate(-0.5F, -0.5F, -0.5F);
         RenderType type = RenderTypes.entityTranslucent(HakiArmamentLayer.WHITE_TEXTURE);
@@ -385,6 +440,32 @@ public final class HakiItemCoat {
                     float z = face == 0 ? 8.5F + LIFT : 7.5F - LIFT;
                     pose.pushPose();
                     pose.translate(x / 16.0F, (15 - y) / 16.0F, z / 16.0F);
+                    collector.order(3).submitModelPart(cell, pose, type, light, OverlayTexture.NO_OVERLAY, null, color);
+                    pose.popPose();
+                }
+                // TRANCHES de l'objet plat (épaisseur d'un pixel, z 7,5 à 8,5) : chaque bord du pixel qui donne sur le vide (comme
+                // les côtés que Minecraft extrude) est recouvert aussi ; débord de LIFT aux deux bouts pour fermer les arêtes
+                float depth = 1.0F + 2.0F * LIFT;
+                for (int side = 0; side < 4; side++) {
+                    int nx = x + (side == 0 ? -1 : side == 1 ? 1 : 0), ny = y + (side == 2 ? -1 : side == 3 ? 1 : 0);
+                    if (nx >= 0 && nx < 16 && ny >= 0 && ny < 16 && frame.mask().solid()[nx][ny]) {
+                        continue; // bord intérieur : caché par le pixel voisin
+                    }
+                    pose.pushPose();
+                    switch (side) {
+                        case 0, 1 -> { // gauche / droite : plan vertical ZY
+                            float px = side == 0 ? x - LIFT : x + 1 + LIFT;
+                            pose.translate(px / 16.0F, (15 - y) / 16.0F, (7.5F - LIFT) / 16.0F);
+                            pose.rotateDegrees(Axis.YP, -90.0F);
+                            pose.scale(depth, 1.0F, 1.0F);
+                        }
+                        default -> { // haut / bas (la texture a l'axe y vers le bas) : plan horizontal XZ
+                            float py = side == 2 ? 16 - y + LIFT : 15 - y - LIFT;
+                            pose.translate(x / 16.0F, py / 16.0F, (7.5F - LIFT) / 16.0F);
+                            pose.rotateDegrees(Axis.XP, 90.0F);
+                            pose.scale(1.0F, depth, 1.0F);
+                        }
+                    }
                     collector.order(3).submitModelPart(cell, pose, type, light, OverlayTexture.NO_OVERLAY, null, color);
                     pose.popPose();
                 }

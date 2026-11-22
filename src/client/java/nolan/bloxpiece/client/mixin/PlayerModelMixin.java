@@ -51,6 +51,8 @@ public class PlayerModelMixin {
         nolan.bloxpiece.client.KamePose.apply((PlayerModel) (Object) this, player,
                 level.getGameTime() + (state.ageInTicks - player.tickCount));
         bloxpiece$hakiDodge(player, state);
+        // Race Cyborg : bras gauche vanilla caché (remplacé par le bras mécanique) et poses de ses attaques
+        nolan.bloxpiece.client.cyborg.CyborgPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
         if (Handcuffs.isCuffed(player)) {
             bloxpiece$cuffedPose();
             return; // menotté : aucune autre pose (pas de pouvoirs)

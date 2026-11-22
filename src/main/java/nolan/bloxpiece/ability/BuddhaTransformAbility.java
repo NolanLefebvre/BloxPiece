@@ -310,6 +310,9 @@ public class BuddhaTransformAbility implements Ability {
         if (!entity.isAlive() || entity.isSpectator() || entity.isPassenger() || entity.getUUID().equals(wave.owner)) {
             return false;
         }
+        if (entity instanceof Player member && nolan.bloxpiece.party.Parties.sameParty(member.getUUID(), wave.owner)) {
+            return false; // membre de la Party du lanceur : pas bousculé
+        }
         if (entity instanceof Player player && player.getAbilities().flying) {
             return false; // comme les explosions vanilla : un joueur en vol créatif n'est pas bousculé
         }

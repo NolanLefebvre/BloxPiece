@@ -203,7 +203,8 @@ public final class ConquerorHaki implements Haki {
         }
         // tout ce qui est (ou entre) dans le rayon s'évanouit
         AABB box = player.getBoundingBox().inflate(RADIUS);
-        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive())) {
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e != player && e.isAlive() && !nolan.bloxpiece.party.Parties.allies(e, player))) { // membres de sa Party épargnés
             if (target.distanceToSqr(player) > RADIUS * RADIUS || Unconscious.is(target)) {
                 continue;
             }

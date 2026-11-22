@@ -41,6 +41,9 @@ public final class BuddhaHits {
         if (entity == owner || !entity.isAlive() || entity.isSpectator() || entity instanceof EnteiSun) {
             return false;
         }
+        if (nolan.bloxpiece.party.Parties.allies(entity, owner)) {
+            return false; // membre de la même Party : ni dégâts, ni recul, ni paralysie
+        }
         return !(entity instanceof Player player && player.isCreative());
     }
 

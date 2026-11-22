@@ -429,7 +429,8 @@ public class FireEffects {
         // Dégâts bonus en zone + mise à feu (en plus de l'explosion normale)
         AABB box = new AABB(x - r, y - r, z - r, x + r, y + r, z + r);
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box,
-                e -> e != t.owner && e.isAlive() && !(e instanceof EnteiSun));
+                e -> e != t.owner && e.isAlive() && !(e instanceof EnteiSun)
+                        && !nolan.bloxpiece.party.Parties.allies(e, t.owner)); // membres de la Party du lanceur : ni dégâts, ni mise à feu
         for (LivingEntity target : targets) {
             if (target.distanceToSqr(x, y, z) <= r * r) {
                 target.igniteForSeconds(k.igniteSeconds * (float) t.scale);

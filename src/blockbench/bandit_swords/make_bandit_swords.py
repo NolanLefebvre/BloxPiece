@@ -23,6 +23,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'main/resources/assets/bloxpiece')
 E, TEX = [], {}
 AX, AZ = 8.0, 8.0                    # axe de l'épée (comme Ace)
+# Taille en 1re personne (échelle, translation) : 0,42 au départ (trop petites à l'écran). Le fauchon, plus court, est agrandi
+# davantage que l'épée du chef (plus longue) pour que les deux restent cohérentes ; translation = poignée gardée en place.
+FIRST_PERSON = {'bandit_sword': (0.68, [1.13, 3.6, 1.98]), 'bandit_chief_sword': (0.62, [1.13, 3.3, 1.55])}
 
 
 def noise(x, y, seed):
@@ -379,8 +382,10 @@ for name, (builder, texfns) in SWORDS.items():
             # l'avant, lame vers le haut ; main gauche en miroir ; 1re personne comme Ace
             'thirdperson_righthand': {'rotation': [-180, 90, -145], 'translation': [0, 5.56, 0.05], 'scale': [0.85, 0.85, 0.85]},
             'thirdperson_lefthand': {'rotation': [-180, -90, 145], 'translation': [0, 5.56, 0.05], 'scale': [0.85, 0.85, 0.85]},
-            'firstperson_righthand': {'rotation': [-180, 90, -125], 'translation': [1.13, 2.3, 0.12], 'scale': [0.42, 0.42, 0.42]},
-            'firstperson_lefthand': {'rotation': [-180, -90, 125], 'translation': [1.13, 2.3, 0.12], 'scale': [0.42, 0.42, 0.42]},
+            # 1re personne : même pose qu'Ace, agrandie AUTOUR DE LA POIGNÉE (translation recalculée : la main tient toujours le
+            # milieu de la poignée), échelle propre à chaque épée (FIRST_PERSON) ; 3e personne inchangée
+            'firstperson_righthand': {'rotation': [-180, 90, -125], 'translation': FIRST_PERSON[name][1], 'scale': [FIRST_PERSON[name][0]] * 3},
+            'firstperson_lefthand': {'rotation': [-180, -90, 125], 'translation': FIRST_PERSON[name][1], 'scale': [FIRST_PERSON[name][0]] * 3},
             'ground': framing(0.42, (0, 2, 0)), 'fixed': framing(0.72, (0, 0, 0), mirror=True), 'gui': framing(0.72, (0, 0, 0)),
         },
         'elements': [{'__comment': e['c'], 'from': list(e['f']), 'to': list(e['t']),

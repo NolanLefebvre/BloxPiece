@@ -253,8 +253,11 @@ model = {
         # sa lame pour que le TRANCHANT et la courbe soient côté extérieur, jamais côté joueur, et redressée de 10° pour
         # que la pointe reste à l'écran. Poignée à l'endroit où la main tient une épée vanilla ; échelle 0,42 = même
         # longueur à l'écran qu'une épée normale ; la garde reste en bas, dans la main.
-        'firstperson_righthand': {'rotation': [-180, 90, -125], 'translation': [1.13, 2.3, 0.12], 'scale': [0.42, 0.42, 0.42]},
-        'firstperson_lefthand': {'rotation': [-180, -90, 125], 'translation': [1.13, 2.3, 0.12], 'scale': [0.42, 0.42, 0.42]},
+        # Agrandie ensuite (0,42 -> 0,54, plus imposante à l'écran) AUTOUR DE LA POIGNÉE : la translation est recalculée pour
+        # que le milieu de la poignée reste exactement à la même place dans la main ; 0,54 car la lame courbe d'Ace revient
+        # vers la caméra : au-delà, la pointe s'en approcherait trop. 3e personne inchangée.
+        'firstperson_righthand': {'rotation': [-180, 90, -125], 'translation': [1.13, 2.9, 0.98], 'scale': [0.54, 0.54, 0.54]},
+        'firstperson_lefthand': {'rotation': [-180, -90, 125], 'translation': [1.13, 2.9, 0.98], 'scale': [0.54, 0.54, 0.54]},
         'ground': framing(0.42, (0, 2, 0)), 'fixed': framing(0.72, (0, 0, 0), mirror=True), 'gui': framing(0.72, (0, 0, 0)),
     },
     'elements': [{'__comment': e['c'], 'from': list(e['f']), 'to': list(e['t']),

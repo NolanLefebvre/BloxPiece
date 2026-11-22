@@ -9,7 +9,9 @@
 		"ItemInHandHakiMixin",
 		"AceSlashFirstPersonMixin",
 		"GuiItemHakiMixin",
-		"ObservationGlowMixin"
+		"ObservationGlowMixin",
+		"InventoryRaceTabMixin",
+		"CyborgHandMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

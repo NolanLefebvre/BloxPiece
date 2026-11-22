@@ -15,7 +15,8 @@ import nolan.bloxpiece.worldgen.MarineBaseExclusion;
 /**
  * Choix des emplacements de structures (MarineBaseExclusion) : la Base de la Marine est refusée près du spawn / du village de
  * départ et sur un relief trop accidenté ; toute autre structure de surface est refusée trop près d'une base ; le Camp de
- * bandits est en plus refusé sur un terrain en pente ou sous l'eau (BanditCampExclusion). Mixin facultatif :
+ * bandits et l'Arène de Roger sont en plus refusés sur un terrain en pente ou sous l'eau (BanditCampExclusion,
+ * RogerArenaExclusion). Mixin facultatif :
  * si la méthode change de nom dans une version de Minecraft, l'injection est ignorée. En cas d'erreur pendant la vérification,
  * la structure est laissée telle quelle (jamais de plantage de la génération).
  */
@@ -32,6 +33,9 @@ public abstract class StructureSpawnExclusionMixin {
                     : MarineBaseExclusion.refuseNearBase(context, self);
             if (!refuse && nolan.bloxpiece.worldgen.BanditCampExclusion.isCamp(context, self)) {
                 refuse = nolan.bloxpiece.worldgen.BanditCampExclusion.refuse(context); // camp de bandits : relief, eau, spawn
+            }
+            if (!refuse && nolan.bloxpiece.worldgen.RogerArenaExclusion.isArena(context, self)) {
+                refuse = nolan.bloxpiece.worldgen.RogerArenaExclusion.refuse(context); // arène de Roger : relief, eau, spawn
             }
             if (refuse) {
                 info.setReturnValue(Optional.empty());

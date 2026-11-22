@@ -45,6 +45,30 @@ public class ModNetworking {
             }
         });
 
+        // Page « Party » du menu personnage : demandes du client (le serveur vérifie tout : party/Parties)
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.PartyActionPayload.TYPE,
+                nolan.bloxpiece.network.PartyActionPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.PartyActionPayload.TYPE, (payload, context) ->
+                nolan.bloxpiece.party.Parties.handle(context.player(), payload.action(), payload.arg()));
+        // Serveur -> Client : état de la Party du joueur
+        PayloadTypeRegistry.clientboundPlay().register(nolan.bloxpiece.network.PartySyncPayload.TYPE,
+                nolan.bloxpiece.network.PartySyncPayload.CODEC);
+
+        // Touche « Basculer fruit / race » : ensemble d'attaques des touches d'attaque (le serveur décide : RaceAbilities)
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.ToggleAttackSetPayload.TYPE,
+                nolan.bloxpiece.network.ToggleAttackSetPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.ToggleAttackSetPayload.TYPE, (payload, context) ->
+                nolan.bloxpiece.race.RaceAbilities.toggle(context.player()));
+        // Menu Race : bouton Reroll (le serveur vérifie le token et tire la race : race/RaceManager)
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.RaceRerollPayload.TYPE,
+                nolan.bloxpiece.network.RaceRerollPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.RaceRerollPayload.TYPE, (payload, context) ->
+                nolan.bloxpiece.race.RaceManager.reroll(context.player()));
+
+        // Serveur -> Client : résultat d'un reroll de race (déjà tiré par le serveur), pour la roulette du menu Race
+        PayloadTypeRegistry.clientboundPlay().register(nolan.bloxpiece.network.RaceRollResultPayload.TYPE,
+                nolan.bloxpiece.network.RaceRollResultPayload.CODEC);
+
         // Serveur -> Client (recharges affichées dans le HUD)
         PayloadTypeRegistry.clientboundPlay().register(CooldownPayload.TYPE, CooldownPayload.CODEC);
         // Serveur -> Client (tremblement de caméra des attaques du Bouddha)
@@ -64,6 +88,15 @@ public class ModNetworking {
             }
         });
         ServerPlayNetworking.registerGlobalReceiver(UseAbilityPayload.TYPE, (payload, context) -> {
+            // mêmes touches pour les deux ensembles : en mode race (ou sans fruit), elles lancent les attaques de la race
+            if (nolan.bloxpiece.race.RaceAbilities.raceMode(context.player())) {
+                if (payload.pressed()) {
+                    nolan.bloxpiece.race.RaceAbilities.tryUse(context.player(), payload.slot());
+                } else {
+                    nolan.bloxpiece.race.RaceAbilities.release(context.player(), payload.slot());
+                }
+                return;
+            }
             if (payload.pressed()) {
                 AbilityManager.tryUse(context.player(), payload.slot());
             } else {

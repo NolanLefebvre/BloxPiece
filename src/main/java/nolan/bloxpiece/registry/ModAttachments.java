@@ -50,7 +50,8 @@ public class ModAttachments {
     public static final AttachmentType<String> RACE = AttachmentRegistry.create(
             BloxPiece.id("race"),
             builder -> builder.persistent(Codec.STRING).copyOnDeath()
-                    .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.targetOnly())
+                    // tous les joueurs proches la reçoivent : chacun voit l'apparence de race des autres (bras du Cyborg)
+                    .syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.all())
     );
 
     /**
@@ -283,6 +284,65 @@ public class ModAttachments {
     public static final AttachmentType<net.minecraft.core.BlockPos> BANDIT_HOME = AttachmentRegistry.create(
             BloxPiece.id("bandit_home"),
             builder -> builder.persistent(net.minecraft.core.BlockPos.CODEC)
+    );
+
+    /**
+     * Gol D. Roger boss d'une Arène de Roger (GolDRoger.isArenaBoss) : marque écrite par la structure elle-même dans les données
+     * du Roger qu'elle pose (roger_arena.nbt), puis sauvegardée avec lui. Absente sur un Roger invoqué par commande.
+     */
+    public static final AttachmentType<Boolean> ARENA_BOSS = AttachmentRegistry.create(
+            BloxPiece.id("arena_boss"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
+    /**
+     * Poste de Gol D. Roger quand il est le boss d'une Arène de Roger (GolDRoger.arenaHome : centre de l'arène, enregistré à sa
+     * première mise à jour) : il ne s'en éloigne pas trop. Sauvegardé avec lui.
+     */
+    public static final AttachmentType<net.minecraft.core.BlockPos> ARENA_HOME = AttachmentRegistry.create(
+            BloxPiece.id("arena_home"),
+            builder -> builder.persistent(net.minecraft.core.BlockPos.CODEC)
+    );
+
+    /**
+     * Toutes les Party (groupes de joueurs) du monde, gardées sur l'Overworld : sauvegardées avec le monde, relues au démarrage
+     * du serveur (party/Parties).
+     */
+    public static final AttachmentType<java.util.List<nolan.bloxpiece.party.Party.Saved>> PARTIES = AttachmentRegistry.create(
+            BloxPiece.id("parties"),
+            builder -> builder.persistent(nolan.bloxpiece.party.Party.SAVE_CODEC)
+    );
+
+    /**
+     * Race Cyborg : attaque en cours, pour les animations chez TOUS les joueurs proches (bras, canon, poses, aura) :
+     * début (temps de jeu) x 8 + type (Cyborg.CANNON, SHIELD, OVERDRIVE, BEAM). Retiré à la fin de l'attaque.
+     */
+    public static final AttachmentType<Long> CYBORG_ACTION = AttachmentRegistry.create(
+            BloxPiece.id("cyborg_action"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Ensemble d'attaques des touches d'attaque : vrai = attaques de la RACE, absent/faux = attaques du fruit du démon (un joueur
+     * sans fruit a toujours les attaques de sa race). Changé par la touche « Basculer fruit / race » (RaceAbilities.toggle),
+     * sauvegardé, synchronisé avec le client du joueur (HUD des attaques).
+     */
+    public static final AttachmentType<Boolean> RACE_ATTACK_MODE = AttachmentRegistry.create(
+            BloxPiece.id("race_attack_mode"),
+            builder -> builder.persistent(Codec.BOOL).copyOnDeath()
+                    .syncWith(ByteBufCodecs.BOOL, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /** Race Cyborg : Surcharge moteur active depuis ce temps de jeu (aura et bras incandescent chez tous les joueurs proches). */
+    public static final AttachmentType<Long> CYBORG_OVERDRIVE = AttachmentRegistry.create(
+            BloxPiece.id("cyborg_overdrive"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /** Race Cyborg : fin (temps de jeu de l'Overworld) de l'épuisement après une Surcharge moteur. Sauvegardé avec le joueur. */
+    public static final AttachmentType<Long> CYBORG_EXHAUSTED_UNTIL = AttachmentRegistry.create(
+            BloxPiece.id("cyborg_exhausted_until"),
+            builder -> builder.persistent(Codec.LONG).copyOnDeath()
     );
 
     public static void initialize() {

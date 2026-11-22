@@ -31,6 +31,10 @@ import nolan.bloxpiece.worldgen.FoundationProcessor;
  *       (tags/worldgen/biome/has_structure/marine_base.json), même rareté que les navires pirates (structure_set/marine_bases.json).
  *       Posée sur la surface, loin des villages (exclusion_zone), à plus de 500 blocs du spawn, sur terrain plat, sans autre structure à moins de 8 tronçons (MarineBaseExclusion) ; le processeur "bloxpiece:foundation" (FoundationProcessor) comble le
  *       dessous et raccorde le terrain autour en pente douce.</li>
+ *   <li>Arène de Roger (structure/roger_arena.nbt, colisée en ruine généré par src/blockbench/structures/make_roger_arena.py ;
+ *       Gol D. Roger posé une seule fois au centre, persistant) : plaines, prairies, savanes ; rare (structure_set/roger_arenas.json :
+ *       un emplacement possible tous les 34 tronçons environ, 14 au moins entre deux) ; terrain plat et sec seulement
+ *       (RogerArenaExclusion) ; raccord au terrain par Minecraft (terrain_adaptation « beard_thin »).</li>
  * </ul>
  */
 public class ModWorldgen {

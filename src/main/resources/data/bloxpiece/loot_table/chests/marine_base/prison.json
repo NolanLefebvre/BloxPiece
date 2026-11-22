@@ -128,6 +128,20 @@
           "weight": 8
         }
       ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "bloxpiece:race_reroll_token",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:empty",
+          "weight": 97
+        }
+      ]
     }
   ]
 }

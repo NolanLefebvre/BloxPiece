@@ -79,7 +79,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "grip"
     },
     {
       "from": [
@@ -156,7 +157,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "grip"
     },
     {
       "from": [
@@ -233,7 +235,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "grip"
     },
     {
       "from": [
@@ -310,7 +313,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "grip"
     },
     {
       "from": [
@@ -387,7 +391,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "decor"
     },
     {
       "from": [
@@ -464,7 +469,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "guard"
     },
     {
       "from": [
@@ -541,7 +547,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "guard"
     },
     {
       "from": [
@@ -618,7 +625,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "blade"
     },
     {
       "from": [
@@ -695,7 +703,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "blade"
     },
     {
       "from": [
@@ -772,7 +781,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "blade"
     },
     {
       "from": [
@@ -849,7 +859,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "blade"
     },
     {
       "from": [
@@ -926,7 +937,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "blade"
     },
     {
       "from": [
@@ -1003,7 +1015,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "blade"
     },
     {
       "from": [
@@ -1080,7 +1093,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "decor"
     },
     {
       "from": [
@@ -1157,7 +1171,8 @@
           8,
           8
         ]
-      }
+      },
+      "bloxpiece_part": "decor"
     }
   ],
   "display": {
