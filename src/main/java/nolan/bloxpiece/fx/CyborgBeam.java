@@ -14,7 +14,7 @@ import nolan.bloxpiece.registry.ModEntities;
  * Radical Beam (race Cyborg) : le rayon laser jaune géant et son explosion, purement VISUELS (rendu : CyborgBeamRenderer ; les
  * dégâts et le cratère sont faits par CyborgRadicalBeamAbility). Part de sa position jusqu'au point d'impact {@code reach}
  * (DX/DY/DZ), avec un rayon de {@code radius} blocs, pendant {@code life} ticks : le front du rayon atteint l'impact en
- * {@link #TRAVEL} ticks, l'explosion (boule de lumière, onde de choc au sol) dure jusqu'à la fin. Jamais sauvegardé.
+ * {@link #travel} ticks (il parcourt la distance), puis l'explosion dure jusqu'à la fin. Jamais sauvegardé.
  */
 public class CyborgBeam extends ModFxEntity {
 
@@ -25,13 +25,15 @@ public class CyborgBeam extends ModFxEntity {
     private static final EntityDataAccessor<Integer> LIFE = SynchedEntityData.defineId(CyborgBeam.class, EntityDataSerializers.INT);
     /** Identifiant (réseau) du lanceur : en vue à la première personne, son rendu est adapté à sa caméra (CyborgBeamRenderer). */
     private static final EntityDataAccessor<Integer> SHOOTER = SynchedEntityData.defineId(CyborgBeam.class, EntityDataSerializers.INT);
-    public static final int TRAVEL = 3;
+    /** Ticks que met le front du rayon pour atteindre l'impact (CyborgRadicalBeamAbility.travelTicks : selon la distance). */
+    private static final EntityDataAccessor<Integer> TRAVEL = SynchedEntityData.defineId(CyborgBeam.class, EntityDataSerializers.INT);
 
     public CyborgBeam(EntityType<? extends CyborgBeam> type, Level level) {
         super(type, level);
     }
 
-    public static CyborgBeam fire(ServerLevel level, net.minecraft.world.entity.Entity shooter, Vec3 from, Vec3 to, float radius, int life) {
+    public static CyborgBeam fire(ServerLevel level, net.minecraft.world.entity.Entity shooter, Vec3 from, Vec3 to, float radius, int travel,
+                                  int life) {
         CyborgBeam beam = new CyborgBeam(ModEntities.CYBORG_BEAM, level);
         beam.managed = true;
         beam.entityData.set(SHOOTER, shooter.getId());
@@ -40,6 +42,7 @@ public class CyborgBeam extends ModFxEntity {
         beam.entityData.set(DZ, (float) (to.z - from.z));
         beam.entityData.set(RADIUS, radius);
         beam.entityData.set(LIFE, life);
+        beam.entityData.set(TRAVEL, Math.max(1, travel));
         beam.setPos(from.x, from.y, from.z);
         level.addFreshEntity(beam);
         return beam;
@@ -59,6 +62,10 @@ public class CyborgBeam extends ModFxEntity {
 
     public int life() {
         return this.entityData.get(LIFE);
+    }
+
+    public int travel() {
+        return this.entityData.get(TRAVEL);
     }
 
     @Override
@@ -82,5 +89,6 @@ public class CyborgBeam extends ModFxEntity {
         builder.define(RADIUS, 1.5F);
         builder.define(LIFE, 26);
         builder.define(SHOOTER, -1);
+        builder.define(TRAVEL, 3);
     }
 }

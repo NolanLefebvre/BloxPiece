@@ -345,6 +345,39 @@ public class ModAttachments {
             builder -> builder.persistent(Codec.LONG).copyOnDeath()
     );
 
+    /**
+     * Race Humaine : attaque en cours, pour les animations et les effets chez TOUS les joueurs proches (poses, poing, aura,
+     * traînées) : début (temps de jeu) x 8 + type (Human.IMPACT, RUSH, BREAKER, CONQUEROR, RUSH_END). Retiré à la fin de l'attaque.
+     */
+    public static final AttachmentType<Long> HUMAN_ACTION = AttachmentRegistry.create(
+            BloxPiece.id("human_action"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /** Race Minks : attaque en cours (début x 8 + type, Minks.CLAWS...), pour les poses et effets chez tous les joueurs proches. */
+    public static final AttachmentType<Long> MINKS_ACTION = AttachmentRegistry.create(
+            BloxPiece.id("minks_action"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /** Race Minks : fin (temps de jeu) des griffes électriques sorties ; visibles par tous les joueurs proches. */
+    public static final AttachmentType<Long> MINKS_CLAWS = AttachmentRegistry.create(
+            BloxPiece.id("minks_claws"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /** Race Minks, Danse des griffes éclair : mouvement en cours (début x 8 + type, MinksDanceAbility.FRONT...) : frappe adaptée. */
+    public static final AttachmentType<Long> MINKS_MOVE = AttachmentRegistry.create(
+            BloxPiece.id("minks_move"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /** Race Minks : Sulong actif depuis ce temps de jeu (apparence Sulong et aura chez tous les joueurs proches). */
+    public static final AttachmentType<Long> MINKS_SULONG = AttachmentRegistry.create(
+            BloxPiece.id("minks_sulong"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
     public static void initialize() {
     }
 

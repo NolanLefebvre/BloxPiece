@@ -45,5 +45,13 @@ public abstract class AvatarRendererHandMixin {
         boolean mainArm = rightArm == (player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
         nolan.bloxpiece.client.haki.HakiArmamentLayer.submitHand(pose, collector, arm, skin, player, mainArm, rightArm, model,
                 player.tickCount + partialTick);
+        // Race Humaine : aura du poing aussi sur la main vue à la première personne
+        nolan.bloxpiece.client.human.HumanFistLayer.submitHand(pose, collector, arm, model);
+        // Race Minks : griffes électriques sur la main vue à la première personne
+        nolan.bloxpiece.client.minks.MinksLayer.submitHand(pose, collector, arm, model);
+        // Race Cyborg, Surcharge moteur : conduits d'énergie sur la main droite vue à la première personne
+        if (rightArm) {
+            nolan.bloxpiece.client.cyborg.CyborgOverdriveLayer.submitHand(pose, collector, arm, false);
+        }
     }
 }

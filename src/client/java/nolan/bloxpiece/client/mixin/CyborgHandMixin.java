@@ -33,6 +33,8 @@ public abstract class CyborgHandMixin {
         arm.yRot = 0.0F;
         arm.zRot = 0.0F;
         if (nolan.bloxpiece.client.cyborg.CyborgArmLayer.renderFirstPerson(pose, collector, light, arm)) {
+            // Surcharge moteur : conduits d'énergie et arcs sur le bras mécanique vu à la première personne
+            nolan.bloxpiece.client.cyborg.CyborgOverdriveLayer.submitHand(pose, collector, arm, true);
             info.cancel();
         }
     }

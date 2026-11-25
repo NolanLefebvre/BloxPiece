@@ -11,7 +11,11 @@
 		"GuiItemHakiMixin",
 		"ObservationGlowMixin",
 		"InventoryRaceTabMixin",
-		"CyborgHandMixin"
+		"CyborgHandMixin",
+		"HumanFirstPersonMixin",
+		"FirstPersonArmInvoker",
+		"CyborgFirstPersonMixin",
+		"MinksCameraMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

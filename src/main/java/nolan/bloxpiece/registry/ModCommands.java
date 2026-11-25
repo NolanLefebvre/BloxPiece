@@ -28,6 +28,7 @@ public class ModCommands {
         //   /bloxfruit addxp <joueur> <quantité>                                  -> ajoute (ou retire si < 0) de l'XP
         //   /bloxfruit resetcooldowns [joueur]                                    -> recharges des attaques, des Hakis et d'Ace
         //   /bloxfruit job set <joueur> <swordman|brawler|sniper|none>              -> impose (ou retire) le job
+        //   /bloxfruit race <human|fishman|lunarian|cyborg|minks> [joueur]         -> change la race (la tienne sans joueur)
         //   /bloxfruit haki unlock|lock <joueur> <armament|observation|conqueror|all> -> débloque / reverrouille un Haki
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> dispatcher.register(
                 Commands.literal("bloxfruit") // ouvert à tous : chaque commande d'administration demande elle-même les droits admin
@@ -49,6 +50,8 @@ public class ModCommands {
                                 .executes(context -> resetCooldowns(context.getSource(), context.getSource().getPlayerOrException()))
                                 .then(Commands.argument("joueur", player())
                                         .executes(context -> resetCooldowns(context.getSource(), getPlayer(context, "joueur")))))
+                        .then(raceChoices(Commands.literal("race")
+                                .requires(PermissionPredicates.require(BloxPiece.id("command/race"), PermissionLevel.GAMEMASTERS))))
                         .then(Commands.literal("job")
                                 .requires(PermissionPredicates.require(BloxPiece.id("command/job"), PermissionLevel.GAMEMASTERS))
                                 .then(jobChoices(Commands.literal("set"))))
@@ -81,6 +84,34 @@ public class ModCommands {
                                 .requires(PermissionPredicates.require(BloxPiece.id("command/haki"), PermissionLevel.GAMEMASTERS))
                                 .then(hakiTypes(Commands.literal("unlock"), true))
                                 .then(hakiTypes(Commands.literal("lock"), false)))));
+    }
+
+    /**
+     * /bloxfruit race <race> [joueur] : une sous-commande par race déclarée dans Races (une nouvelle race y apparaît seule).
+     */
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> raceChoices(
+            com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> root) {
+        for (nolan.bloxpiece.race.Race race : nolan.bloxpiece.race.Races.all()) {
+            root.then(Commands.literal(race.id())
+                    .executes(context -> setRace(context.getSource(), context.getSource().getPlayerOrException(), race))
+                    .then(Commands.argument("joueur", player())
+                            .executes(context -> setRace(context.getSource(), getPlayer(context, "joueur"), race))));
+        }
+        return root;
+    }
+
+    /**
+     * Change la race : même enregistrement que le reroll (attachment RACE, synchronisé : bras du Cyborg, menu Race, HUD), puis
+     * RaceManager.apply retire les bonus de l'ancienne race et pose ceux de la nouvelle (aucun autre bonus touché). Une attaque
+     * raciale en cours de l'ancienne race s'arrête d'elle-même (elle vérifie la race à chaque tick).
+     */
+    private static int setRace(CommandSourceStack source, ServerPlayer target, nolan.bloxpiece.race.Race race) {
+        target.setAttached(ModAttachments.RACE, race.id());
+        nolan.bloxpiece.race.RaceManager.apply(target);
+        Component name = Component.translatable(race.translationKey()).withColor(race.color());
+        target.sendSystemMessage(Component.translatable("message.bloxpiece.race.set_notify", name));
+        source.sendSuccess(() -> Component.translatable("message.bloxpiece.race.set_success", target.getDisplayName(), name), true);
+        return 1;
     }
 
     /** /bloxfruit job set <joueur> <swordman|brawler|sniper|none> */

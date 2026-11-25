@@ -38,6 +38,8 @@ public class CyborgShield extends ModFxEntity {
     private static final EntityDataAccessor<Float> RADIUS = SynchedEntityData.defineId(CyborgShield.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> GROW = SynchedEntityData.defineId(CyborgShield.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> LIFE = SynchedEntityData.defineId(CyborgShield.class, EntityDataSerializers.INT);
+    /** Identifiant (réseau) du lanceur : le client dessine le dôme EXACTEMENT sur lui à chaque image (CyborgShieldRenderer). */
+    private static final EntityDataAccessor<Integer> OWNER = SynchedEntityData.defineId(CyborgShield.class, EntityDataSerializers.INT);
     /** Durée de la disparition (ticks). */
     public static final int FADE = 12;
     /** Hauteur du centre de la sphère au-dessus des pieds du lanceur : le milieu de son corps (il est au centre du bouclier). */
@@ -57,6 +59,7 @@ public class CyborgShield extends ModFxEntity {
         shield.entityData.set(RADIUS, radius);
         shield.entityData.set(GROW, Math.max(1, grow));
         shield.entityData.set(LIFE, life);
+        shield.entityData.set(OWNER, owner.getId());
         shield.setPos(owner.getX(), owner.getY(), owner.getZ());
         level.addFreshEntity(shield);
         return shield;
@@ -72,6 +75,11 @@ public class CyborgShield extends ModFxEntity {
 
     public int life() {
         return this.entityData.get(LIFE);
+    }
+
+    /** Identifiant réseau du lanceur (-1 si inconnu). */
+    public int ownerNetworkId() {
+        return this.entityData.get(OWNER);
     }
 
     /** Rayon actuel (il grandit pendant le déploiement, rétrécit pendant la disparition). */
@@ -178,5 +186,6 @@ public class CyborgShield extends ModFxEntity {
         builder.define(RADIUS, 4.0F);
         builder.define(GROW, 20);
         builder.define(LIFE, 180);
+        builder.define(OWNER, -1);
     }
 }

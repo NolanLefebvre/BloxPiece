@@ -26,7 +26,16 @@ import nolan.bloxpiece.fx.CyborgBeam;
  */
 public class CyborgRadicalBeamAbility implements Ability {
 
-    public static final int CHARGE = 32, TRAVEL = 3, BEAM_LIFE = 26, DURATION = CHARGE + BEAM_LIFE + 10;
+    public static final int CHARGE = 32, BEAM_LIFE = 26, DURATION = CHARGE + BEAM_LIFE + 10;
+    /** Vitesse du front du rayon (blocs/tick) : il PARCOURT la distance jusqu'à l'impact (64 blocs en 11 ticks). */
+    public static final double BEAM_SPEED = 6.0;
+    /** Après l'arrivée du front : le rayon tient encore {@link #HOLD} ticks, l'explosion dure {@link #BLAST_LIFE} ticks (visuel). */
+    public static final int HOLD = 14, BLAST_LIFE = 56;
+
+    /** Ticks que met le front pour parcourir {@code distance} blocs (au moins 1). Partagé avec le rendu. */
+    public static int travelTicks(double distance) {
+        return Math.max(1, (int) Math.ceil(distance / BEAM_SPEED));
+    }
     public static final int COOLDOWN = 20 * 90;
     public static final double RANGE = 64.0;
     public static final float BEAM_RADIUS = 1.6F, BEAM_DAMAGE = 30.0F;
@@ -121,18 +130,24 @@ public class CyborgRadicalBeamAbility implements Ability {
         Vec3 far = from.add(look.scale(RANGE));
         BlockHitResult block = level.clip(new ClipContext(from, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         Vec3 to = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
-        CyborgBeam.fire(level, player, from, to, BEAM_RADIUS, BEAM_LIFE);
+        int travel = travelTicks(to.distanceTo(from));
+        CyborgBeam.fire(level, player, from, to, BEAM_RADIUS, travel, travel + BLAST_LIFE);
         level.playSound(null, from.x, from.y, from.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 3.0F, 0.9F);
-        // tout ce que le rayon traverse : touché UNE fois
+        // tout ce que le rayon traverse : touché UNE fois, à l'instant où son front l'atteint
         Set<LivingEntity> hit = new HashSet<>();
         for (LivingEntity target : Goro.targets(level, player, new AABB(from, to).inflate(BEAM_RADIUS + 1.0))) {
             Vec3 c = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
             if (distanceToSegment(c, from, to) <= BEAM_RADIUS + target.getBbWidth() * 0.5 && hit.add(target)) {
-                BuddhaHits.strike(level, player, target, BEAM_DAMAGE, look.scale(1.2).add(0.0, 0.3, 0.0));
+                int delay = travelTicks(Math.max(0.0, c.subtract(from).dot(look)));
+                Goro.later(delay, () -> {
+                    if (player.isAlive() && !player.isRemoved() && target.isAlive()) {
+                        BuddhaHits.strike(level, player, target, BEAM_DAMAGE, look.scale(1.2).add(0.0, 0.3, 0.0));
+                    }
+                });
             }
         }
-        // l'explosion quand le rayon a atteint son point d'impact
-        Goro.later(TRAVEL, () -> explode(level, player, to, hit));
+        // l'explosion quand le front du rayon atteint son point d'impact
+        Goro.later(travel, () -> explode(level, player, to, hit));
     }
 
     private static double distanceToSegment(Vec3 p, Vec3 a, Vec3 b) {

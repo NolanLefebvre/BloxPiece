@@ -53,6 +53,10 @@ public class PlayerModelMixin {
         bloxpiece$hakiDodge(player, state);
         // Race Cyborg : bras gauche vanilla caché (remplacé par le bras mécanique) et poses de ses attaques
         nolan.bloxpiece.client.cyborg.CyborgPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
+        // Race Humaine : poses du corps entier pendant ses attaques (Impact Fulgurant, Ruée, Briseur Terrestre, Conquérant)
+        nolan.bloxpiece.client.human.HumanPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
+        // Race Minks : griffes, barrage, danse des griffes éclair, transformation Sulong
+        nolan.bloxpiece.client.minks.MinksPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
         if (Handcuffs.isCuffed(player)) {
             bloxpiece$cuffedPose();
             return; // menotté : aucune autre pose (pas de pouvoirs)

@@ -413,6 +413,32 @@ public class ModEntities {
             .updateInterval(1)
             .build(CYBORG_BEAM_KEY);
 
+    // Race Humaine : human_fx (effets des quatre attaques, entité d'effet ni sauvegardée ni invocable)
+    public static final ResourceKey<EntityType<?>> HUMAN_FX_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("human_fx"));
+
+    public static final EntityType<nolan.bloxpiece.fx.HumanFx> HUMAN_FX =
+            EntityType.Builder.<nolan.bloxpiece.fx.HumanFx>of(nolan.bloxpiece.fx.HumanFx::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(16)
+            .updateInterval(1)
+            .build(HUMAN_FX_KEY);
+
+    // Race Minks : minks_fx (effets des quatre attaques, entité d'effet ni sauvegardée ni invocable)
+    public static final ResourceKey<EntityType<?>> MINKS_FX_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("minks_fx"));
+
+    public static final EntityType<nolan.bloxpiece.fx.MinksFx> MINKS_FX =
+            EntityType.Builder.<nolan.bloxpiece.fx.MinksFx>of(nolan.bloxpiece.fx.MinksFx::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(16)
+            .updateInterval(1)
+            .build(MINKS_FX_KEY);
+
     public static final ResourceKey<EntityType<?>> HAKI_BOLT_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("haki_bolt"));
 
@@ -514,6 +540,8 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_CANNONBALL_KEY, CYBORG_CANNONBALL);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_SHIELD_KEY, CYBORG_SHIELD);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_BEAM_KEY, CYBORG_BEAM);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, HUMAN_FX_KEY, HUMAN_FX);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, MINKS_FX_KEY, MINKS_FX);
     }
 
     private static <T extends LivingEntity> void register(

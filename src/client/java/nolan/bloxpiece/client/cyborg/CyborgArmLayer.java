@@ -33,8 +33,8 @@ import nolan.bloxpiece.client.goro.GoroLightning;
  *   <li>Cannon Arm : les quatre plaques de l'avant-bras s'ouvrent sur leurs charnières (en décalé), les deux volets de l'embout
  *       s'écartent, le canon caché sort de l'avant-bras et se verrouille ; recul au tir ; puis tout se replie dans l'ordre
  *       inverse.</li>
- *   <li>Surcharge moteur : le bras chauffe (seconde passe lumineuse orange qui pulse) et des arcs d'énergie crépitent autour du
- *       corps.</li>
+ *   <li>Surcharge moteur : le bras chauffe (seconde passe lumineuse orange qui pulse) ; le reste des effets (réacteur,
+ *       conduits, gyroscopes, arcs) : CyborgOverdriveLayer.</li>
  *   <li>Radical Beam : une boule d'énergie jaune grossit entre les mains (rayons, arcs), puis éclate au tir.</li>
  * </ul>
  * Première personne : {@link #renderFirstPerson} (main gauche, quand Minecraft la dessine).
@@ -144,9 +144,6 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         drawArm(this.rig, pose, collector, light, cannon[0], cannon[1], engine, age);
         pose.popPose();
 
-        if (engine > 0.0F) {
-            drawAura(pose, collector, model, engine, age, state.id);
-        }
         if (CyborgClient.kind(entity) == Cyborg.BEAM) {
             drawBeamCharge(pose, collector, model, CyborgClient.elapsed(entity, age), age, state.id);
         }
@@ -163,30 +160,6 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             collector.order(1).submitModelPart(rig.arm, pose, RenderTypes.entityTranslucentEmissive(TEXTURE), 0xF000F0,
                     OverlayTexture.NO_OVERLAY, null, GoroLightning.argb(0.25F + 0.4F * engine * pulse, HOT));
         }
-    }
-
-    /** Arcs d'énergie qui crépitent autour du corps (surcharge). */
-    private void drawAura(PoseStack pose, SubmitNodeCollector collector, PlayerModel model, float engine, float age, int seed) {
-        RenderType glow = RenderTypes.entityTranslucent(GoroLightning.TEXTURE);
-        Random random = new Random(seed * 31L + (long) (age * 1.5F));
-        pose.pushPose();
-        model.body.translateAndRotate(pose);
-        int arcs = 2 + (int) (4 * engine);
-        for (int i = 0; i < arcs; i++) {
-            double a = random.nextDouble() * Math.PI * 2;
-            float y = -0.6F + random.nextFloat() * 1.8F;
-            float r = 0.42F + random.nextFloat() * 0.15F;
-            float[] p = {(float) Math.cos(a) * r, y, (float) Math.sin(a) * r};
-            for (int s = 0; s < 3; s++) {
-                double b = a + (random.nextDouble() - 0.5) * 0.9;
-                float[] q = {(float) Math.cos(b) * r, p[1] + (random.nextFloat() - 0.5F) * 0.35F, (float) Math.sin(b) * r};
-                int color = random.nextBoolean() ? HOT : ENERGY;
-                GoroLightning.segment(this.segment, pose, collector, 2, glow, p, q, 0.6F + engine * 0.5F,
-                        GoroLightning.argb(0.85F * engine, color));
-                p = q;
-            }
-        }
-        pose.popPose();
     }
 
     /** Boule d'énergie jaune entre les mains tendues (Radical Beam). */

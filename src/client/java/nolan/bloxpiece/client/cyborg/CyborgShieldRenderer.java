@@ -34,6 +34,8 @@ public class CyborgShieldRenderer extends EntityRenderer<CyborgShield, CyborgShi
 
     public static class State extends EntityRenderState {
         public float age, radius = 2.3F;
+        /** Décalage (blocs) entre la position interpolée du dôme et celle du lanceur à cette image. */
+        public float offX, offY, offZ;
         public int grow = 20, life = 180;
     }
 
@@ -204,6 +206,18 @@ public class CyborgShieldRenderer extends EntityRenderer<CyborgShield, CyborgShi
         state.radius = entity.radius();
         state.grow = entity.grow();
         state.life = entity.life();
+        // Le dôme est ATTACHÉ au joueur : la position de l'entité (déplacée par le serveur, puis interpolée par le client) arrive
+        // toujours un peu après celle du joueur (prédite par son client, interpolée autrement pour les autres). On le dessine donc
+        // à la position du lanceur telle qu'elle est affichée à CETTE image : aucun retard, en sauts, chutes et courses.
+        state.offX = state.offY = state.offZ = 0.0F;
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        net.minecraft.world.entity.Entity owner = level == null ? null : level.getEntity(entity.ownerNetworkId());
+        if (owner != null) {
+            net.minecraft.world.phys.Vec3 o = owner.getPosition(partialTick), s = entity.getPosition(partialTick);
+            state.offX = (float) (o.x - s.x);
+            state.offY = (float) (o.y - s.y);
+            state.offZ = (float) (o.z - s.z);
+        }
     }
 
     /** Allumage d'un élément à la hauteur {@code height} (0 au sol, 1 au sommet) : du sol vers le sommet, éteint du sommet. */
@@ -223,7 +237,8 @@ public class CyborgShieldRenderer extends EntityRenderer<CyborgShield, CyborgShi
         }
         RenderType glow = RenderTypes.entityTranslucent(GoroLightning.TEXTURE);
         pose.pushPose();
-        pose.translate(0.0F, CyborgShield.CENTER_Y, 0.0F); // centre de la sphère : le milieu du corps du joueur
+        // centre de la sphère : le milieu du corps du joueur, à sa position affichée (voir extractRenderState)
+        pose.translate(state.offX, state.offY + CyborgShield.CENTER_Y, state.offZ);
         // remplissage de chaque hexagone (bleu clair translucide, reflet d'énergie qui balaie le dôme)
         for (int i = 0; i < FACES.size(); i++) {
             float[] c = FACES.get(i);
@@ -299,6 +314,6 @@ public class CyborgShieldRenderer extends EntityRenderer<CyborgShield, CyborgShi
 
     @Override
     protected AABB getBoundingBoxForCulling(CyborgShield entity, float partialTick) {
-        return entity.getBoundingBox().inflate(entity.radius() + 1.0);
+        return entity.getBoundingBox().inflate(entity.radius() + 3.0); // (marge : le dôme est dessiné sur le joueur, en avance sur l'entité)
     }
 }

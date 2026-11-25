@@ -260,14 +260,10 @@ public final class Cyborg {
             if (end != null) {
                 if (Races.of(player) != Races.CYBORG || now(player) >= end) {
                     endOverdrive(player, true);
-                } else if (player.level() instanceof ServerLevel level && tick % 2 == 0) {
-                    // surcharge : décharges et vapeur autour du corps, étincelles au bras mécanique
+                } else if (player.level() instanceof ServerLevel level && tick % 4 == 0) {
+                    // surcharge : quelques étincelles qui tombent du corps (les effets 3D : CyborgOverdriveLayer, côté client)
                     Vec3 c = player.position().add(0.0, 1.0, 0.0);
-                    level.sendParticles(ParticleTypes.ELECTRIC_SPARK, c.x, c.y, c.z, 3, 0.4, 0.6, 0.4, 0.15);
-                    level.sendParticles(ParticleTypes.FLAME, c.x, c.y - 0.2, c.z, 1, 0.3, 0.5, 0.3, 0.01);
-                    if (tick % 6 == 0) {
-                        level.sendParticles(ParticleTypes.CLOUD, c.x, c.y + 0.6, c.z, 1, 0.2, 0.1, 0.2, 0.02);
-                    }
+                    level.sendParticles(ParticleTypes.ELECTRIC_SPARK, c.x, c.y, c.z, 2, 0.3, 0.5, 0.3, 0.12);
                 }
             }
             if (tick % 20 == 0 && player.getAttached(ModAttachments.CYBORG_EXHAUSTED_UNTIL) != null) {

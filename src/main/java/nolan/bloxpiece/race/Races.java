@@ -35,7 +35,11 @@ public final class Races {
     /** Humain : équilibré, juste un demi-cœur de plus. */
     public static final Race HUMAN = register(new Race("human", 0xFFE8C9A0, 20,
             List.of(RaceBonus.attribute("max_health", Attributes.MAX_HEALTH, Operation.ADD_VALUE, 1.0)),
-            attacks("human_resolute_strike", "human_quick_step", "human_fighter_guard", "human_war_cry", "human_indomitable_will")));
+            // attaques DÉVELOPPÉES (ability/Human*) : force physique et arts martiaux, niveaux 10 / 20 / 30 / 50
+            List.of(RaceAttack.of("human_lightning_impact", 10, new nolan.bloxpiece.ability.HumanLightningImpactAbility(10)),
+                    RaceAttack.of("human_destructive_rush", 20, new nolan.bloxpiece.ability.HumanDestructiveRushAbility(20)),
+                    RaceAttack.of("human_earth_breaker", 30, new nolan.bloxpiece.ability.HumanEarthBreakerAbility(30)),
+                    RaceAttack.of("human_conqueror_fist", 50, new nolan.bloxpiece.ability.HumanConquerorFistAbility(50)))));
 
     /** Fishman : un peu plus fort au corps-à-corps, rapide dans l'eau, respire sous l'eau. */
     public static final Race FISHMAN = register(new Race("fishman", 0xFF4FA8E0, 20,
@@ -69,7 +73,11 @@ public final class Races {
             List.of(RaceBonus.attribute("move_speed", Attributes.MOVEMENT_SPEED, Operation.ADD_MULTIPLIED_BASE, 0.05),
                     RaceBonus.attribute("attack_speed", Attributes.ATTACK_SPEED, Operation.ADD_MULTIPLIED_TOTAL, 0.05),
                     RaceBonus.attribute("safe_fall", Attributes.SAFE_FALL_DISTANCE, Operation.ADD_VALUE, 1.0)),
-            attacks("minks_electro", "minks_feral_leap", "minks_thunder_claws", "minks_storm_rush", "minks_sulong")));
+            // attaques DÉVELOPPÉES (ability/Minks*) : électricité, vitesse, griffes, Sulong ; niveaux 10 / 20 / 30 / 50
+            List.of(RaceAttack.of("minks_electric_claws", 10, new nolan.bloxpiece.ability.MinksClawsAbility(10)),
+                    RaceAttack.of("minks_claw_barrage", 20, new nolan.bloxpiece.ability.MinksBarrageAbility(20)),
+                    RaceAttack.of("minks_lightning_dance", 30, new nolan.bloxpiece.ability.MinksDanceAbility(30)),
+                    RaceAttack.of("minks_sulong", 50, new nolan.bloxpiece.ability.MinksSulongAbility(50)))));
 
     /** Race affichée tant qu'un joueur n'a pas encore reçu la sienne (elle est tirée à sa première connexion). */
     public static final Race DEFAULT = HUMAN;

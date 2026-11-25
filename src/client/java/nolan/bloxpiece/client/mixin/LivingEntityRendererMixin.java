@@ -73,6 +73,12 @@ public abstract class LivingEntityRendererMixin {
             this.layers.add(new nolan.bloxpiece.client.cyborg.CyborgArmLayer(parent,
                     context.bakeLayer(nolan.bloxpiece.client.cyborg.CyborgArmModels.ARM),
                     context.bakeLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER).getChild("segment")));
+            // Race Humaine : aura du poing, traînées du bras, effets de la ruée (ne dessine rien hors de ses attaques)
+            this.layers.add(new nolan.bloxpiece.client.human.HumanFistLayer(parent, context));
+            // Race Cyborg : effets de la Surcharge moteur (réacteur, conduits, gyroscopes, arcs ; ne dessine rien hors surcharge)
+            this.layers.add(new nolan.bloxpiece.client.cyborg.CyborgOverdriveLayer(parent, context));
+            // Race Minks : oreilles, queue, griffes électriques, apparence et aura de Sulong (rien sur les autres races)
+            this.layers.add(new nolan.bloxpiece.client.minks.MinksLayer(parent, context));
             // Kame Kame no Mi : la carapace (ne dessine rien sans carapace)
             this.layers.add(new nolan.bloxpiece.client.entity.KameShellLayer(parent,
                     context.bakeLayer(nolan.bloxpiece.client.entity.KameShellModel.LAYER)));

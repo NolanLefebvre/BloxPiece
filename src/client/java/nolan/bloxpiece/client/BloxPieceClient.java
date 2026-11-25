@@ -313,7 +313,28 @@ public class BloxPieceClient implements ClientModInitializer {
                 nolan.bloxpiece.client.cyborg.CyborgCannonballRenderer::createLayer);
         EntityRendererRegistry.register(ModEntities.CYBORG_CANNONBALL, nolan.bloxpiece.client.cyborg.CyborgCannonballRenderer::new);
         EntityRendererRegistry.register(ModEntities.CYBORG_SHIELD, nolan.bloxpiece.client.cyborg.CyborgShieldRenderer::new);
+        // explosion du Radical Beam : anneau hexagonal et cellule de plasma
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.cyborg.CyborgFxModels.HEX, nolan.bloxpiece.client.cyborg.CyborgFxModels::hex);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.cyborg.CyborgFxModels.PLASMA, nolan.bloxpiece.client.cyborg.CyborgFxModels::plasma);
         EntityRendererRegistry.register(ModEntities.CYBORG_BEAM, nolan.bloxpiece.client.cyborg.CyborgBeamRenderer::new);
+        // Race Humaine : éclats de pierre, poussière, poing d'air géant, et les effets des quatre attaques
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.human.HumanModels.ROCK, nolan.bloxpiece.client.human.HumanModels::rock);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.human.HumanModels.DUST, nolan.bloxpiece.client.human.HumanModels::dust);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.human.HumanModels.FIST, nolan.bloxpiece.client.human.HumanModels::fist);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.human.HumanModels.RING, nolan.bloxpiece.client.human.HumanModels::ring);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.human.HumanModels.CHUNK, nolan.bloxpiece.client.human.HumanModels::chunk);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.human.HumanModels.FLAME, nolan.bloxpiece.client.human.HumanModels::flame);
+        EntityRendererRegistry.register(ModEntities.HUMAN_FX, nolan.bloxpiece.client.human.HumanFxRenderer::new);
+        // Race Minks : oreilles, queue, griffes électriques, et les effets des quatre attaques
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.EAR, nolan.bloxpiece.client.minks.MinksModels::ear);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.TAIL, nolan.bloxpiece.client.minks.MinksModels::tail);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.EAR_SULONG, nolan.bloxpiece.client.minks.MinksModels::earSulong);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.TAIL_SULONG, nolan.bloxpiece.client.minks.MinksModels::tailSulong);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.GLOVE_RIGHT, nolan.bloxpiece.client.minks.MinksModels::gloveRight);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.GLOVE_LEFT, nolan.bloxpiece.client.minks.MinksModels::gloveLeft);
+        EntityRendererRegistry.register(ModEntities.MINKS_FX, nolan.bloxpiece.client.minks.MinksFxRenderer::new);
+        // Danse des griffes éclair : caméra cinématique (vue à la 3e personne pendant l'attaque, puis perspective restaurée)
+        ClientTickEvents.END_CLIENT_TICK.register(nolan.bloxpiece.client.minks.MinksCamera::tick);
 
         // Reroll de race : le serveur a tiré la race ; le menu Race (s'il est ouvert) joue la roulette jusqu'à elle
         ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.RaceRollResultPayload.TYPE, (payload, context) -> {
