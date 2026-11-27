@@ -41,6 +41,20 @@ public class ModSpawns {
                 .minGroupSeparation(80)
                 .debug(false));
 
+        // HUMANDRILLS (Kuraigana) : bandes de 2 à 4 babouins sabreurs de 4 blocs, plus rares que les pirates et les Marines
+        // (intervalle plus long, moins nombreux, groupes plus espacés). Hostiles aux joueurs. Membres plus écartés (gros gabarit).
+        GroupSpawner.register(new GroupSpawnRule(ModEntities.HUMANDRILL)
+                .groupSize(2, 4)
+                .groupSpread(9)
+                .distance(40, 100)
+                .interval(minutes(3), minutes(7))
+                .globalGap(seconds(20))
+                .retryDelay(seconds(15))
+                .populationLimits(6, 24)
+                .populationRadius(100)
+                .minGroupSeparation(120)
+                .debug(false));
+
         GroupSpawner.initialize();
     }
 

@@ -15,7 +15,8 @@
 		"HumanFirstPersonMixin",
 		"FirstPersonArmInvoker",
 		"CyborgFirstPersonMixin",
-		"MinksCameraMixin"
+		"MinksCameraMixin",
+		"LunarianRotationMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

@@ -139,16 +139,19 @@ public class ModEvents {
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
             if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
                 IceSaberAbility.onMelee(serverPlayer, entity);
+                nolan.bloxpiece.quest.UniqueQuests.onPunchStart(serverPlayer, entity); // quête de Haki : coups de poing
             }
             return InteractionResult.PASS;
         });
 
-        // Quand un mob du mod meurt : XP BloxPiece pour le joueur responsable (s'il y en a un).
-        // Tous les futurs mobs (qui étendent BloxMob) sont couverts automatiquement.
+        // Quêtes uniques (Rayleigh) : un coup de poing retenu ne compte que si les dégâts sont réellement infligés
+        ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, base, taken, blocked) ->
+                nolan.bloxpiece.quest.UniqueQuests.onDamage(entity, source, taken, blocked));
+
+        // Quand un mob hostile du mod meurt : XP BloxPiece pour le joueur responsable (s'il y en a un), calculée par MobXp
+        // d'après ses PV, ses dégâts et son rôle. Tous les futurs mobs du mod sont couverts automatiquement.
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (entity instanceof BloxMob mob) {
-                mob.rewardKiller(source);
-            }
+            nolan.bloxpiece.progression.MobXp.onDeath(entity, source);
             // Quêtes journalières : pirates et monstres hostiles tués par un joueur
             if (source.getEntity() instanceof ServerPlayer killer && entity != killer) {
                 if (entity instanceof ArmedPirate) {
@@ -157,6 +160,10 @@ public class ModEvents {
                 if (entity instanceof Enemy) {
                     Quests.progress(killer, QuestType.KILL_HOSTILES, 1);
                 }
+                // quêtes uniques (Rayleigh) : mobs tués par CE joueur (pas par un autre joueur, un animal ou l'environnement)
+                nolan.bloxpiece.quest.UniqueQuests.onKill(killer, entity);
+                // quêtes répétables (Tavernier) : seulement les ennemis tués par CE joueur
+                nolan.bloxpiece.quest.RepeatableQuests.onKill(killer, entity);
             }
             // Un joueur qui meurt transformé en Bouddha redevient normal
             if (entity instanceof ServerPlayer player) {
@@ -166,12 +173,16 @@ public class ModEvents {
 
         // Quêtes journalières : blocs minés (pas les herbes ni les fleurs, cassées d'un coup)
         PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
+            if (player instanceof ServerPlayer breaker) {
+                nolan.bloxpiece.quest.UniqueQuests.onBlockBroken(breaker); // quêtes uniques : blocs cassés
+            }
             if (player instanceof ServerPlayer serverPlayer && state.getDestroySpeed(level, pos) >= 0.5F) {
                 Quests.progress(serverPlayer, QuestType.MINE_BLOCKS, 1);
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             Quests.forget(handler.getPlayer().getUUID());
+            nolan.bloxpiece.quest.UniqueQuests.forget(handler.getPlayer().getUUID());
             TreasureChests.onDisconnect(handler.getPlayer()); // roulette pas finie : le fruit est donné tout de suite
         });
 
@@ -179,6 +190,8 @@ public class ModEvents {
         ServerPlayConnectionEvents.JOIN.register((listener, sender, server) -> {
             AbilityManager.syncCooldowns(listener.getPlayer());
             Quests.ensure(listener.getPlayer()); // quêtes du jour prêtes dès la connexion
+            nolan.bloxpiece.quest.UniqueQuests.onJoin(listener.getPlayer()); // quêtes de Haki (Rayleigh) prêtes et synchronisées
+            nolan.bloxpiece.quest.RepeatableQuests.onJoin(listener.getPlayer()); // missions du Tavernier
             BuddhaTransformAbility.reset(listener.getPlayer()); // jamais de taille ou de modificateur resté d'une session précédente
         });
 

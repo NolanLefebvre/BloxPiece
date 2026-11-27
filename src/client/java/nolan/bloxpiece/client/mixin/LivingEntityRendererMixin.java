@@ -79,6 +79,10 @@ public abstract class LivingEntityRendererMixin {
             this.layers.add(new nolan.bloxpiece.client.cyborg.CyborgOverdriveLayer(parent, context));
             // Race Minks : oreilles, queue, griffes électriques, apparence et aura de Sulong (rien sur les autres races)
             this.layers.add(new nolan.bloxpiece.client.minks.MinksLayer(parent, context));
+            // Race Fishman : ailerons des bras et du dos, eau sur les bras pendant ses attaques (rien sur les autres races)
+            this.layers.add(new nolan.bloxpiece.client.fishman.FishmanLayer(parent, context));
+            // Race Lunarian : ailes animées, flammes du dos, feu du poing, plumes en formation (rien sur les autres races)
+            this.layers.add(new nolan.bloxpiece.client.lunarian.LunarianLayer(parent, context));
             // Kame Kame no Mi : la carapace (ne dessine rien sans carapace)
             this.layers.add(new nolan.bloxpiece.client.entity.KameShellLayer(parent,
                     context.bakeLayer(nolan.bloxpiece.client.entity.KameShellModel.LAYER)));

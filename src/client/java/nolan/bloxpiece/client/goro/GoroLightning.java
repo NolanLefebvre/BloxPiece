@@ -80,6 +80,12 @@ public final class GoroLightning {
      */
     public static Path channel(float[] start, float[] dir, float length, int count, float rootWidth, float sway, float age, int seed,
                                Random shape, Random jag, boolean tied) {
+        return channel(start, dir, length, count, rootWidth, sway, age, seed, shape, jag, tied, 0.06F);
+    }
+
+    /** Canal avec amplitude de crépitement {@code jitter} réglable (0,06 : foudre du Goro). Utilisé par le système commun Electric. */
+    public static Path channel(float[] start, float[] dir, float length, int count, float rootWidth, float sway, float age, int seed,
+                               Random shape, Random jag, boolean tied, float jitter) {
         float[][] basis = perpendiculars(dir);
         float[] u = basis[0], v = basis[1];
         float p1 = shape.nextFloat() * 6.28F, p2 = shape.nextFloat() * 6.28F;
@@ -95,8 +101,8 @@ public final class GoroLightning {
             float jagU = end ? 0.0F : (jag.nextFloat() - 0.5F) * 2.0F;
             float jagV = end ? 0.0F : (jag.nextFloat() - 0.5F) * 2.0F;
             float scale = Math.min(length, 14.0F); // les longues colonnes ne s'écartent pas démesurément
-            float offU = (waveU * sway + jagU * 0.06F) * scale * envelope;
-            float offV = (waveV * sway + jagV * 0.06F) * scale * envelope;
+            float offU = (waveU * sway + jagU * jitter) * scale * envelope;
+            float offV = (waveV * sway + jagV * jitter) * scale * envelope;
             float along = t * length;
             float[] p = new float[3];
             for (int k = 0; k < 3; k++) {

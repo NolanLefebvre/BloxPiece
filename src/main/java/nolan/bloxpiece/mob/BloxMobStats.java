@@ -12,9 +12,10 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
  * @param attackDamage  dégâts par attaque (2 = 1 coeur)
  * @param movementSpeed vitesse : 0.23 = zombie, 0.1 = vitesse de marche de base du joueur (voir PirateSwordsman)
  * @param followRange   distance (en blocs) à laquelle le mob repère et poursuit un joueur
- * @param xpReward      XP BloxPiece donnée au joueur qui tue le mob (PAS l'XP vanilla)
+ * L'XP BloxPiece donnée quand le mob est tué est calculée AUTOMATIQUEMENT à partir de ses PV, de ses dégâts et de son rôle
+ * (progression/MobXp, barème : progression/XpBalance) : rien à écrire ici.
  */
-public record BloxMobStats(double maxHealth, double attackDamage, double movementSpeed, double followRange, int xpReward) {
+public record BloxMobStats(double maxHealth, double attackDamage, double movementSpeed, double followRange) {
 
     /** Transforme les stats en attributs Minecraft (à enregistrer avec le type d'entité). */
     public AttributeSupplier.Builder toAttributes() {

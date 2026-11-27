@@ -16,8 +16,7 @@ public class Ener extends BloxMob {
             300.0, // points de vie
             12.0,  // dégâts par coup (à mains nues, en attendant ses pouvoirs)
             0.30,  // vitesse
-            40.0,  // détection / poursuite (blocs)
-            400    // XP BloxPiece
+            40.0   // détection / poursuite (blocs)
     );
 
     public Ener(EntityType<? extends Ener> type, Level level) {

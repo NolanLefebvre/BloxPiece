@@ -19,8 +19,7 @@ public class PirateCaptain extends ArmedPirate {
             90.0,  // points de vie : un mini-boss
             8.0,   // dégâts par coup (sans le sabre)
             0.27,  // vitesse
-            32.0,  // détection / poursuite (blocs)
-            80     // XP BloxPiece
+            32.0   // détection / poursuite (blocs)
     );
 
     public PirateCaptain(EntityType<? extends PirateCaptain> type, Level level) {

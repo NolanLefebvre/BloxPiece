@@ -139,11 +139,10 @@ public final class RaceManager {
     }
 
     /**
-     * Les flammes du Lunarian sont-elles actives ? Pour l'instant : le joueur est en feu. Point d'entrée de la future mécanique
-     * de flammes des Lunarians (il suffira de changer ce test).
+     * Les flammes du Lunarian sont-elles actives ? Mode Défense de la race (Lunarian : flammes du dos allumées).
      */
     public static boolean flamesActive(ServerPlayer player) {
-        return player.isOnFire();
+        return nolan.bloxpiece.ability.Lunarian.defense(player); // mode Défense (flammes du dos allumées)
     }
 
     /** Bonus spéciaux qui agissent en continu (chaque tick serveur). */

@@ -46,6 +46,8 @@ public class BloxPiece implements ModInitializer {
         nolan.bloxpiece.ability.Cyborg.initialize();     // race Cyborg : attaques en cours, bouclier, surcharge, épuisement
         nolan.bloxpiece.ability.Human.initialize();      // race Humaine : attaques en cours (animations synchronisées)
         nolan.bloxpiece.ability.Minks.initialize();      // race Minks : griffes, paralysie limitée, Sulong (bonus, durée)
+        nolan.bloxpiece.ability.Fishman.initialize();    // race Fishman : attaques en cours (animations synchronisées)
+        nolan.bloxpiece.ability.Lunarian.initialize();   // race Lunarian : modes Défense / Vitesse, attaques en cours, nettoyage
         nolan.bloxpiece.haki.HakiManager.initialize(); // Haki de l'Armement, de l'Observation et des Rois
         nolan.bloxpiece.ability.Goro.initialize(); // Goro Goro no Mi : attaques en cours, paralysie
         nolan.bloxpiece.ability.Kame.initialize(); // Kame Kame no Mi : carapace, dimension de poche, carapace tournoyante

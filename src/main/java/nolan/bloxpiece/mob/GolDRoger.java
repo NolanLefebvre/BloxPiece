@@ -28,8 +28,7 @@ public class GolDRoger extends ArmedPirate {
             400.0, // points de vie
             18.0,  // dégâts par coup (sans le sabre)
             0.30,  // vitesse
-            40.0,  // détection / poursuite (blocs)
-            500    // XP BloxPiece
+            40.0   // détection / poursuite (blocs)
     );
 
     /** Boss d'arène : sans cible depuis ce temps après un combat (10 s), il se calme et attend de nouveau d'être frappé. */

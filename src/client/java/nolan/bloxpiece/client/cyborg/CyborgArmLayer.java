@@ -46,6 +46,8 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
 
     /** Dernier modèle construit (aussi pour la vue à la première personne). */
     private static Rig shared;
+    /** Cube unité des effets lumineux (aussi pour la boule du Radical Beam à la première personne). */
+    private static ModelPart sharedSegment;
     private final Rig rig;
     private final ModelPart segment;
 
@@ -111,6 +113,7 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         this.rig = new Rig(root);
         this.segment = segment;
         shared = this.rig;
+        sharedSegment = segment;
     }
 
     /** Transformation en canon (0..1) et recul (0..1) de ce joueur à cet instant. */
@@ -162,8 +165,21 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         }
     }
 
-    /** Boule d'énergie jaune entre les mains tendues (Radical Beam). */
+    /** Boule d'énergie jaune entre les mains tendues (Radical Beam), devant la poitrine. */
     private void drawBeamCharge(PoseStack pose, SubmitNodeCollector collector, PlayerModel model, float e, float age, int seed) {
+        pose.pushPose();
+        model.body.translateAndRotate(pose);
+        pose.translate(0.0F, 6.0F / 16.0F, -12.0F / 16.0F); // devant la poitrine, là où les mains se rejoignent
+        drawCharge(this.segment, pose, collector, e, age, seed, 1.0F);
+        pose.popPose();
+    }
+
+    /**
+     * La boule d'énergie du Radical Beam, centrée sur l'origine du repère courant : noyau, halo, rayons et petits arcs, qui
+     * grossit pendant la charge et éclate au tir. {@code scale} : taille relative (1 = vue de l'extérieur). Même dessin à la
+     * troisième et à la première personne (CyborgFirstPerson.submitBeamCharge).
+     */
+    static void drawCharge(ModelPart segment, PoseStack pose, SubmitNodeCollector collector, float e, float age, int seed, float scale) {
         float charge = CyborgClient.ramp(e, 2.0F, CyborgRadicalBeamAbility.CHARGE);
         float burst = e >= CyborgRadicalBeamAbility.CHARGE ? Math.max(0.0F, 1.0F - (e - CyborgRadicalBeamAbility.CHARGE) / 6.0F) : 1.0F;
         if (charge <= 0.0F || burst <= 0.0F) {
@@ -171,9 +187,7 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         }
         RenderType glow = RenderTypes.entityTranslucent(GoroLightning.TEXTURE);
         pose.pushPose();
-        model.body.translateAndRotate(pose);
-        pose.translate(0.0F, 6.0F / 16.0F, -12.0F / 16.0F); // devant la poitrine, là où les mains se rejoignent
-        float r = (0.06F + 0.32F * charge) * (e >= CyborgRadicalBeamAbility.CHARGE ? 1.0F + (1.0F - burst) * 1.5F : 1.0F);
+        float r = scale * (0.06F + 0.32F * charge) * (e >= CyborgRadicalBeamAbility.CHARGE ? 1.0F + (1.0F - burst) * 1.5F : 1.0F);
         float pulse = 0.85F + 0.15F * Mth.sin(age * 2.2F);
         float[][] axes = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.7F, 0.7F, 0}, {0.7F, 0, 0.7F}, {0, 0.7F, 0.7F}};
         for (int layer = 0; layer < 3; layer++) {
@@ -181,7 +195,7 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             int color = layer == 0 ? ENERGY_CORE : layer == 1 ? ENERGY : HOT;
             float alpha = (layer == 0 ? 0.95F : layer == 1 ? 0.5F : 0.2F) * burst;
             for (float[] ax : axes) {
-                GoroLightning.segment(this.segment, pose, collector, layer, glow, new float[] {-ax[0] * lr, -ax[1] * lr, -ax[2] * lr},
+                GoroLightning.segment(segment, pose, collector, layer, glow, new float[] {-ax[0] * lr, -ax[1] * lr, -ax[2] * lr},
                         new float[] {ax[0] * lr, ax[1] * lr, ax[2] * lr}, lr * 16.0F * 1.1F, GoroLightning.argb(alpha, color));
             }
         }
@@ -190,8 +204,8 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         for (int i = 0; i < 3 + (int) (5 * charge); i++) {
             float[] d = GoroLightning.normalize(new float[] {random.nextFloat() - 0.5F, random.nextFloat() - 0.5F, random.nextFloat() - 0.5F});
             float len = r * (1.4F + random.nextFloat());
-            GoroLightning.segment(this.segment, pose, collector, 2, glow, new float[] {d[0] * r, d[1] * r, d[2] * r},
-                    new float[] {d[0] * len, d[1] * len, d[2] * len}, 0.5F, GoroLightning.argb(0.8F * burst, ENERGY));
+            GoroLightning.segment(segment, pose, collector, 2, glow, new float[] {d[0] * r, d[1] * r, d[2] * r},
+                    new float[] {d[0] * len, d[1] * len, d[2] * len}, 0.5F * scale, GoroLightning.argb(0.8F * burst, ENERGY));
         }
         pose.popPose();
     }
@@ -200,7 +214,12 @@ public class CyborgArmLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
      * Première personne : la main gauche du joueur local Cyborg, dessinée par Minecraft (AvatarRenderer.renderHand), est remplacée
      * par le bras mécanique, sur la même pose (CyborgHandMixin).
      */
-    public static boolean renderFirstPerson(PoseStack pose, SubmitNodeCollector collector, int light, ModelPart arm) {
+    /** Cube unité des effets (null tant qu'aucun joueur n'a été affiché). */
+    static ModelPart segment() {
+        return sharedSegment;
+    }
+
+        public static boolean renderFirstPerson(PoseStack pose, SubmitNodeCollector collector, int light, ModelPart arm) {
         Minecraft mc = Minecraft.getInstance();
         if (shared == null || mc.player == null || !CyborgClient.isCyborg(mc.player)) {
             return false;

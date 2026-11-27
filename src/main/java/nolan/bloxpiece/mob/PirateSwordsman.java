@@ -15,8 +15,7 @@ public class PirateSwordsman extends ArmedPirate {
             24.0,  // points de vie
             5.0,   // dégâts par coup (sans le sabre)
             0.30,  // vitesse : bien plus vif qu'un zombie (0,23)
-            32.0,  // détection / poursuite (blocs)
-            12     // XP BloxPiece
+            32.0   // détection / poursuite (blocs)
     );
 
     public PirateSwordsman(EntityType<? extends PirateSwordsman> type, Level level) {

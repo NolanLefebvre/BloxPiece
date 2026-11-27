@@ -1,5 +1,6 @@
 package nolan.bloxpiece.client.screen;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.ChatFormatting;
@@ -24,8 +25,8 @@ import net.minecraft.util.Mth;
  */
 public class DialogueScreen extends Screen {
 
-    /** Un sujet de conversation : la question du joueur et la réponse du PNJ (clés de traduction). */
-    private record Topic(String question, String answer) {
+    /** Un bouton du joueur : son texte et ce qu'il fait (réponse du PNJ, quête...). Le bouton « Au revoir » est ajouté à part. */
+    public record Option(Component label, Runnable action) {
     }
 
     private static final int MAX_W = 380;
@@ -44,7 +45,8 @@ public class DialogueScreen extends Screen {
     private static final int COLOR_BUTTON_HOVER = 0x40FFD25A;
 
     private final String npc;
-    private final List<Topic> topics;
+    private final int entityId;
+    private List<Option> options;
     private Component speech;
     private long speechStartMs = System.currentTimeMillis();
     private boolean speechComplete;
@@ -57,17 +59,22 @@ public class DialogueScreen extends Screen {
     private int buttonW;
 
     public DialogueScreen(String npc) {
-        this(npc, "");
+        this(npc, "", -1);
     }
 
-    /** {@code speech} : première réplique (suffixe de clé), vide pour l'accueil habituel. */
     public DialogueScreen(String npc, String speech) {
+        this(npc, speech, -1);
+    }
+
+    /**
+     * {@code speech} : première réplique (suffixe de clé), vide pour l'accueil habituel ; {@code entityId} : le PNJ (Silvers
+     * Rayleigh s'en sert pour les quêtes de Haki : le serveur vérifie que le joueur lui parle bien).
+     */
+    public DialogueScreen(String npc, String speech, int entityId) {
         super(Component.translatable("npc.bloxpiece." + npc + ".name"));
         this.npc = npc;
-        // sujets propres à chaque PNJ (Silvers Rayleigh : le futur système de quêtes passera par « quests »)
-        this.topics = nolan.bloxpiece.mob.Rayleigh.NPC_ID.equals(npc)
-                ? List.of(topic("quests"), topic("haki"), topic("roger"), topic("who"))
-                : List.of(topic("fruit"), topic("mastery"), topic("village"), topic("start"));
+        this.entityId = entityId;
+        this.options = mainOptions();
         this.speech = Component.translatable(key(speech == null || speech.isEmpty() ? "greeting" : speech));
     }
 
@@ -75,8 +82,45 @@ public class DialogueScreen extends Screen {
         return "npc.bloxpiece." + this.npc + "." + suffix;
     }
 
-    private Topic topic(String id) {
-        return new Topic(key(id + ".question"), key(id + ".answer"));
+    /** Sujet de conversation : la question du joueur, et la réponse du PNJ quand il clique. */
+    private Option topic(String id) {
+        return new Option(Component.translatable(key(id + ".question")), () -> say(Component.translatable(key(id + ".answer"))));
+    }
+
+    /**
+     * Les boutons de départ, propres à chaque PNJ. Silvers Rayleigh : « quests » ouvre les quêtes de Haki
+     * (RayleighQuestDialogue) ; les autres sujets sont de simples réponses.
+     */
+    public List<Option> mainOptions() {
+        if (nolan.bloxpiece.mob.Rayleigh.NPC_ID.equals(this.npc)) {
+            return List.of(new Option(Component.translatable(key("quests.question")), () -> RayleighQuestDialogue.open(this)),
+                    topic("haki"), topic("roger"), topic("who"));
+        }
+        if (nolan.bloxpiece.mob.TavernKeeper.NPC_ID.equals(this.npc)) {
+            // Tavernier : « missions » ouvre les quêtes répétables (TavernQuestDialogue) ; les autres sujets sont des réponses
+            return List.of(new Option(Component.translatable(key("missions.question")), () -> TavernQuestDialogue.open(this)),
+                    topic("fruit"), topic("mastery"), topic("village"), topic("start"));
+        }
+        return List.of(topic("fruit"), topic("mastery"), topic("village"), topic("start"));
+    }
+
+    /** Remplace les boutons (le bouton « Au revoir » reste toujours en dernier). */
+    public void setOptions(List<Option> options) {
+        this.options = new ArrayList<>(options);
+    }
+
+    /** Retour aux sujets de départ, avec une nouvelle réplique du PNJ. */
+    public void showMain(Component speech) {
+        this.setOptions(mainOptions());
+        this.say(speech);
+    }
+
+    public int entityId() {
+        return this.entityId;
+    }
+
+    public String npcKey(String suffix) {
+        return key(suffix);
     }
 
     @Override
@@ -102,7 +146,7 @@ public class DialogueScreen extends Screen {
         List<FormattedCharSequence> lines = font.split(Component.literal(full.substring(0, shown)), textW);
         int fullLines = Math.max(1, font.split(this.speech, textW).size()); // hauteur fixe : la fenêtre ne saute pas
 
-        int buttons = this.topics.size() + 1; // + Au revoir
+        int buttons = this.options.size() + 1; // + Au revoir
         int rows = (buttons + 1) / 2;
         int nameH = font.lineHeight + 6;
         int textH = fullLines * (font.lineHeight + 1);
@@ -150,7 +194,7 @@ public class DialogueScreen extends Screen {
             boolean bye = i == buttons - 1;
             g.fill(bx, by, bx + bw, by + BUTTON_H, hovered ? COLOR_BUTTON_HOVER : COLOR_BUTTON);
             g.outline(bx, by, bw, BUTTON_H, hovered ? COLOR_GOLD_BRIGHT : COLOR_GOLD_DIM);
-            Component label = Component.translatable(bye ? key("bye") : this.topics.get(i).question());
+            Component label = bye ? Component.translatable(key("bye")) : this.options.get(i).label();
             label = BloxPanelScreen.fit(font, label, bw - 10);
             g.centeredText(font, label, bx + bw / 2, by + (BUTTON_H - font.lineHeight) / 2 + 1,
                     hovered ? COLOR_GOLD_BRIGHT : (bye ? 0xFFB8B8C4 : COLOR_TEXT));
@@ -168,7 +212,7 @@ public class DialogueScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == LEFT_MOUSE_BUTTON) {
             double mx = event.x(), my = event.y();
-            int buttons = this.topics.size() + 1;
+            int buttons = this.options.size() + 1;
             int textW = this.panelW - 2 * PAD;
             for (int i = 0; i < buttons; i++) {
                 int bx = this.panelX + PAD + (i % 2) * (this.buttonW + GAP);
@@ -181,7 +225,7 @@ public class DialogueScreen extends Screen {
                     if (i == buttons - 1) {
                         this.onClose();
                     } else {
-                        say(Component.translatable(this.topics.get(i).answer()));
+                        this.options.get(i).action().run();
                     }
                     return true;
                 }
@@ -195,7 +239,7 @@ public class DialogueScreen extends Screen {
         return super.mouseClicked(event, doubleClick);
     }
 
-    private void say(Component text) {
+    public void say(Component text) {
         this.speech = text;
         this.speechStartMs = System.currentTimeMillis();
         this.speechComplete = false;

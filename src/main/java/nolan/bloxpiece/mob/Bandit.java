@@ -16,8 +16,7 @@ public class Bandit extends ArmedBandit {
             22.0,  // points de vie
             3.0,   // dégâts par coup (sans l'épée)
             0.30,  // vitesse
-            28.0,  // détection / poursuite (blocs)
-            10     // XP BloxPiece
+            28.0   // détection / poursuite (blocs)
     );
 
     public Bandit(EntityType<? extends Bandit> type, Level level) {

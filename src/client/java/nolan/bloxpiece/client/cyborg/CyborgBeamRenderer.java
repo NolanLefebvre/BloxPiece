@@ -18,6 +18,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
 import nolan.bloxpiece.ability.CyborgRadicalBeamAbility;
+import nolan.bloxpiece.client.fx.Electric;
 import nolan.bloxpiece.client.goro.GoroLightning;
 import nolan.bloxpiece.client.haki.HakiBoltRenderer;
 import nolan.bloxpiece.client.human.HumanDraw;
@@ -59,10 +60,13 @@ public class CyborgBeamRenderer extends EntityRenderer<CyborgBeam, CyborgBeamRen
     private static final int CORE = 0xFFFBE0, YELLOW = 0xFFE030, ORANGE = 0xFF8A1E, RED = 0xD8401E, SMOKE = 0x3E3A42;
     private final ModelPart segment, hex, plasma;
     private final HumanDraw draw;
+    /** Éclairs : système électrique commun (forme du Goro), palette jaune du Cyborg. */
+    private final Electric electric;
 
     public CyborgBeamRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.segment = context.bakeLayer(HakiBoltRenderer.LAYER).getChild("segment");
+        this.electric = new Electric(this.segment);
         this.hex = context.bakeLayer(CyborgFxModels.HEX).getChild("hex");
         this.plasma = context.bakeLayer(CyborgFxModels.PLASMA).getChild("cell");
         this.draw = new HumanDraw(context); // (débris, fumée, murs d'onde : outils d'effets partagés du mod)
@@ -160,9 +164,9 @@ public class CyborgBeamRenderer extends EntityRenderer<CyborgBeam, CyborgBeamRen
             float l = R * (1.0F + random.nextFloat() * 1.5F);
             float[] o = HumanDraw.onCircle(new float[] {0, 0, 0}, perp[0], perp[1], 1.0F, ang);
             float[] p = {dir[0] * at + o[0] * R, dir[1] * at + o[1] * R, dir[2] * at + o[2] * R};
-            GoroLightning.segment(this.segment, pose, col, 2, glow, p,
+            this.electric.bolt(pose, col, Electric.Palette.CYBORG, Electric.Style.SPARK, p,
                     new float[] {p[0] + o[0] * l + dir[0] * l * 0.5F, p[1] + o[1] * l + dir[1] * l * 0.5F, p[2] + o[2] * l + dir[2] * l * 0.5F},
-                    0.8F, a(0.8F * out, YELLOW));
+                    0.6F, age, random.nextInt(), 0.85F * out);
         }
         // 5. tête du rayon pendant le trajet : cellules de plasma qui tournent et un anneau hexagonal serré
         if (age < s.travel + 1.0F) {
@@ -290,11 +294,8 @@ public class CyborgBeamRenderer extends EntityRenderer<CyborgBeam, CyborgBeamRen
                 double ang = ar.nextDouble() * Math.PI * 2;
                 float r0 = 1.5F + ar.nextFloat() * B * 0.6F;
                 float[] p = {c[0] + (float) Math.cos(ang) * r0, c[1] + ar.nextFloat() * 2.5F, c[2] + (float) Math.sin(ang) * r0};
-                for (int sgm = 0; sgm < 4; sgm++) {
-                    float[] q = {p[0] + (ar.nextFloat() - 0.5F) * 1.4F, p[1] + (ar.nextFloat() - 0.6F) * 1.2F, p[2] + (ar.nextFloat() - 0.5F) * 1.4F};
-                    GoroLightning.segment(this.segment, pose, col, 1, glow, p, q, 1.1F, a(0.9F * (1.0F - k), sgm % 2 == 0 ? CORE : YELLOW));
-                    p = q;
-                }
+                float[] q = {p[0] + (ar.nextFloat() - 0.5F) * 3.0F, p[1] + (ar.nextFloat() - 0.6F) * 2.4F, p[2] + (ar.nextFloat() - 0.5F) * 3.0F};
+                this.electric.bolt(pose, col, Electric.Palette.CYBORG, Electric.Style.STRIKE, p, q, 0.9F, since, ar.nextInt(), 0.9F * (1.0F - k));
             }
         }
         // 8. débris projetés loin, braises
@@ -338,7 +339,7 @@ public class CyborgBeamRenderer extends EntityRenderer<CyborgBeam, CyborgBeamRen
                 double ang = ar.nextDouble() * Math.PI * 2;
                 float[] p = {c[0] + (float) Math.cos(ang) * rr, c[1] - 0.3F, c[2] + (float) Math.sin(ang) * rr};
                 float[] q = {p[0] + (ar.nextFloat() - 0.5F) * 1.2F, p[1] + 0.6F + ar.nextFloat() * 0.8F, p[2] + (ar.nextFloat() - 0.5F) * 1.2F};
-                GoroLightning.segment(this.segment, pose, col, 1, glow, p, q, 1.0F, a(0.85F * (1.0F - k), CORE));
+                this.electric.bolt(pose, col, Electric.Palette.CYBORG, Electric.Style.SPARK, p, q, 0.7F, emp, ar.nextInt(), 0.85F * (1.0F - k));
             }
         }
     }

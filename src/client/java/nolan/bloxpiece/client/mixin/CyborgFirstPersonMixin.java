@@ -25,7 +25,7 @@ import nolan.bloxpiece.client.cyborg.CyborgFirstPerson;
  *       est dessiné en plus pendant les attaques qui l'animent ; le bras mécanique remplace alors le bras vanilla
  *       (CyborgHandMixin), avec sa transformation en canon.</li>
  * </ul>
- * Sert aussi à la race Minks (MinksFirstPerson), avec le même mécanisme.
+ * Sert aussi à la race Minks (MinksFirstPerson) et à la race Fishman (FishmanFirstPerson), avec le même mécanisme.
  * Mixin facultatif (require = 0) : sans effet, mais sans plantage, si les méthodes changent.
  */
 @Mixin(FirstPersonHandsAndItemsRenderer.class)
@@ -39,6 +39,8 @@ public abstract class CyborgFirstPersonMixin {
         if (hand == InteractionHand.MAIN_HAND) {
             CyborgFirstPerson.applyMain(pose, partialTicks);
             nolan.bloxpiece.client.minks.MinksFirstPerson.applyMain(pose, partialTicks); // race Minks (même principe)
+            nolan.bloxpiece.client.fishman.FishmanFirstPerson.applyMain(pose, partialTicks); // race Fishman (même principe)
+            nolan.bloxpiece.client.lunarian.LunarianFirstPerson.applyMain(pose, partialTicks); // race Lunarian (même principe)
         }
     }
 
@@ -53,10 +55,24 @@ public abstract class CyborgFirstPersonMixin {
         if (arm == null) { // race Minks : l'autre main pendant ses attaques (même principe)
             arm = nolan.bloxpiece.client.minks.MinksFirstPerson.offArm(pose, partialTicks);
         }
+        if (arm == null) { // race Fishman : l'autre main pendant ses attaques (même principe)
+            arm = nolan.bloxpiece.client.fishman.FishmanFirstPerson.offArm(pose, partialTicks);
+        }
+        if (arm == null) { // race Lunarian : l'autre main pendant ses capacités (même principe)
+            arm = nolan.bloxpiece.client.lunarian.LunarianFirstPerson.offArm(pose, partialTicks);
+        }
         if (arm != null) {
             ((FirstPersonArmInvoker) this).bloxpiece$renderPlayerArm(pose, collector, playerState.avatarRenderState.lightCoords, 0.0F, 0.0F,
                     arm, playerState);
         }
+        pose.popPose();
+        // race Cyborg : boule d'énergie du Radical Beam entre les mains, comme vue de l'extérieur
+        pose.pushPose();
+        CyborgFirstPerson.submitBeamCharge(pose, collector, partialTicks);
+        pose.popPose();
+        // race Lunarian : bout des ailes qui entre dans le champ, flammes de transition au bas de l'écran
+        pose.pushPose();
+        nolan.bloxpiece.client.lunarian.LunarianFirstPerson.submitView(pose, collector, partialTicks, playerState.avatarRenderState.lightCoords);
         pose.popPose();
     }
 }

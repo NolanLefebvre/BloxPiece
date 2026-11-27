@@ -15,8 +15,7 @@ public class PirateGunner extends ArmedPirate {
             18.0,  // points de vie : plus fragile que le sabreur
             2.0,   // dégâts au corps-à-corps (il préfère tirer)
             0.28,  // vitesse
-            40.0,  // détection : il repère de loin
-            14     // XP BloxPiece
+            40.0   // détection : il repère de loin
     );
 
     public PirateGunner(EntityType<? extends PirateGunner> type, Level level) {

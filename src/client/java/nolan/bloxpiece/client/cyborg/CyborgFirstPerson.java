@@ -4,7 +4,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 
@@ -150,6 +152,34 @@ public final class CyborgFirstPerson {
         transform(pose, k, side, true);
         return side;
     }
+
+    /**
+     * Radical Beam à la première personne : la même boule d'énergie qu'à la troisième personne (CyborgArmLayer.drawCharge)
+     * grossit ENTRE LES MAINS jointes, au centre de l'écran, suit leur tremblement, puis éclate au tir. Appelé à la fin du
+     * dessin des mains (CyborgFirstPersonMixin), dans le repère de la caméra. Taille réduite : les mains sont tout près de l'œil.
+     */
+    public static void submitBeamCharge(PoseStack pose, SubmitNodeCollector collector, float partialTicks) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        ModelPart segment = CyborgArmLayer.segment();
+        if (player == null || segment == null || player.isInvisible() || !CyborgClient.isCyborg(player)
+                || CyborgClient.kind(player) != Cyborg.BEAM) {
+            return;
+        }
+        float age = player.tickCount + partialTicks;
+        float e = CyborgClient.elapsed(player, age);
+        Key k = e < 0.0F ? null : key(Cyborg.BEAM, e, age, false);
+        if (k == null) {
+            return;
+        }
+        pose.pushPose();
+        // entre les deux mains (symétriques : x = 0), un peu au-dessus et devant les poings
+        pose.translate(0.0F, HAND_Y + k.y + 0.1F, HAND_Z + k.z - 0.14F);
+        CyborgArmLayer.drawCharge(segment, pose, collector, e, age, player.getId(), CHARGE_SCALE);
+        pose.popPose();
+    }
+
+    /** Taille de la boule du Radical Beam à la première personne (par rapport à la vue de l'extérieur). */
+    private static final float CHARGE_SCALE = 0.55F;
 
     /** Déplacement et rotations autour de la main ; un bras qui apparaît monte depuis le bas de l'écran ({@code rise}). */
     private static void transform(PoseStack pose, Key k, HumanoidArm arm, boolean rise) {

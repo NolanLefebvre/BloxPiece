@@ -1,7 +1,5 @@
 package nolan.bloxpiece.mob;
 
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
@@ -14,14 +12,13 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-import nolan.bloxpiece.progression.Progression;
-
 /**
  * Base de tous les ennemis du mod : un monstre hostile classique (poursuite + corps-à-corps)
- * dont les stats et la récompense d'XP viennent d'un BloxMobStats.
+ * dont les stats viennent d'un BloxMobStats (l'XP à sa mort : MobXp, calculée automatiquement).
  *
  * Pour créer un nouvel ennemi : étendre cette classe, déclarer ses stats, l'enregistrer dans ModEntities,
- * lui donner un renderer (client) et son nom dans la lang. Rien d'autre à brancher : l'XP est donnée toute seule.
+ * lui donner un renderer (client) et son nom dans la lang. Rien d'autre à brancher : l'XP BloxPiece à sa mort est calculée
+ * et donnée toute seule (progression/MobXp, d'après ses PV, ses dégâts et son rôle).
  */
 public abstract class BloxMob extends Monster {
 
@@ -47,25 +44,4 @@ public abstract class BloxMob extends Monster {
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
 
-    /**
-     * Donne l'XP BloxPiece au joueur responsable de la mort (appelé par ModEvents à la mort du mob).
-     * Responsable = le joueur qui porte le coup fatal (y compris par projectile / explosion),
-     * ou à défaut le joueur qui l'a blessé dans les dernières secondes. Aucun joueur = aucune XP.
-     */
-    public void rewardKiller(DamageSource source) {
-        ServerPlayer killer = findKiller(source);
-        if (killer != null) {
-            Progression.addXp(killer, stats().xpReward());
-        }
-    }
-
-    private ServerPlayer findKiller(DamageSource source) {
-        if (source.getEntity() instanceof ServerPlayer player) {
-            return player;
-        }
-        if (this.getLastHurtByMob() instanceof ServerPlayer player) {
-            return player;
-        }
-        return null;
-    }
 }

@@ -89,6 +89,8 @@ public class TavernKeeper extends PathfinderMob {
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (player instanceof ServerPlayer server) {
+            // quêtes répétables : une mission lui est tirée (et gardée) s'il n'en a pas, pour que le dialogue la propose
+            nolan.bloxpiece.quest.RepeatableQuests.prepareOffer(server);
             // le dialogue s'ouvre comme avant ; sa première réplique annonce le kit de départ (reçu, déjà reçu, inventaire plein)
             ServerPlayNetworking.send(server, new OpenDialoguePayload(NPC_ID, this.getId(), giveStarterKit(server)));
         }

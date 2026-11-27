@@ -14,8 +14,7 @@ public class Pirate extends BloxMob {
             20.0,  // points de vie (10 coeurs)
             3.0,   // dégâts par attaque
             0.2,   // vitesse
-            16.0,  // distance de détection / poursuite (blocs)
-            10     // XP BloxPiece donnée au joueur qui le tue
+            16.0   // distance de détection / poursuite (blocs)
     );
 
     public Pirate(EntityType<? extends Pirate> type, Level level) {

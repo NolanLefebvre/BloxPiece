@@ -118,6 +118,17 @@ public class ModItems {
     );
 
     /**
+     * Sabre des Humandrills (Kuraigana) : longue lame courbe usée, garde ronde dorée, poignée tressée (modèle 3D original :
+     * models/item/humandrill_sword.json, généré par src/blockbench/humandrill/MakeHumandrill.java). Tenu par les Humandrills
+     * (1 à 3 chacun), rarement lâché. 7 dégâts, 1,7 coup par seconde.
+     */
+    public static final Item HUMANDRILL_SWORD = register(
+            "humandrill_sword",
+            PirateSaberItem::new,
+            new Item.Properties().stacksTo(1).durability(500).attributes(PirateSaberItem.attributes(7.0, -2.3))
+    );
+
+    /**
      * Épées des bandits : modèles 3D originaux (fauchon rustique du Bandit, grand dao à garde en S du Chef :
      * models/item/bandit_sword.json et bandit_chief_sword.json, générés par src/blockbench/bandit_swords/make_bandit_swords.py). Mêmes dégâts que les épées qu'ils avaient avant : fer pour le
      * Bandit (6), diamant pour le Chef (7), 1,6 coup par seconde.
@@ -241,7 +252,7 @@ public class ModItems {
                     // Fruits, armes, objets d'XP... puis tout autre objet du mod ajouté plus tard (sauf le trident de glace,
                     // qui n'existe qu'à travers l'attaque Ice Saber et fondrait aussitôt)
                     java.util.List<Item> first = java.util.List.of(TREASURE_CHEST, FIRE_FRUIT, ICE_FRUIT, BUDDHA_FRUIT, GURA_FRUIT, KAME_FRUIT, GORO_FRUIT,
-                            PIRATE_SABER, CAPTAIN_SABER, ACE, BANDIT_SWORD, BANDIT_CHIEF_SWORD, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
+                            PIRATE_SABER, CAPTAIN_SABER, ACE, BANDIT_SWORD, BANDIT_CHIEF_SWORD, HUMANDRILL_SWORD, FLINTLOCK, MARINE_SABER, MARINE_RIFLE,
                             XP_CRYSTAL_CABIN_BOY, XP_CRYSTAL_PIRATE, XP_CRYSTAL_SUPERNOVA, XP_CRYSTAL_EMPEROR);
                     first.forEach(entries::accept);
                     BuiltInRegistries.ITEM.stream()

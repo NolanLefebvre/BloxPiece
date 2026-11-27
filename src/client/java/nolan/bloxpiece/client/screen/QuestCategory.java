@@ -7,7 +7,9 @@ package nolan.bloxpiece.client.screen;
 public enum QuestCategory {
     /** Quêtes journalières : renouvelées chaque jour Minecraft. */
     DAILY("daily"),
-    /** Quêtes uniques : réalisables une seule fois dans toute la partie (contenu à venir). */
+    /** Quêtes répétables : missions du Tavernier (une à la fois, une nouvelle après chaque récompense). */
+    REPEATABLE("repeatable"),
+    /** Quêtes uniques : réalisables une seule fois dans toute la partie (quêtes de Haki de Rayleigh : UniqueQuest). */
     UNIQUE("unique");
 
     public final String id;

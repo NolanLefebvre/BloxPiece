@@ -1,5 +1,7 @@
 package nolan.bloxpiece.client.minks;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.joml.Quaternionf;
@@ -25,6 +27,7 @@ import net.minecraft.world.entity.Entity;
 import nolan.bloxpiece.ability.Minks;
 import nolan.bloxpiece.ability.MinksDanceAbility;
 import nolan.bloxpiece.ability.MinksSulongAbility;
+import nolan.bloxpiece.client.fx.Electric;
 import nolan.bloxpiece.client.goro.GoroLightning;
 
 /**
@@ -38,7 +41,7 @@ import nolan.bloxpiece.client.goro.GoroLightning;
  *   <li>danse : électricité qui parcourt le corps pendant la préparation, traces de griffes bleues à chaque frappe ;</li>
  *   <li>SULONG : cinématique de transformation (étincelles, éclairs qui parcourent les membres, aura qui se forme), puis aura
  *       permanente (langues électriques en deux couches, éclairs sur bras, jambes et dos, pulsations, éclairs qui se détachent) ;
- *       MODÈLES PROPRES (grandes oreilles hérissées de touffes, gros pompon), morphose avec arcs ; yeux lumineux ; aura électrique (arcs
+ *       MODÈLES PROPRES (grandes oreilles hérissées de touffes, gros pompon), morphose avec arcs ; aura électrique (arcs
  *       qui crépitent sur la silhouette, anneaux d'éclairs qui tournent). La transformation : électricité qui s'accumule.</li>
  * </ul>
  * Première personne : griffes sur les mains vues ({@link #submitHand}).
@@ -50,6 +53,8 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 
     private static MinksLayer shared;
     private final ModelPart earNormal, earSulong, tailNormal, tailSulong, gloveRight, gloveLeft, segment;
+    /** Éclairs : système électrique commun (forme du Goro), palette des Minks. */
+    private final Electric electric;
 
     public MinksLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent, EntityRendererProvider.Context context) {
         super(parent);
@@ -60,6 +65,7 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         this.gloveRight = context.bakeLayer(MinksModels.GLOVE_RIGHT).getChild("glove");
         this.gloveLeft = context.bakeLayer(MinksModels.GLOVE_LEFT).getChild("glove");
         this.segment = context.bakeLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER).getChild("segment");
+        this.electric = new Electric(this.segment);
         shared = this;
     }
 
@@ -370,20 +376,27 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         }
     }
 
-    /** Yeux lumineux de Sulong (repère de la tête : face avant), avec une petite traînée. */
-    private void eyes(PoseStack pose, SubmitNodeCollector col, PlayerModel model, float su, float age) {
-        pose.pushPose();
-        model.head.translateAndRotate(pose);
-        float pulse = 0.85F + 0.15F * Mth.sin(age * 0.8F);
-        for (int side = -1; side <= 1; side += 2) {
-            float x = side * 2.0F / 16.0F;
-            float[] a0 = {x - 0.6F / 16.0F, -3.5F / 16.0F, -4.15F / 16.0F}, a1 = {x + 0.6F / 16.0F, -3.5F / 16.0F, -4.15F / 16.0F};
-            GoroLightning.segment(this.segment, pose, col, 0, glow(), a0, a1, 1.1F, a(0.95F * su, CORE));
-            GoroLightning.segment(this.segment, pose, col, 1, glow(), a0, a1, 2.4F * pulse, a(0.5F * su, HAZE));
-            GoroLightning.segment(this.segment, pose, col, 2, glow(), new float[] {x + side * 0.6F / 16.0F, -3.5F / 16.0F, -4.15F / 16.0F},
-                    new float[] {x + side * 3.2F / 16.0F, -3.9F / 16.0F, -3.0F / 16.0F}, 0.7F, a(0.45F * su * pulse, HAZE));
+    /**
+     * Sulong : petits ÉCLAIRS RAMIFIÉS autour du corps (la foudre du Goro en miniature, système commun) : ils partent des
+     * épaules, des mains, de la tête, des hanches et des pieds vers l'extérieur, avec de courtes fourches. Chaque éclair tient
+     * deux ticks (forme lisible) en crépitant, puis un autre apparaît ailleurs ; assez fins pour garder le personnage visible.
+     */
+    private void sulongSparks(PoseStack pose, SubmitNodeCollector col, PlayerModel model, float k, float age, int seed) {
+        float[][] pts = {onPart(model.head, 0, -8.5F, 0), onPart(model.body, 4.2F, 0.5F, 0), onPart(model.body, -4.2F, 0.5F, 0),
+                onPart(model.rightArm, -1, 10.5F, 0), onPart(model.leftArm, 1, 10.5F, 0), onPart(model.body, 0, 11.5F, 2.3F),
+                onPart(model.rightLeg, 0, 12, 0), onPart(model.leftLeg, 0, 12, 0), onPart(model.body, 0, 5, 2.4F)};
+        long slot = (long) (age * 0.5F);
+        Random r = new Random(seed * 17L + slot);
+        int n = 2 + (int) (3 * k);
+        for (int i = 0; i < n; i++) {
+            float[] p = pts[r.nextInt(pts.length)];
+            // vers l'extérieur de la silhouette (repère du modèle : y vers le bas), un peu au hasard
+            float hx = p[0] + (r.nextFloat() - 0.5F) * 0.3F, hz = p[2] + (r.nextFloat() - 0.5F) * 0.3F;
+            float hl = Math.max(0.05F, (float) Math.sqrt(hx * hx + hz * hz));
+            float len = 0.45F + r.nextFloat() * 0.45F;
+            float[] q = {p[0] + hx / hl * len * 0.8F, p[1] + (r.nextFloat() - 0.6F) * len, p[2] + hz / hl * len * 0.8F};
+            this.electric.bolt(pose, col, Electric.Palette.MINKS, Electric.Style.SPARK, p, q, 0.42F, age, (int) (seed * 31 + slot * 7 + i), k);
         }
-        pose.popPose();
     }
 
     /** Deux anneaux d'éclairs brisés qui tournent autour du corps (Sulong). */
@@ -393,42 +406,24 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
             float rad = 0.75F + 0.1F * ring;
             Random r = new Random(seed * 7L + ring * 101L + (long) (age * 0.5F));
             float spin = age * (ring == 0 ? 0.2F : -0.25F);
-            float[] prev = null;
+            List<float[]> pts = new ArrayList<>();
             int n = 14;
             for (int i = 0; i <= n; i++) {
                 if (r.nextFloat() < 0.18F) { // l'anneau se brise par endroits
-                    prev = null;
+                    pts.add(null);
                     continue;
                 }
                 double ang = spin + 2 * Math.PI * i / n;
                 float jit = (r.nextFloat() - 0.5F) * 0.12F;
-                float[] p = {(float) Math.cos(ang) * (rad + jit), y + (r.nextFloat() - 0.5F) * 0.12F, (float) Math.sin(ang) * (rad + jit)};
-                if (prev != null) {
-                    GoroLightning.segment(this.segment, pose, col, 1, glow(), prev, p, 0.6F, a(0.85F * su, CORE));
-                    GoroLightning.segment(this.segment, pose, col, 2, glow(), prev, p, 1.6F, a(0.3F * su, ring == 0 ? SHEATH : HAZE));
-                }
-                prev = p;
+                pts.add(new float[] {(float) Math.cos(ang) * (rad + jit), y + (r.nextFloat() - 0.5F) * 0.12F, (float) Math.sin(ang) * (rad + jit)});
             }
+            this.electric.broken(pose, col, Electric.Palette.MINKS, Electric.Style.TRACE, pts, 0.6F, age, seed + ring * 7, 0.85F * su);
         }
     }
 
-    /** Arc électrique en zigzag (coeur blanc, gaine jaune, halo bleu pâle). */
+    /** Petit arc électrique (système commun : canal crépitant du Goro, palette des Minks), re-tiré selon {@code r}. */
     void arc(PoseStack pose, SubmitNodeCollector col, float[] from, float[] to, Random r, float k, float width) {
-        int n = 4;
-        float[] prev = from;
-        for (int i = 1; i <= n; i++) {
-            float t = (float) i / n;
-            float[] q = {from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t};
-            if (i < n) {
-                q[0] += (r.nextFloat() - 0.5F) * 0.18F;
-                q[1] += (r.nextFloat() - 0.5F) * 0.18F;
-                q[2] += (r.nextFloat() - 0.5F) * 0.18F;
-            }
-            GoroLightning.segment(this.segment, pose, col, 0, glow(), prev, q, 0.45F * width, a(0.95F * k, CORE));
-            GoroLightning.segment(this.segment, pose, col, 1, glow(), prev, q, 1.2F * width, a(0.45F * k, SHEATH));
-            GoroLightning.segment(this.segment, pose, col, 2, glow(), prev, q, 2.4F * width, a(0.14F * k, HAZE));
-            prev = q;
-        }
+        this.electric.bolt(pose, col, Electric.Palette.MINKS, Electric.Style.ARC, from, to, 0.45F * width, 0.0F, r.nextInt(), k);
     }
 
     private void ring(PoseStack pose, SubmitNodeCollector col, float[] c, float[] u, float[] w, float r, float width, int color, int n) {
@@ -470,7 +465,7 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
     /**
      * Aura permanente du Sulong : langues électriques en deux couches autour de la silhouette, éclairs qui parcourent bras,
      * jambes et dos, pulsation régulière (onde et anneau qui s'embrase), éclairs qui se détachent de l'aura et s'éteignent,
-     * anneaux d'éclairs qui tournent, yeux lumineux. L'intensité varie sans cesse ; tout reste assez translucide pour garder le
+     * anneaux d'éclairs qui tournent. L'intensité varie sans cesse ; tout reste assez translucide pour garder le
      * personnage lisible.
      */
     private void sulongAura(PoseStack pose, SubmitNodeCollector col, PlayerModel model, float su, float age, int seed) {
@@ -478,12 +473,11 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         float k = su * vary;
         float pulse = (age % 20.0F) / 8.0F; // pulsation toutes les secondes
         float beat = pulse < 1.0F ? 1.0F - pulse : 0.0F;
-        bodyArcs(pose, col, model, (0.45F + 0.25F * beat) * k, age, seed, false);
+        sulongSparks(pose, col, model, (0.6F + 0.3F * beat) * k, age, seed);
         limbSurges(pose, col, model, (0.6F + 0.3F * beat) * k, age, seed);
         auraTongues(pose, col, (0.7F + 0.3F * beat) * k, age, seed, 1.0F + 0.15F * beat);
         detachBolts(pose, col, k, age, seed);
         lightningRings(pose, col, su, age, seed);
-        eyes(pose, col, model, su, age);
         if (pulse < 1.0F) { // l'onde de la pulsation part de la poitrine
             float[] chest = onPart(model.body, 0.0F, 5.0F, 0.0F);
             ring(pose, col, chest, new float[] {1, 0, 0}, new float[] {0, 0, 1}, 0.35F + 1.1F * MinksClient.snap(pulse, 0.0F, 1.0F),
@@ -516,7 +510,8 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         Random jr = new Random(seed * 41L + (long) (age * 1.5F));
         for (int i = 0; i < 2; i++) {
             float head = (age * 0.11F + i * 0.5F + seed * 0.13F) % 1.0F;
-            float[] prev = null;
+            // l'impulsion : une queue pâle puis une tête brillante (deux fils électriques qui se suivent)
+            List<float[]> tail = new ArrayList<>(), front = new ArrayList<>();
             for (int s = 0; s <= 6; s++) {
                 float t = head - 0.4F + 0.4F * s / 6.0F;
                 if (t < 0.0F) {
@@ -526,41 +521,40 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
                 float y = y0 + (y1 - y0) * t;
                 float[] p = {(cx + (float) Math.cos(ang) * r) / 16.0F + (jr.nextFloat() - 0.5F) * 0.02F, y / 16.0F,
                         (cz + (float) Math.sin(ang) * r) / 16.0F + (jr.nextFloat() - 0.5F) * 0.02F};
-                if (prev != null) {
-                    float f = (float) s / 6.0F; // plus brillant à la tête de l'impulsion
-                    GoroLightning.segment(this.segment, pose, col, 1, glow(), prev, p, 0.45F + 0.3F * f, a(0.9F * k * f, CORE));
-                    GoroLightning.segment(this.segment, pose, col, 2, glow(), prev, p, 1.3F, a(0.4F * k * f, SHEATH));
+                if (s <= 3) {
+                    tail.add(p);
                 }
-                prev = p;
+                if (s >= 3) {
+                    front.add(p);
+                }
             }
+            this.electric.trace(pose, col, Electric.Palette.MINKS, Electric.Style.TRACE, tail, 0.5F, age, seed + i * 5, 0.4F * k);
+            this.electric.trace(pose, col, Electric.Palette.MINKS, Electric.Style.TRACE, front, 0.7F, age, seed + i * 5 + 1, 0.9F * k);
         }
         pose.popPose();
     }
 
-    /** Aura en deux couches : langues électriques qui montent de la silhouette (re-tirées tous les 2 ticks). */
+    /** Aura en deux couches : petits éclairs ramifiés qui montent autour de la silhouette (re-tirés tous les 2 ticks). */
     private void auraTongues(PoseStack pose, SubmitNodeCollector col, float k, float age, int seed, float size) {
         if (k <= 0.01F) {
             return;
         }
-        Random r = new Random(seed * 59L + (long) (age * 0.5F));
+        // aura : petits ÉCLAIRS RAMIFIÉS (foudre du Goro en miniature, système commun) répartis autour de la silhouette ; ils
+        // montent en s'écartant un peu du corps, chacun tient deux ticks en crépitant puis réapparaît ailleurs
+        long slot = (long) (age * 0.5F);
+        Random r = new Random(seed * 59L + slot);
         for (int layer = 0; layer < 2; layer++) {
-            int n = layer == 0 ? 14 : 10;
-            float rad0 = (layer == 0 ? 0.38F : 0.55F) * size;
+            int n = layer == 0 ? 5 : 3;
+            float rad0 = (layer == 0 ? 0.4F : 0.55F) * size;
             for (int i = 0; i < n; i++) {
-                double ang = i * Math.PI * 2 / n + r.nextDouble() * 0.3 + layer * 0.2;
-                float rad = rad0 + r.nextFloat() * 0.08F, y = 0.05F + r.nextFloat() * 1.4F, h = (0.2F + r.nextFloat() * 0.35F) * size;
+                double ang = i * Math.PI * 2 / n + r.nextDouble() * 0.9 + layer * 0.6;
+                float rad = rad0 + r.nextFloat() * 0.08F, y = 0.1F + r.nextFloat() * 1.3F, h = (0.4F + r.nextFloat() * 0.4F) * size;
                 float[] p = {(float) Math.cos(ang) * rad, y, (float) Math.sin(ang) * rad};
-                float[] m = {p[0] * 1.07F + (r.nextFloat() - 0.5F) * 0.07F, y - h * 0.5F, p[2] * 1.07F + (r.nextFloat() - 0.5F) * 0.07F};
-                float[] q = {p[0] * 1.14F, y - h, p[2] * 1.14F};
-                if (layer == 0) {
-                    GoroLightning.segment(this.segment, pose, col, 2, glow(), p, m, 0.5F, a(0.5F * k, CORE));
-                    GoroLightning.segment(this.segment, pose, col, 2, glow(), m, q, 0.4F, a(0.45F * k, SHEATH));
-                    GoroLightning.segment(this.segment, pose, col, 3, glow(), p, q, 1.8F, a(0.12F * k, SHEATH));
-                } else { // couche extérieure : plus large, plus pâle, bleu intense
-                    GoroLightning.segment(this.segment, pose, col, 3, glow(), p, m, 0.6F, a(0.3F * k, SHEATH));
-                    GoroLightning.segment(this.segment, pose, col, 3, glow(), m, q, 0.5F, a(0.25F * k, HAZE));
-                    GoroLightning.segment(this.segment, pose, col, 3, glow(), p, q, 2.8F, a(0.08F * k, HAZE));
-                }
+                double lean = ang + (r.nextDouble() - 0.5) * 1.2; // un peu de travers : jamais un trait vertical
+                float out = h * (0.35F + r.nextFloat() * 0.35F);
+                float[] q = {p[0] + (float) Math.cos(lean) * out, y - h, p[2] + (float) Math.sin(lean) * out};
+                this.electric.bolt(pose, col, Electric.Palette.MINKS, Electric.Style.SPARK, p, q, layer == 0 ? 0.4F : 0.34F, age,
+                        (int) (seed * 59 + slot * 11 + layer * 50 + i), (layer == 0 ? 0.85F : 0.55F) * k);
             }
         }
     }
@@ -575,14 +569,11 @@ public class MinksLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
             double ang = sr.nextDouble() * Math.PI * 2;
             float y = 0.05F + sr.nextFloat() * 1.4F;
             float[] base = {(float) Math.cos(ang) * 0.45F, y, (float) Math.sin(ang) * 0.45F};
-            float[] out = {(float) Math.cos(ang) * (0.45F + 0.75F * t), y - 0.35F * t, (float) Math.sin(ang) * (0.45F + 0.75F * t)};
+            float[] out = {(float) Math.cos(ang) * (0.45F + 1.0F * t), y - 0.35F * t, (float) Math.sin(ang) * (0.45F + 1.0F * t)};
             float[] from = {base[0] + (out[0] - base[0]) * Math.max(0.0F, t - 0.3F), base[1] + (out[1] - base[1]) * Math.max(0.0F, t - 0.3F),
                     base[2] + (out[2] - base[2]) * Math.max(0.0F, t - 0.3F)};
-            float[] mid = {(from[0] + out[0]) * 0.5F + (sr.nextFloat() - 0.5F) * 0.12F, (from[1] + out[1]) * 0.5F, (from[2] + out[2]) * 0.5F};
             float al = 0.9F * (1.0F - t) * k;
-            GoroLightning.segment(this.segment, pose, col, 1, glow(), from, mid, 0.5F, a(al, CORE));
-            GoroLightning.segment(this.segment, pose, col, 1, glow(), mid, out, 0.45F, a(al, SHEATH));
-            GoroLightning.segment(this.segment, pose, col, 2, glow(), from, out, 1.6F, a(0.3F * al, HAZE));
+            this.electric.bolt(pose, col, Electric.Palette.MINKS, Electric.Style.SPARK, from, out, 0.45F, age, seed * 97 + (int) n * 13 + i, al);
         }
     }
 

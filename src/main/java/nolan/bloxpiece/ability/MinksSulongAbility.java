@@ -8,9 +8,10 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 import nolan.bloxpiece.fx.MinksFx;
+import nolan.bloxpiece.registry.ModAttachments;
 
 /**
- * Race Minks, niveau 50 : TRANSFORMATION SULONG. Uniquement la NUIT (vérifié par le serveur : dimension avec un cycle jour /
+ * Race Minks, niveau 50 : TRANSFORMATION SULONG. Uniquement la NUIT, DEUX FOIS AU PLUS par nuit (PER_NIGHT) (vérifié par le serveur : dimension avec un cycle jour /
  * nuit, heure du monde entre {@link #NIGHT_START} et {@link #NIGHT_END}) ; sinon refusée avec un message, sans consommer la
  * recharge. Cinématique : préparation et montée en puissance ({@link #CHARGE} ticks : le joueur se ramasse, l'électricité
  * s'accumule puis parcourt tout son corps), explosion de transformation, posture de puissance ({@link #REVEAL} ticks), et Sulong pendant Minks.SULONG_TICKS (30 s) : oreilles et queue blanches et duveteuses, yeux lumineux, aura
@@ -24,6 +25,8 @@ public class MinksSulongAbility implements Ability {
     public static final int COOLDOWN = 20 * 180;
     /** Nuit (heure du monde, ticks dans la journée) : comme le moment où l'on peut dormir. */
     public static final long NIGHT_START = 12542, NIGHT_END = 23460;
+    /** Transformations au plus par nuit (la recharge reste la même). */
+    public static final int PER_NIGHT = 2;
 
     private final int level;
 
@@ -74,7 +77,26 @@ public class MinksSulongAbility implements Ability {
                     ? "message.bloxpiece.minks.sulong_no_moon" : "message.bloxpiece.minks.sulong_day"), true);
             return false;
         }
+        if (usedTonight(player) >= PER_NIGHT) {
+            player.sendSystemMessage(Component.translatable("message.bloxpiece.minks.sulong_limit", PER_NIGHT), true);
+            return false;
+        }
         return true;
+    }
+
+    /** Jour du monde (une nuit = un jour : la nuit tient entière dans la même tranche de 24000 ticks). */
+    private static long day(ServerPlayer player) {
+        return Math.floorDiv(((ServerLevel) player.level()).getDefaultClockTime(), 24000L);
+    }
+
+    /** Transformations déjà faites cette nuit. */
+    public static int usedTonight(ServerPlayer player) {
+        Long v = player.getAttached(ModAttachments.MINKS_SULONG_NIGHT);
+        return v != null && Math.floorDiv(v, 4L) == day(player) ? (int) Math.floorMod(v, 4L) : 0;
+    }
+
+    private static void countUse(ServerPlayer player) {
+        player.setAttached(ModAttachments.MINKS_SULONG_NIGHT, day(player) * 4L + Math.min(3, usedTonight(player) + 1));
     }
 
     @Override
@@ -108,6 +130,7 @@ public class MinksSulongAbility implements Ability {
                 if (t == CHARGE) {
                     // phase 3 : explosion de transformation (le Sulong commence ICI : ses 30 s comptent à partir de maintenant)
                     Minks.startSulong(player);
+                    countUse(player); // compte pour la limite de la nuit (au moment où la transformation a vraiment lieu)
                     MinksFx.spawn(level, player, MinksFx.SULONG, player.position(), player.getLookAngle(), 1.0F, 40);
                     level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.TRIDENT_THUNDER.value(), SoundSource.PLAYERS,
                             1.6F, 0.9F);

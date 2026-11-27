@@ -15,8 +15,7 @@ public class MarineSwordsman extends ArmedMarine {
             26.0,  // points de vie
             5.0,   // dégâts par coup (sans le sabre)
             0.30,  // vitesse
-            32.0,  // détection / poursuite (blocs)
-            13     // XP BloxPiece
+            32.0   // détection / poursuite (blocs)
     );
 
     public MarineSwordsman(EntityType<? extends MarineSwordsman> type, Level level) {

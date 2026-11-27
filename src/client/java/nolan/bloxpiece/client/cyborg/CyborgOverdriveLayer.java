@@ -23,6 +23,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 
 import nolan.bloxpiece.ability.Cyborg;
+import nolan.bloxpiece.client.fx.Electric;
 import nolan.bloxpiece.client.goro.GoroLightning;
 import nolan.bloxpiece.client.human.HumanDraw;
 
@@ -49,11 +50,14 @@ public class CyborgOverdriveLayer extends RenderLayer<AvatarRenderState, PlayerM
 
     private static CyborgOverdriveLayer shared;
     private final ModelPart segment, hex, plasma;
+    /** Éclairs : système électrique commun, palette du Cyborg. */
+    private final Electric electric;
     private final HumanDraw draw;
 
     public CyborgOverdriveLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent, EntityRendererProvider.Context context) {
         super(parent);
         this.segment = context.bakeLayer(nolan.bloxpiece.client.haki.HakiBoltRenderer.LAYER).getChild("segment");
+        this.electric = new Electric(this.segment);
         this.hex = context.bakeLayer(CyborgFxModels.HEX).getChild("hex");
         this.plasma = context.bakeLayer(CyborgFxModels.PLASMA).getChild("cell");
         this.draw = new HumanDraw(context); // (vapeur : nuages en volume, outils partagés)
@@ -299,23 +303,9 @@ public class CyborgOverdriveLayer extends RenderLayer<AvatarRenderState, PlayerM
         pose.popPose();
     }
 
-    /** Arc électrique en zigzag (trois épaisseurs : coeur blanc, gaine jaune, halo orange). */
+    /** Arc électrique : système commun (canal crépitant du Goro), palette jaune du Cyborg ; re-tiré selon {@code r}. */
     private void arc(PoseStack pose, SubmitNodeCollector col, float[] from, float[] to, Random r, float k, float width) {
-        int n = 5;
-        float[] prev = from;
-        for (int i = 1; i <= n; i++) {
-            float t = (float) i / n;
-            float[] q = {from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t};
-            if (i < n) {
-                q[0] += (r.nextFloat() - 0.5F) * 0.22F;
-                q[1] += (r.nextFloat() - 0.5F) * 0.22F;
-                q[2] += (r.nextFloat() - 0.5F) * 0.22F;
-            }
-            GoroLightning.segment(this.segment, pose, col, 0, glow(), prev, q, 0.5F * width, a(0.95F * k, CORE));
-            GoroLightning.segment(this.segment, pose, col, 1, glow(), prev, q, 1.3F * width, a(0.5F * k, ENERGY));
-            GoroLightning.segment(this.segment, pose, col, 2, glow(), prev, q, 2.6F * width, a(0.16F * k, HOT));
-            prev = q;
-        }
+        this.electric.bolt(pose, col, Electric.Palette.CYBORG, Electric.Style.ARC, from, to, 0.5F * width, 0.0F, r.nextInt(), k);
     }
 
     /** Anneau hexagonal en plaques (CyborgFxModels.HEX, apothème 6 px) de rayon {@code radius} blocs autour de {@code axis}. */

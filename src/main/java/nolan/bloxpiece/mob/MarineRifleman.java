@@ -18,8 +18,7 @@ public class MarineRifleman extends ArmedMarine {
             20.0,  // points de vie
             2.0,   // dégâts au corps-à-corps (il préfère tirer)
             0.27,  // vitesse
-            44.0,  // détection : il repère de très loin
-            15     // XP BloxPiece
+            44.0   // détection : il repère de très loin
     );
 
     public MarineRifleman(EntityType<? extends MarineRifleman> type, Level level) {

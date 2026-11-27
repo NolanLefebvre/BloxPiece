@@ -57,6 +57,10 @@ public class PlayerModelMixin {
         nolan.bloxpiece.client.human.HumanPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
         // Race Minks : griffes, barrage, danse des griffes éclair, transformation Sulong
         nolan.bloxpiece.client.minks.MinksPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
+        // Race Fishman : garde de karaté, lance aquatique, frappe du sol, perforation des profondeurs
+        nolan.bloxpiece.client.fishman.FishmanPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
+        // Race Lunarian : flammes, plumes, poing embrasé, tempête du jugement céleste
+        nolan.bloxpiece.client.lunarian.LunarianPose.apply((PlayerModel) (Object) this, player, state.ageInTicks);
         if (Handcuffs.isCuffed(player)) {
             bloxpiece$cuffedPose();
             return; // menotté : aucune autre pose (pas de pouvoirs)

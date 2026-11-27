@@ -47,15 +47,22 @@ public final class Races {
                     RaceBonus.attribute("knockback", Attributes.ATTACK_KNOCKBACK, Operation.ADD_VALUE, 0.2),
                     RaceBonus.attribute("swim_speed", Attributes.WATER_MOVEMENT_EFFICIENCY, Operation.ADD_VALUE, 0.33, 100.0),
                     RaceBonus.special(RaceBonus.Kind.WATER_BREATHING, "water_breathing", 0.0)),
-            attacks("fishman_karate_punch", "fishman_water_shot", "fishman_shock_wave", "fishman_shark_roar", "fishman_great_tide")));
+            // attaques DÉVELOPPÉES (ability/Fishman*) : karaté des hommes-poissons et maîtrise de l'eau ; niveaux 10 / 20 / 30 / 50
+            List.of(RaceAttack.of("fishman_aqua_wave", 10, new nolan.bloxpiece.ability.FishmanWaveAbility(10)),
+                    RaceAttack.of("fishman_water_spear", 20, new nolan.bloxpiece.ability.FishmanSpearAbility(20)),
+                    RaceAttack.of("fishman_devastating_wave", 30, new nolan.bloxpiece.ability.FishmanTideAbility(30)),
+                    RaceAttack.of("fishman_abyss_piercer", 50, new nolan.bloxpiece.ability.FishmanDepthsAbility(50)))));
 
     /** Lunarian : un peu plus résistant, brûle moins longtemps, mieux protégé quand ses flammes sont actives. */
     public static final Race LUNARIAN = register(new Race("lunarian", 0xFFFF7A3C, 20,
             List.of(RaceBonus.attribute("armor", Attributes.ARMOR, Operation.ADD_VALUE, 2.0),
                     RaceBonus.attribute("burn_time", Attributes.BURNING_TIME, Operation.ADD_MULTIPLIED_TOTAL, -0.5),
                     RaceBonus.special(RaceBonus.Kind.FLAME_GUARD, "flame_guard", 2.0)),
-            attacks("lunarian_ember_breath", "lunarian_cinder_wings", "lunarian_flame_shell", "lunarian_blazing_rain",
-                    "lunarian_celestial_pyre")));
+            // attaques DÉVELOPPÉES (ability/Lunarian*) : ailes, flammes du dos (modes Défense / Vitesse), feu ; niveaux 10 / 20 / 30 / 50
+            List.of(RaceAttack.of("lunarian_flame_mode", 10, new nolan.bloxpiece.ability.LunarianFlamesAbility(10)),
+                    RaceAttack.of("lunarian_burning_feathers", 20, new nolan.bloxpiece.ability.LunarianFeathersAbility(20)),
+                    RaceAttack.of("lunarian_blazing_fist", 30, new nolan.bloxpiece.ability.LunarianFistAbility(30)),
+                    RaceAttack.of("lunarian_celestial_storm", 50, new nolan.bloxpiece.ability.LunarianJudgmentAbility(50)))));
 
     /** Cyborg : un cœur de plus, un peu moins repoussé, poison et faim s'estompent plus vite. */
     public static final Race CYBORG = register(new Race("cyborg", 0xFF9AB4C8, 20,

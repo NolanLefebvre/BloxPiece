@@ -216,9 +216,11 @@ public final class GroupSpawner {
     private static BloxMob placeMember(GroupSpawnRule rule, ServerLevel level, BlockPos anchor, List<BloxMob> group, ServerPlayer player) {
         RandomSource random = level.getRandom();
 
+        // écart minimal entre deux membres : 1,5 bloc, ou plus pour les gros mobs (pas de membres emboîtés)
+        double minGap = Math.max(1.5, rule.type.getWidth() * 1.2);
         for (int attempt = 0; attempt < rule.memberAttempts; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2.0;
-            double radius = 1.5 + random.nextDouble() * Math.max(0.5, rule.groupSpread - 1.5);
+            double radius = minGap + random.nextDouble() * Math.max(0.5, rule.groupSpread - minGap);
             int x = Mth.floor(anchor.getX() + 0.5 + Math.cos(angle) * radius);
             int z = Mth.floor(anchor.getZ() + 0.5 + Math.sin(angle) * radius);
 
@@ -235,7 +237,7 @@ public final class GroupSpawner {
 
             boolean overlaps = false;
             for (BloxMob other : group) {
-                if (mob.distanceToSqr(other) < 1.5 * 1.5) {
+                if (mob.distanceToSqr(other) < minGap * minGap) {
                     overlaps = true;
                     break;
                 }

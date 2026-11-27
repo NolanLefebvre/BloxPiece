@@ -17,8 +17,7 @@ public class BanditChief extends ArmedBandit {
             70.0,  // points de vie : un petit chef
             5.0,   // dégâts par coup (sans l'épée)
             0.28,  // vitesse
-            32.0,  // détection / poursuite (blocs)
-            50     // XP BloxPiece
+            32.0   // détection / poursuite (blocs)
     );
 
     public BanditChief(EntityType<? extends BanditChief> type, Level level) {

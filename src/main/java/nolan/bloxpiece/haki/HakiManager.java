@@ -23,8 +23,8 @@ import nolan.bloxpiece.registry.ModAttachments;
 
 /**
  * Le système de Haki : les trois Hakis de base (HakiType), leurs touches (UseHakiPayload), leurs recharges (affichées par le
- * HUD client avec les mêmes clés que les attaques de fruit), le déblocage (attachment HAKI_UNLOCKED : tout est débloqué dès
- * l'arrivée du joueur dans cette première version) et les règles communes : impossible menotté ou évanoui, coupé à la mort.
+ * HUD client avec les mêmes clés que les attaques de fruit), le déblocage (attachment HAKI_UNLOCKED : aucun Haki au départ ; chacun se
+ * débloque par sa quête auprès de Silvers Rayleigh, voir quest/UniqueQuest) et les règles communes : impossible menotté ou évanoui, coupé à la mort.
  * Chaque Haki gère son propre effet (Haki).
  */
 public final class HakiManager {

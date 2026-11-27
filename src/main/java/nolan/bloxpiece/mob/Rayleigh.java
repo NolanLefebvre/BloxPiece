@@ -23,13 +23,15 @@ import nolan.bloxpiece.network.OpenDialoguePayload;
 
 /**
  * Silvers Rayleigh, le « Seigneur des Ténèbres », Second du Roi des Pirates : PNJ du village de départ, debout devant la
- * taverne (placé par village/RayleighPlacement). Futur donneur de quêtes principal du serveur.
+ * taverne (placé par village/RayleighPlacement). MAÎTRE DES HAKI : il donne les quêtes de déblocage des Haki et de leurs
+ * évolutions (quest/UniqueQuest, UniqueQuests), selon le niveau de chaque joueur.
  * <ul>
  *   <li>Invulnérable (sauf /kill et le vide), ni poussé ni repoussé, et IMMOBILE : s'il est déplacé malgré tout (pouvoir d'un
  *       fruit, explosion...), il revient aussitôt à sa place. Il suit simplement les joueurs du regard.</li>
  *   <li>Jamais supprimé à distance : sauvegardé avec le monde, il est toujours là après un redémarrage.</li>
- *   <li>Clic droit : fenêtre de dialogue (DialogueScreen, PNJ « silvers_rayleigh »). Le système de quêtes viendra se brancher
- *       ici ({@link #mobInteract}).</li>
+ *   <li>Clic droit : fenêtre de dialogue (DialogueScreen, PNJ « silvers_rayleigh ») ; son bouton « Enseigne-moi le Haki »
+ *       propose la quête de Haki disponible (RayleighQuestDialogue, côté client) ; l'acceptation est vérifiée par le serveur
+ *       (UniqueQuests.accept : niveau, distance à Rayleigh, quête ni en cours ni terminée).</li>
  * </ul>
  */
 public class Rayleigh extends PathfinderMob {
@@ -110,7 +112,7 @@ public class Rayleigh extends PathfinderMob {
         return false;
     }
 
-    // ------------------------------------------------------------------ dialogue (point d'entrée du futur système de quêtes)
+    // ------------------------------------------------------------------ dialogue (quêtes de Haki : voir RayleighQuestDialogue)
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {

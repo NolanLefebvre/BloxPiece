@@ -1,5 +1,6 @@
 package nolan.bloxpiece.client.minks;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -14,6 +15,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
+import nolan.bloxpiece.client.fx.Electric;
 import nolan.bloxpiece.client.goro.GoroLightning;
 import nolan.bloxpiece.client.haki.HakiBoltRenderer;
 import nolan.bloxpiece.client.human.HumanDraw;
@@ -49,10 +51,13 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
 
     private final ModelPart segment;
     private final HumanDraw draw;
+    /** Éclairs : système électrique commun (forme du Goro), palette des Minks. */
+    private final Electric electric;
 
     public MinksFxRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.segment = context.bakeLayer(HakiBoltRenderer.LAYER).getChild("segment");
+        this.electric = new Electric(this.segment);
         this.draw = new HumanDraw(context); // (poussière, anneaux : outils d'effets partagés du mod)
     }
 
@@ -102,15 +107,18 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
 
     /** Éclair (canal sinueux et fourches du Goro) de {@code a} vers {@code a + d}, aux couleurs des Minks. */
     private void bolt(PoseStack pose, SubmitNodeCollector col, float[] a, float[] d, float width, float age, int seed, float alpha, boolean forks) {
-        Random shape = new Random(seed), jag = new Random(seed * 31L + (long) (age * 2.0F));
-        List<GoroLightning.Path> paths = GoroLightning.bolt(a, d, width, age, seed, shape, jag, forks);
-        for (GoroLightning.Path p : paths) {
-            GoroLightning.drawPath(this.segment, pose, col, 0, HumanDraw.glow(), p, 1.4F, a(alpha, CORE));
-            GoroLightning.drawPath(this.segment, pose, col, 1, HumanDraw.glow(), p, 2.8F, a(0.5F * alpha, SHEATH));
-        }
-        if (!paths.isEmpty()) {
-            GoroLightning.drawPath(this.segment, pose, col, 2, HumanDraw.glow(), paths.get(0), 6.0F, a(0.16F * alpha, HAZE));
-        }
+        this.electric.bolt(pose, col, Electric.Palette.MINKS, forks ? Electric.Style.STRIKE : Electric.Style.BOLT, a,
+                new float[] {a[0] + d[0], a[1] + d[1], a[2] + d[2]}, width, age, seed, alpha);
+    }
+
+    /** Petit arc électrique (système commun) de {@code from} à {@code to}. */
+    private void arc(PoseStack pose, SubmitNodeCollector col, float[] from, float[] to, float width, float age, int seed, float alpha) {
+        this.electric.bolt(pose, col, Electric.Palette.MINKS, Electric.Style.ARC, from, to, width, age, seed, alpha);
+    }
+
+    /** Fil électrique (système commun) le long de points, coupé aux null. */
+    private void wire(PoseStack pose, SubmitNodeCollector col, List<float[]> pts, float width, float age, int seed, float alpha) {
+        this.electric.broken(pose, col, Electric.Palette.MINKS, Electric.Style.TRACE, pts, width, age, seed, alpha);
     }
 
     /**
@@ -179,8 +187,7 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
                 float s1 = (r.nextFloat() - 0.5F) * 0.12F, s2 = (r.nextFloat() - 0.5F) * 0.12F;
                 float[] m = {p[0] + across[0] * s1 + along[0] * 0.05F, p[1] + across[1] * s1 + along[1] * 0.05F, p[2] + across[2] * s1 + along[2] * 0.05F};
                 float[] q = {m[0] + across[0] * s2 + along[0] * 0.06F, m[1] + across[1] * s2 + along[1] * 0.06F, m[2] + across[2] * s2 + along[2] * 0.06F};
-                this.draw.seg(pose, col, 1, p, m, 0.3F, a(0.85F * alpha, CORE));
-                this.draw.seg(pose, col, 1, m, q, 0.25F, a(0.7F * alpha, SHEATH));
+                arc(pose, col, p, q, 0.3F, age, r.nextInt(), 0.85F * alpha);
             }
         }
     }
@@ -214,9 +221,7 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
             for (int i = 0; i < (small ? 1 : 3); i++) {
                 float[] dd = GoroLightning.normalize(new float[] {ar.nextFloat() - 0.5F, ar.nextFloat() - 0.5F, ar.nextFloat() - 0.5F});
                 float l = (0.2F + ar.nextFloat() * 0.25F) * size;
-                float[] mid = HumanDraw.add(HumanDraw.add(o, dd, l * 0.5F), new float[] {ar.nextFloat() - 0.5F, ar.nextFloat() - 0.5F, ar.nextFloat() - 0.5F}, 0.06F);
-                draw.seg(pose, col, 1, o, mid, 0.35F, a(0.9F * out, CORE));
-                draw.seg(pose, col, 1, mid, HumanDraw.add(o, dd, l), 0.3F, a(0.75F * out, SHEATH));
+                arc(pose, col, o, HumanDraw.add(o, dd, l), 0.35F, a, ar.nextInt(), 0.9F * out);
             }
         }
         // légère onde de pression (fine)
@@ -255,10 +260,7 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
             Random jr = new Random(s.seed * 5L + (long) (a * 1.5F));
             for (int[] l : links) {
                 float[] p = body[l[0]], q = body[l[1]];
-                float[] m = {(p[0] + q[0]) * 0.5F + (jr.nextFloat() - 0.5F) * 0.15F, (p[1] + q[1]) * 0.5F, (p[2] + q[2]) * 0.5F + (jr.nextFloat() - 0.5F) * 0.15F};
-                draw.seg(pose, col, 1, p, m, 0.5F, a(0.85F * ghost, CORE));
-                draw.seg(pose, col, 1, m, q, 0.5F, a(0.85F * ghost, CORE));
-                draw.seg(pose, col, 2, p, q, 1.4F, a(0.25F * ghost, SHEATH));
+                arc(pose, col, p, q, 0.5F, a, jr.nextInt(), 0.85F * ghost);
             }
         }
         // 3. air chassé au départ (anneau au ras du sol) et poussière d'appui
@@ -339,21 +341,17 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
         for (int lat = 0; lat < 5; lat++) {
             double th = Math.toRadians(lat * 18.0);
             float rr = (1.2F + 1.8F * k) * (float) Math.cos(th), y = (1.2F + 1.8F * k) * (float) Math.sin(th) + 0.1F;
-            float[] prev = null;
+            List<float[]> pts = new ArrayList<>();
             for (int i = 0; i <= 18; i++) {
                 if (r.nextFloat() < 0.2F) {
-                    prev = null;
+                    pts.add(null);
                     continue;
                 }
                 double ang = 2 * Math.PI * i / 18;
-                float[] p = {(float) Math.cos(ang) * (rr + (r.nextFloat() - 0.5F) * 0.2F), y + (r.nextFloat() - 0.5F) * 0.2F,
-                        (float) Math.sin(ang) * (rr + (r.nextFloat() - 0.5F) * 0.2F)};
-                if (prev != null) {
-                    draw.seg(pose, col, 1, prev, p, 0.8F, a(0.8F * out, CORE));
-                    draw.seg(pose, col, 2, prev, p, 2.2F, a(0.3F * out, lat % 2 == 0 ? SHEATH : HAZE));
-                }
-                prev = p;
+                pts.add(new float[] {(float) Math.cos(ang) * (rr + (r.nextFloat() - 0.5F) * 0.2F), y + (r.nextFloat() - 0.5F) * 0.2F,
+                        (float) Math.sin(ang) * (rr + (r.nextFloat() - 0.5F) * 0.2F)});
             }
+            wire(pose, col, pts, 0.8F, a, s.seed + lat * 19, 0.8F * out);
         }
         // 2b. onde d'énergie : un mur électrique bleu qui part du joueur et s'abaisse en s'éloignant
         float wk = Mth.clamp(a / 18.0F, 0.0F, 1.0F);
@@ -441,23 +439,17 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
             // front d'éclairs brisés qui épouse le sol (re-tiré à chaque tick)
             Random r = new Random(s.seed * 31L + wv * 101L + (long) a);
             int n = Math.max(20, (int) (front * 6.0F));
-            float[] prev = null;
+            List<float[]> pts = new ArrayList<>();
             for (int i = 0; i <= n; i++) {
                 if (r.nextFloat() < 0.12F) {
-                    prev = null;
+                    pts.add(null);
                     continue;
                 }
                 double ang = 2 * Math.PI * i / n;
                 float rr = front + (r.nextFloat() - 0.5F) * 0.25F;
-                float[] p = {(float) Math.cos(ang) * rr, 0.06F + r.nextFloat() * 0.12F, (float) Math.sin(ang) * rr};
-                if (prev != null) {
-                    float wd = wv == 0 ? 1.4F : 1.0F;
-                    draw.seg(pose, col, 1, prev, p, 0.55F * wd, a(0.9F * fade, CORE));
-                    draw.seg(pose, col, 2, prev, p, 1.7F * wd, a(0.35F * fade, SHEATH));
-                    draw.seg(pose, col, 3, prev, p, 3.2F * wd, a(0.1F * fade, HAZE));
-                }
-                prev = p;
+                pts.add(new float[] {(float) Math.cos(ang) * rr, 0.06F + r.nextFloat() * 0.12F, (float) Math.sin(ang) * rr});
             }
+            wire(pose, col, pts, (wv == 0 ? 1.4F : 1.0F) * 0.55F, a, s.seed + wv * 101, 0.9F * fade);
             // mur d'énergie fin et bas : le volume de la vague (il s'abaisse en s'éloignant)
             draw.wall(pose, col, 3, new float[] {0, 0, 0}, front * 0.97F, 0.0F, (0.9F - 0.2F * wv) * (1.0F - k) + 0.08F, a(0.22F * fade, SHEATH),
                     a(0.55F * fade, CORE), 48);
@@ -467,9 +459,7 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
                 float r0 = front * (0.55F + r.nextFloat() * 0.35F), r1 = Math.min(front, r0 + 0.6F + r.nextFloat() * 0.6F);
                 float[] p0 = {(float) Math.cos(ang) * r0, 0.05F, (float) Math.sin(ang) * r0};
                 float[] p1 = {(float) Math.cos(ang + (r.nextDouble() - 0.5) * 0.3) * r1, 0.05F, (float) Math.sin(ang + (r.nextDouble() - 0.5) * 0.3) * r1};
-                float[] m = {(p0[0] + p1[0]) * 0.5F + (r.nextFloat() - 0.5F) * 0.2F, 0.1F, (p0[2] + p1[2]) * 0.5F + (r.nextFloat() - 0.5F) * 0.2F};
-                draw.seg(pose, col, 1, p0, m, 0.45F, a(0.8F * fade, CORE));
-                draw.seg(pose, col, 1, m, p1, 0.4F, a(0.7F * fade, SHEATH));
+                arc(pose, col, p0, p1, 0.45F, a, r.nextInt(), 0.8F * fade);
             }
         }
         // 2b. la première vague atteint le bord de la zone : le cercle de la zone s'embrase un instant
@@ -491,8 +481,7 @@ public class MinksFxRenderer extends EntityRenderer<MinksFx, MinksFxRenderer.Sta
                 float[] p0 = {(float) Math.cos(ang) * d0, 0.05F, (float) Math.sin(ang) * d0};
                 float[] m = {p0[0] + (rr.nextFloat() - 0.5F) * 0.7F, 0.1F, p0[2] + (rr.nextFloat() - 0.5F) * 0.7F};
                 float[] p1 = {m[0] + (rr.nextFloat() - 0.5F) * 0.7F, 0.05F, m[2] + (rr.nextFloat() - 0.5F) * 0.7F};
-                draw.seg(pose, col, 1, p0, m, 0.4F, a(0.75F * res, CORE));
-                draw.seg(pose, col, 1, m, p1, 0.35F, a(0.65F * res, SHEATH));
+                wire(pose, col, List.of(p0, m, p1), 0.4F, a, rr.nextInt(), 0.75F * res);
             }
         }
         // 3. sol marqué au centre (cercle d'éclairs qui s'éteint lentement)

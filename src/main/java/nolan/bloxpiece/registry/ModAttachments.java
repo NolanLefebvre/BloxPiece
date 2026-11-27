@@ -44,6 +44,26 @@ public class ModAttachments {
     );
 
     /**
+     * Quêtes UNIQUES du joueur (quêtes de Haki de Silvers Rayleigh : acceptées, en cours, terminées), voir UniqueQuests. Même
+     * fonctionnement que QUESTS : sauvegardé avec le joueur (son UUID), conservé à la mort, synchronisé avec son client seulement.
+     */
+    /**
+     * Quêtes RÉPÉTABLES du joueur (missions du Tavernier : mission proposée, mission en cours, historique), voir
+     * RepeatableQuests. Sauvegardé avec le joueur (son UUID), conservé à la mort, synchronisé avec son client seulement.
+     */
+    public static final AttachmentType<nolan.bloxpiece.quest.RepeatableQuest.Data> REPEATABLE_QUESTS = AttachmentRegistry.create(
+            BloxPiece.id("repeatable_quests"),
+            builder -> builder.persistent(nolan.bloxpiece.quest.RepeatableQuest.Data.CODEC).copyOnDeath()
+                    .syncWith(nolan.bloxpiece.quest.RepeatableQuest.Data.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
+    );
+
+    public static final AttachmentType<nolan.bloxpiece.quest.UniqueQuestData> UNIQUE_QUESTS = AttachmentRegistry.create(
+            BloxPiece.id("unique_quests"),
+            builder -> builder.persistent(nolan.bloxpiece.quest.UniqueQuestData.CODEC).copyOnDeath()
+                    .syncWith(nolan.bloxpiece.quest.UniqueQuestData.STREAM_CODEC, AttachmentSyncPredicate.targetOnly())
+    );
+
+    /**
      * La race du joueur (id de la race, ex : "human").
      * Pas de valeur = race par défaut (voir Races.DEFAULT). Lire avec Races.of(player).
      */
@@ -360,6 +380,27 @@ public class ModAttachments {
             builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
     );
 
+    /** Race Lunarian : attaque en cours (début x 8 + type, Lunarian.FLAMES...), pour les poses, les ailes et les effets chez tous les joueurs proches. */
+    public static final AttachmentType<Long> LUNARIAN_ACTION = AttachmentRegistry.create(
+            BloxPiece.id("lunarian_action"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /**
+     * Race Lunarian : mode Défense (flammes du dos allumées) : instant du dernier changement x 2 + 1 si allumées, 0 si éteintes ;
+     * absent = mode Vitesse depuis toujours. Synchronisé avec tous : chacun voit les flammes grandir ou s'éteindre.
+     */
+    public static final AttachmentType<Long> LUNARIAN_FLAME = AttachmentRegistry.create(
+            BloxPiece.id("lunarian_flame"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
+    /** Race Fishman : attaque en cours (début x 8 + type, Fishman.WAVE...), pour les poses et effets chez tous les joueurs proches. */
+    public static final AttachmentType<Long> FISHMAN_ACTION = AttachmentRegistry.create(
+            BloxPiece.id("fishman_action"),
+            builder -> builder.syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())
+    );
+
     /** Race Minks : fin (temps de jeu) des griffes électriques sorties ; visibles par tous les joueurs proches. */
     public static final AttachmentType<Long> MINKS_CLAWS = AttachmentRegistry.create(
             BloxPiece.id("minks_claws"),
@@ -437,6 +478,15 @@ public class ModAttachments {
      * Évanoui par le Haki des Rois jusqu'à ce tick de jeu (joueurs et mobs). Sauvegardé, synchronisé avec tous (rendu allongé,
      * paralysie côté client).
      */
+    /**
+     * Minks : transformations Sulong de la nuit en cours ({@code jour * 4 + nombre}, jour = horloge du monde / 24000). Sauvegardé,
+     * gardé à la mort : on ne contourne pas la limite (MinksSulongAbility.PER_NIGHT) en se reconnectant ou en mourant.
+     */
+    public static final AttachmentType<Long> MINKS_SULONG_NIGHT = AttachmentRegistry.create(
+            BloxPiece.id("minks_sulong_night"),
+            builder -> builder.persistent(Codec.LONG).copyOnDeath()
+    );
+
     public static final AttachmentType<Long> UNCONSCIOUS_UNTIL = AttachmentRegistry.create(
             BloxPiece.id("unconscious_until"),
             builder -> builder.persistent(Codec.LONG).syncWith(ByteBufCodecs.VAR_LONG, AttachmentSyncPredicate.all())

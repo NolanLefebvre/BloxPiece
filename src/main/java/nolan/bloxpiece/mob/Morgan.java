@@ -29,8 +29,7 @@ public class Morgan extends ArmedMarine {
             220.0, // points de vie
             16.0,  // dégâts d'un coup de hache
             0.24,  // vitesse (lourd, mais de grandes enjambées)
-            32.0,  // détection / poursuite (blocs)
-            250    // XP BloxPiece
+            32.0   // détection / poursuite (blocs)
     );
 
     /** Heure du monde (ticks) du début du dernier coup de hache, synchronisée serveur -> clients pour l'animation. */

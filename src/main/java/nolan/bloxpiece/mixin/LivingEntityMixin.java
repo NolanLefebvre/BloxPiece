@@ -23,6 +23,9 @@ public abstract class LivingEntityMixin {
     private float bloxpiece$scaleFruitDamage(float amount, @Local(argsOnly = true) DamageSource source) {
         // Haki de l'Armement sur tout le corps : dégâts subis réduits
         amount *= nolan.bloxpiece.haki.HakiManager.incomingDamageMultiplier((LivingEntity) (Object) this, source);
+        // race Lunarian, mode Défense : dégâts reçus réduits, et dégâts infligés (coups, fruits, attaques de race...) très réduits
+        amount *= nolan.bloxpiece.ability.Lunarian.takenMultiplier((LivingEntity) (Object) this);
+        amount *= nolan.bloxpiece.ability.Lunarian.dealtMultiplier(source, (LivingEntity) (Object) this);
         Player attacker = LevelScaling.fruitAttacker(source);
         if (attacker == null || attacker == (Object) this) {
             return amount;

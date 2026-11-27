@@ -35,6 +35,23 @@ public class ModNetworking {
         ServerPlayNetworking.registerGlobalReceiver(ClaimQuestPayload.TYPE, (payload, context) ->
                 Quests.claim(context.player(), payload.index()));
 
+        // Quêtes uniques : acceptation d'une quête de Haki auprès de Silvers Rayleigh (le serveur vérifie tout)
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.AcceptUniqueQuestPayload.TYPE,
+                nolan.bloxpiece.network.AcceptUniqueQuestPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.AcceptUniqueQuestPayload.TYPE, (payload, context) ->
+                nolan.bloxpiece.quest.UniqueQuests.accept(context.player(), payload.quest(), payload.rayleighId()));
+
+        // Quêtes répétables : accepter la mission du Tavernier, ou récupérer sa récompense (le serveur vérifie tout)
+        PayloadTypeRegistry.serverboundPlay().register(nolan.bloxpiece.network.RepeatableQuestPayload.TYPE,
+                nolan.bloxpiece.network.RepeatableQuestPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.RepeatableQuestPayload.TYPE, (payload, context) -> {
+            if (payload.action() == nolan.bloxpiece.network.RepeatableQuestPayload.ACCEPT) {
+                nolan.bloxpiece.quest.RepeatableQuests.accept(context.player(), payload.keeperId());
+            } else if (payload.action() == nolan.bloxpiece.network.RepeatableQuestPayload.CLAIM) {
+                nolan.bloxpiece.quest.RepeatableQuests.claim(context.player(), payload.keeperId());
+            }
+        });
+
         // Roulette du Coffre au Trésor : bouton OUVRIR (coffre consommé, fruit tiré) ou fenêtre refermée sans lancer
         PayloadTypeRegistry.serverboundPlay().register(StartRoulettePayload.TYPE, StartRoulettePayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StartRoulettePayload.TYPE, (payload, context) -> {

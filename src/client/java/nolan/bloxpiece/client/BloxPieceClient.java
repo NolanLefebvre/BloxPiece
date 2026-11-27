@@ -173,6 +173,10 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.MorganFx.LAYER,
                 nolan.bloxpiece.client.entity.MorganFx::createLayer);
         EntityRendererRegistry.register(ModEntities.MORGAN_QUAKE, nolan.bloxpiece.client.entity.MorganQuakeRenderer::new);
+        // Humandrills (Kuraigana) : modèle généré par src/blockbench/humandrill/MakeHumandrill.java, animations HumandrillAnimator
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.humandrill.HumandrillModels.HUMANDRILL,
+                nolan.bloxpiece.client.humandrill.HumandrillModels::create);
+        EntityRendererRegistry.register(ModEntities.HUMANDRILL, nolan.bloxpiece.client.humandrill.HumandrillRenderer::new);
         // Silvers Rayleigh (même construction que Gol D. Roger : RayleighModels, généré par make_silvers_rayleigh.py)
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.entity.RayleighModels.RAYLEIGH,
                 nolan.bloxpiece.client.entity.RayleighModels::rayleigh);
@@ -333,6 +337,18 @@ public class BloxPieceClient implements ClientModInitializer {
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.GLOVE_RIGHT, nolan.bloxpiece.client.minks.MinksModels::gloveRight);
         ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.minks.MinksModels.GLOVE_LEFT, nolan.bloxpiece.client.minks.MinksModels::gloveLeft);
         EntityRendererRegistry.register(ModEntities.MINKS_FX, nolan.bloxpiece.client.minks.MinksFxRenderer::new);
+        // Race Fishman : ailerons, cube d'eau des effets, et les effets des quatre attaques
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.fishman.FishmanModels.ARM_FIN_RIGHT, nolan.bloxpiece.client.fishman.FishmanModels::armFinRight);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.fishman.FishmanModels.ARM_FIN_LEFT, nolan.bloxpiece.client.fishman.FishmanModels::armFinLeft);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.fishman.FishmanModels.BACK_FIN, nolan.bloxpiece.client.fishman.FishmanModels::backFin);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.fishman.FishmanModels.WATER, nolan.bloxpiece.client.fishman.FishmanModels::water);
+        EntityRendererRegistry.register(ModEntities.FISHMAN_FX, nolan.bloxpiece.client.fishman.FishmanFxRenderer::new);
+        // Race Lunarian : ailes, plume incandescente, effets des quatre capacités, caméra de la Tempête
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.lunarian.LunarianModels.WING, nolan.bloxpiece.client.lunarian.LunarianModels::wing);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.lunarian.LunarianModels.FLAME, nolan.bloxpiece.client.lunarian.LunarianModels::flame);
+        ModelLayerRegistry.registerModelLayer(nolan.bloxpiece.client.lunarian.LunarianModels.FEATHER, nolan.bloxpiece.client.lunarian.LunarianModels::feather);
+        EntityRendererRegistry.register(ModEntities.LUNARIAN_FX, nolan.bloxpiece.client.lunarian.LunarianFxRenderer::new);
+        ClientTickEvents.END_CLIENT_TICK.register(nolan.bloxpiece.client.lunarian.LunarianFirstPerson::tickCamera);
         // Danse des griffes éclair : caméra cinématique (vue à la 3e personne pendant l'attaque, puis perspective restaurée)
         ClientTickEvents.END_CLIENT_TICK.register(nolan.bloxpiece.client.minks.MinksCamera::tick);
 
@@ -368,7 +384,7 @@ public class BloxPieceClient implements ClientModInitializer {
         // Coffre au Trésor : ouverture de la roulette, puis fruit tiré par le serveur au clic sur OUVRIR (il le donne lui-même)
         // PNJ : fenêtre de dialogue (clic droit sur le Tavernier)
         ClientPlayNetworking.registerGlobalReceiver(nolan.bloxpiece.network.OpenDialoguePayload.TYPE, (payload, context) ->
-                Minecraft.getInstance().gui.setScreen(new nolan.bloxpiece.client.screen.DialogueScreen(payload.npc(), payload.speech())));
+                Minecraft.getInstance().gui.setScreen(new nolan.bloxpiece.client.screen.DialogueScreen(payload.npc(), payload.speech(), payload.entityId())));
         ClientPlayNetworking.registerGlobalReceiver(OpenRoulettePayload.TYPE, (payload, context) -> {
             Minecraft mc = Minecraft.getInstance();
             String id = payload.fruitItemId();

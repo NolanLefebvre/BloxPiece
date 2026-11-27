@@ -122,6 +122,16 @@ public class ModEntities {
             .updateInterval(20)
             .build(MORGAN_QUAKE_KEY);
 
+    // Humandrills (île de Kuraigana) : babouins sabreurs d'environ 4 blocs, 1 à 3 épées chacun ; invoqués par commande
+    public static final ResourceKey<EntityType<?>> HUMANDRILL_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("humandrill"));
+
+    public static final EntityType<nolan.bloxpiece.mob.Humandrill> HUMANDRILL =
+            EntityType.Builder.of(nolan.bloxpiece.mob.Humandrill::new, MobCategory.MONSTER)
+            .sized(1.75F, 4.0F)
+            .clientTrackingRange(8)
+            .build(HUMANDRILL_KEY);
+
     // Bandits du camp de bandits et leur chef (un par camp) : posés par la structure du camp, invocables aussi
     public static final ResourceKey<EntityType<?>> BANDIT_KEY = ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("bandit"));
 
@@ -439,6 +449,32 @@ public class ModEntities {
             .updateInterval(1)
             .build(MINKS_FX_KEY);
 
+    public static final ResourceKey<EntityType<?>> LUNARIAN_FX_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("lunarian_fx"));
+
+    /** Effets 3D (purement visuels) des attaques de la race Lunarian : plumes de feu, explosions, traînées, tornade de feu. */
+    public static final EntityType<nolan.bloxpiece.fx.LunarianFx> LUNARIAN_FX =
+            EntityType.Builder.<nolan.bloxpiece.fx.LunarianFx>of(nolan.bloxpiece.fx.LunarianFx::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(16)
+            .updateInterval(1)
+            .build(LUNARIAN_FX_KEY);
+
+    public static final ResourceKey<EntityType<?>> FISHMAN_FX_KEY =
+            ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("fishman_fx"));
+
+    /** Effets 3D (purement visuels) des attaques de la race Fishman : onde, gouttes, vagues, spirale, explosion d'eau. */
+    public static final EntityType<nolan.bloxpiece.fx.FishmanFx> FISHMAN_FX =
+            EntityType.Builder.<nolan.bloxpiece.fx.FishmanFx>of(nolan.bloxpiece.fx.FishmanFx::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .noSave()
+            .noSummon()
+            .clientTrackingRange(16)
+            .updateInterval(1)
+            .build(FISHMAN_FX_KEY);
+
     public static final ResourceKey<EntityType<?>> HAKI_BOLT_KEY =
             ResourceKey.create(Registries.ENTITY_TYPE, BloxPiece.id("haki_bolt"));
 
@@ -502,6 +538,8 @@ public class ModEntities {
         register(MORGAN_KEY, MORGAN, nolan.bloxpiece.mob.Morgan.STATS.toAttributes()
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.8)   // massif
                 .add(Attributes.ATTACK_KNOCKBACK, 1.2));     // le coup de hache repousse la cible
+        register(HUMANDRILL_KEY, HUMANDRILL, nolan.bloxpiece.mob.Humandrill.STATS.toAttributes()
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.25));
         register(BANDIT_KEY, BANDIT, nolan.bloxpiece.mob.Bandit.STATS.toAttributes());
         register(BANDIT_CHIEF_KEY, BANDIT_CHIEF, nolan.bloxpiece.mob.BanditChief.STATS.toAttributes()
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.5)   // dur à repousser
@@ -542,6 +580,8 @@ public class ModEntities {
         Registry.register(BuiltInRegistries.ENTITY_TYPE, CYBORG_BEAM_KEY, CYBORG_BEAM);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, HUMAN_FX_KEY, HUMAN_FX);
         Registry.register(BuiltInRegistries.ENTITY_TYPE, MINKS_FX_KEY, MINKS_FX);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, FISHMAN_FX_KEY, FISHMAN_FX);
+        Registry.register(BuiltInRegistries.ENTITY_TYPE, LUNARIAN_FX_KEY, LUNARIAN_FX);
     }
 
     private static <T extends LivingEntity> void register(

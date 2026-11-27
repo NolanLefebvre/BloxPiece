@@ -49,6 +49,10 @@ public abstract class AvatarRendererHandMixin {
         nolan.bloxpiece.client.human.HumanFistLayer.submitHand(pose, collector, arm, model);
         // Race Minks : griffes électriques sur la main vue à la première personne
         nolan.bloxpiece.client.minks.MinksLayer.submitHand(pose, collector, arm, model);
+        // Race Fishman : aileron du bras et eau des attaques sur la main vue à la première personne
+        nolan.bloxpiece.client.fishman.FishmanLayer.submitHand(pose, collector, arm, model, light);
+        // Race Lunarian : feu du poing sur la main vue à la première personne
+        nolan.bloxpiece.client.lunarian.LunarianLayer.submitHand(pose, collector, arm, model);
         // Race Cyborg, Surcharge moteur : conduits d'énergie sur la main droite vue à la première personne
         if (rightArm) {
             nolan.bloxpiece.client.cyborg.CyborgOverdriveLayer.submitHand(pose, collector, arm, false);
